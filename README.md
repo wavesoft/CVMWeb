@@ -9,7 +9,8 @@ It then provides a simple interface to start/stop the VM and access it's data se
 
 # How to install the plugin
 
-The plugin has no installation system yet, but you can install it manually using one of the following techniques:
+The plugin has no installation system yet, but you can install it manually using one of the following techniques.
+You can always find the latest binary builds for your operating system in the *builds* directory.
 
 ## Installing on Mac OSX
 
