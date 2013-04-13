@@ -32,14 +32,20 @@
 		var core, session;
 		window.onload = function() { 
 			core = document.getElementById('cvmweb'); 
-			if (core.hypervisorName == "") {
-				_txt("hv", "Unable to detect your hypervisor!");
+			if (core.hypervisorName === undefined) {
+				_txt("hv", "Unable to load CernVM WebAPI Plugin!");
+				_txt("state", "Please make sure you have installed the CernVM WebAPI Plugin</a>");
+				_dis("session-name", true);
+				_dis("session-key", true);
+				_dis("session-request", true);
+			} else if (core.hypervisorName == "") {
+				_txt("hv", "Unable to detect your hypervisor! (WebAPI v" + core.version + ")");
 				_txt("state", "Please make sure you have installed <a href=\"https://www.virtualbox.org/\">VirtualBox</a>");
 				_dis("session-name", true);
 				_dis("session-key", true);
 				_dis("session-request", true);
 			} else {
-				_txt("hv", "Using " + core.hypervisorName + " (version "+ core.hypervisorVersion +")");
+				_txt("hv", "Using " + core.hypervisorName + " (version "+ core.hypervisorVersion +", WebAPI v" + core.version + ")");
 			}
 		};
 		
@@ -84,6 +90,11 @@
 			});
 			session.addEventListener('openError', function(msg, id) { // Open Error
 				_txt( "state", "Error while opening (" + msg + ")" );
+				_dis("session-cpus", false);
+				_dis("session-ram", false);
+				_dis("session-disk", false);
+				_dis("session-ver", false);
+				_dis("session-open", false);
 			});
 			session.addEventListener('close', function() { // Session Closed
 				_vis('tbl-run', false);
