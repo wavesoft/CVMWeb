@@ -94,12 +94,21 @@ public:
     FB_JSAPI_EVENT(live,        0, ());
     FB_JSAPI_EVENT(dead,        0, ());
     FB_JSAPI_EVENT(pause,       0, ());
+    FB_JSAPI_EVENT(pauseError,  2, ( const std::string&, int ));
     FB_JSAPI_EVENT(resume,      0, ());
+    FB_JSAPI_EVENT(resumeError, 2, ( const std::string&, int ));
     FB_JSAPI_EVENT(reset,       0, ());
+    FB_JSAPI_EVENT(resetError,  2, ( const std::string&, int ));
     FB_JSAPI_EVENT(stop,        0, ());
+    FB_JSAPI_EVENT(stopError,   2, ( const std::string&, int ));
+    FB_JSAPI_EVENT(error,       3, ( const std::string&, int, const std::string& ));
     
     // Threads
     void thread_close( );
+    void thread_pause( );
+    void thread_resume( );
+    void thread_stop( );
+    void thread_reset( );
     void thread_open( const FB::JSObjectPtr &o );
     void thread_start( const FB::variant& cfg );
     

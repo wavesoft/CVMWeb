@@ -52,9 +52,18 @@ CVMWebPtr CVMWebAPISession::getPlugin()
 
 // Functions
 int CVMWebAPISession::pause() {
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
+    return HVE_SHEDULED;
+}
+
+void CVMWebAPISession::thread_pause() {
     int ans = this->session->pause();
-    if (ans == 0) this->fire_pause();
-    return ans;
+    if (ans == 0) {
+        this->fire_pause();
+    } else {
+        this->fire_pauseError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "pause");
+    }
 }
 
 int CVMWebAPISession::close(){
@@ -68,25 +77,53 @@ void CVMWebAPISession::thread_close(){
         this->fire_close();
     } else {
         this->fire_closeError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "close");
     }
 }
 
 int CVMWebAPISession::resume(){
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_resume, this ));
+    return HVE_SHEDULED;
+}
+
+void CVMWebAPISession::thread_resume(){
     int ans = this->session->resume();
-    if (ans == 0) this->fire_resume();
-    return ans;
+    if (ans == 0) {
+        this->fire_resume();
+    } else {
+        this->fire_resumeError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "resume");
+    }
 }
 
 int CVMWebAPISession::reset(){
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_reset, this ));
+    return HVE_SHEDULED;
+}
+
+void CVMWebAPISession::thread_reset(){
     int ans = this->session->reset();
-    if (ans == 0) this->fire_reset();
-    return ans;
+    if (ans == 0) {
+        this->fire_reset();
+    } else {
+        this->fire_resetError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "reset");
+    }
 }
 
 int CVMWebAPISession::stop(){
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
+    return HVE_SHEDULED;
+}
+
+void CVMWebAPISession::thread_stop(){
     int ans = this->session->stop();
-    if (ans == 0) this->fire_stop();
-    return ans;
+    if (ans == 0) {
+        this->fire_stop();
+    } else {
+        this->fire_stopError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "stop");
+    }
 }
 
 int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
@@ -100,15 +137,18 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
     int disk = 1024;
     int ans = 0;
     std::string ver = DEFAULT_CERNVM_VERSION;
-    if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
-    if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
-    if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
-    if (o->HasProperty("version")) ver = o->GetProperty("version").cast<std::string>();
+    if (o != NULL) {
+        if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
+        if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
+        if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
+        if (o->HasProperty("version")) ver = o->GetProperty("version").cast<std::string>();
+    }
     ans = this->session->open( cpus, ram, disk, ver);
     if (ans == 0) {
         this->fire_open();
     } else {
         this->fire_openError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "open");
     }
 }
 
@@ -119,12 +159,15 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
 
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     int ans = 0;
-    std::string vmUserData = cfg.cast<std::string>();
+    std::string vmUserData = "";
+    vmUserData = cfg.cast<std::string>();
+    
     ans = this->session->start(vmUserData);
     if (ans == 0) {
         this->fire_start();
     } else {
         this->fire_startError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "start");
     }
 }
 

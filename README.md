@@ -48,7 +48,9 @@ the owner and only his secret key can be used to request access to the same sess
 
 This function will return either a CVMWebAPISession object or *false* if an error occurred.
 
-The session is unusable until the *open* function is called:
+## Opening session
+
+The session is unusable until the *open* function is called and the session requirements are specified:
 
 	sess.open({ requirements })
 
