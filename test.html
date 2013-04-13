@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>CVMWeb Test</title>
+		<script type="text/javascript">
+		
+		///////////////////////////////////////////////////
+		// HELPER FUNCTIONS
+		///////////////////////////////////////////////////
+		
+		function _txt( id, text ) { var e = document.getElementById(id); return e.innerHTML = text; }
+		function _val( id ) { var e = document.getElementById(id); return e.value; };
+		function _sval( id, v ) { var e = document.getElementById(id); return e.value=v; };
+		function _dis( id, v ) { var e = document.getElementById(id); return e.disabled=v; };
+		function _vis( id, v ) { var e = document.getElementById(id); return e.style['visibility']=v?'visible':'hidden'; };
+		
+		function stateName( num ) {
+			if (num == 0) return "Session closed";
+			if (num == 1) return "Opening session";
+			if (num == 2) return "Session open";
+			if (num == 3) return "Starting session";
+			if (num == 4) return "Session started";
+			if (num == 5) return "Session error";
+			if (num == 6) return "Session paused";
+			return "Unknown state";
+		}
+
+		///////////////////////////////////////////////////
+		// 1) Core initialization happens here
+		///////////////////////////////////////////////////
+		
+		var core, session;
+		window.onload = function() { 
+			core = document.getElementById('cvmweb'); 
+			if (core.hypervisorName == "") {
+				_txt("hv", "Unable to detect your hypervisor!");
+			} else {
+				_txt("hv", "Using " + core.hypervisorName + " (version "+ core.hypervisorVersion +")");
+			}
+		};
+		
+		///////////////////////////////////////////////////
+		// 2) Request a computation session
+		///////////////////////////////////////////////////
+
+		function requestSession( name, key ) {
+			session = core.requestSession( name, key );
+			if (session === false) {
+				alert('Your session key is invalid!');
+			} else {
+				_vis('tbl-open', true);
+				_dis("session-name", true);
+				_dis("session-key", true);
+				_dis("session-request", true);
+				
+				// Note: If we are resuming an already running session it might be open!
+				if (session.state != 0) {
+					_txt( "state", stateName(session.state) );
+					_vis('tbl-run', true);
+					_dis("session-cpus", true);
+					_dis("session-ram", true);
+					_dis("session-disk", true);
+					_dis("session-ver", true);
+					_dis("session-open", true);					
+					_sval("session-cpus", session.cpus);
+					_sval("session-ram", session.ram);
+				} else {
+					_txt( "state", "Set your requirements and press 'Open Session'" );
+					
+				}
+				
+			}
+			
+			// Bind event listeners 
+			session.addEventListener('open', function() { // Session Opened
+				_vis('tbl-run', true);
+				_txt( "state", "Session open" );
+			});
+			session.addEventListener('openError', function(msg, id) { // Open Error
+				_txt( "state", "Error while opening (" + msg + ")" );
+			});
+			session.addEventListener('close', function() { // Session Closed
+				_vis('tbl-run', false);
+				_dis("session-cpus", false);
+				_dis("session-ram", false);
+				_dis("session-disk", false);
+				_dis("session-ver", false);
+				_dis("session-open", false);
+				_txt( "state", "Session closed" );
+			});
+			session.addEventListener('closeError', function(msg, id) { // Close Error
+				_txt( "state", "Error while closing (" + msg + ")" );
+			});
+			session.addEventListener('start', function() { // Started
+				_txt( "state", "Session started" );
+			});
+			session.addEventListener('startError', function(msg, id) { // Start Error
+				_txt( "state", "Error while starting (" + msg + ")" );
+			});
+			session.addEventListener('stop', function() { // Stopped
+				_txt( "state", "Session stopped" );
+			});
+			session.addEventListener('pause', function() { // Paused
+				_txt( "state", "Session paused" );
+			});
+			session.addEventListener('resume', function() { // Resumed
+				_txt( "state", "Session resumed" );
+			});
+			session.addEventListener('reset', function() { // Reset
+				_txt( "state", "Session restarted" );
+			});
+			session.addEventListener('progress', function( step, total, msg) { // Progress updates
+				var perc = Math.round( 100 * step / total );
+				_txt( "state", msg + " ("+perc+" %)" );
+			});
+			
+		};
+
+		///////////////////////////////////////////////////
+		// 3) Open the session, by specifying our resource
+		//    requirements.
+		///////////////////////////////////////////////////
+		
+		function openSession( cpus, ram, disk, version ) {
+			var ans = session.open({
+				'cpus': cpus,
+				'ram': ram,
+				'disk': disk,
+				'version': version
+			});
+			
+			if (ans != 1) { // 1 means 'scheduled'
+				alert('Unable to open session. Error #'+ans+'!');
+			} else {
+				
+				// Get the display name of the current session state
+				_dis("session-cpus", true);
+				_dis("session-ram", true);
+				_dis("session-disk", true);
+				_dis("session-ver", true);
+				_dis("session-open", true);
+				
+			}
+			
+			// (The events onOpen or onOpenError will be fired)
+			
+		};
+		
+		///////////////////////////////////////////////////
+		// 4) If everything is ready, we can start our 
+		//    session, by specifying the user-data to pass
+		//    on the VM.
+		///////////////////////////////////////////////////
+		
+		function startVM(userData) {
+			var ans = session.start(userData);
+			
+			if (ans != 1) { // 1 means 'scheduled'
+				alert('Unable to start the VM');
+			}
+			
+			// (The events onStart or onStartError will be fired)
+		}
+		
+		///////////////////////////////////////////////////
+		// 5) You can then perform various other operations
+		//    with the running session.
+		///////////////////////////////////////////////////
+		
+		function restartVM() {
+			if (session.reset() != 0) {
+				alert('Unable to restart the VM');
+			}
+		}
+		
+		function pauseVM() {
+			if (session.pause() != 0) {
+				alert('Unable to pause the VM');
+			}
+		}
+		
+		function resumeVM() {
+			if (session.resume() != 0) {
+				alert('Unable to resume the VM');
+			}
+		}
+		
+		function stopVM() {
+			if (session.stop() != 0) {
+				alert('Unable to stop the VM');
+			}
+		}
+		
+		///////////////////////////////////////////////////
+		// 6) When you are done, don't forget to close your
+		//    session. This will also erase the VM and it's
+		//    components.
+		///////////////////////////////////////////////////
+		
+		function closeSession() {
+			session.close();
+			// (The events onClose or onCloseError will be fired)
+		}
+		
+		///////////////////////////////////////////////////
+		
+		</script>
+		<style type="text/css">
+		body {
+			font-family: Verdana, Geneva, sans-serif;
+			font-size: 14px;
+		}
+		#hv {
+			color: #FF0000;
+		}
+		#tbl-request, #tbl-open, #tbl-run {
+			border: solid 1px #333;
+			background: #CCF;
+			border-radius: 10px;
+			padding: 8px;
+		}
+		</style>
+	</head>
+	<body>
+		<embed type="application/x-cvmweb" style="width: 1px; height: 1px" id="cvmweb" />
+		
+		<table>
+			<tr>
+				<td colspan="3">
+					<div id="hv">Could not initiate plugin</div>
+					<div id="state">Entry a session name and a secret key. If the session is already open you must provide the same key.</div>
+				</td>
+			</tr>
+			<tr>
+				<td valign="top">
+					<table id="tbl-request">
+						<tr>
+							<td align="right">Session name:</td>
+							<td><input id="session-name" type="text" /></td>
+						</tr>
+						<tr>
+							<td align="right">Secret:</td>
+							<td><input id="session-key" type="text" /></td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center"><input type="button" value="Request Session" id="session-request" onclick="requestSession(_val('session-name'), _val('session-key'));" /></td>
+						</tr>
+					</table>
+				</td>
+				<td valign="top">
+					<table id="tbl-open" style="visibility: hidden">
+						<tr>
+							<td align="right">VCPUs:</td>
+							<td><input id="session-cpus" value="1" type="text" /></td>
+						</tr>
+						<tr>
+							<td align="right">RAM:</td>
+							<td><input id="session-ram" value="256" type="text" /> Mb</td>
+						</tr>
+						<tr>
+							<td align="right">Disk:</td>
+							<td><input id="session-disk" value="1024" type="text" /> Mb</td>
+						</tr>
+						<tr>
+							<td align="right">&mu;CernVM:</td>
+							<td><input id="session-ver" value="1.3" type="text" /></td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center"><input type="button" value="Open Session" id="session-open" onclick="openSession(_val('session-cpus'), _val('session-ram'), _val('session-disk'), _val('session-ver'));" /></td>
+						</tr>
+					</table>
+				</td>
+				<td valign="top">
+					<table id="tbl-run" style="visibility: hidden">
+						<tr>
+							<td align="right">User-Data:</td>
+							<td><textarea id="user-data" rows="4" cols="30">[cernvm]
+users=user:users:s3cret
+</textarea></td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center">
+								<input type="button" value="Start VM" id="session-start" onclick="startVM(_val('user-data'));" />
+								<input type="button" value="Stop VM" id="session-start" onclick="stopVM();" />
+								<input type="button" value="Restart VM" id="session-start" onclick="restartVM();" />
+								<input type="button" value="Pause VM" id="session-start" onclick="pauseVM();" />
+								<input type="button" value="Resume VM" id="session-start" onclick="resumeVM();" />
+							</td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center">
+								<input type="button" value="Close Session" id="session-start" onclick="closeSession();" />
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+		
+	</body>
+</html>

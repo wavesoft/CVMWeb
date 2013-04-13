@@ -1,0 +1,9 @@
+{
+  "name": "CernVM Web API",
+  "version": "${FBSTRING_PLUGIN_VERSION}",
+  "description": "CernVM Web Access Plugin",
+
+	"plugins": [
+    { "path": "npCVMWeb.dll", "public": true }
+  ]
+}
