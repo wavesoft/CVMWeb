@@ -68,6 +68,8 @@
 					_dis("session-open", true);					
 					_sval("session-cpus", session.cpus);
 					_sval("session-ram", session.ram);
+					_sval("session-disk", session.disk);
+					_sval("session-ver", session.version);
 				} else {
 					_txt( "state", "Set your requirements and press 'Open Session'" );
 					
@@ -104,14 +106,26 @@
 			session.addEventListener('stop', function() { // Stopped
 				_txt( "state", "Session stopped" );
 			});
+			session.addEventListener('stopError', function(msg, id) { // Stop Error
+				_txt( "state", "Error while stopping (" + msg + ")" );
+			});
 			session.addEventListener('pause', function() { // Paused
 				_txt( "state", "Session paused" );
+			});
+			session.addEventListener('pauseError', function(msg, id) { // Pause Error
+				_txt( "state", "Error while pausing (" + msg + ")" );
 			});
 			session.addEventListener('resume', function() { // Resumed
 				_txt( "state", "Session resumed" );
 			});
+			session.addEventListener('resumeError', function(msg, id) { // Resume Error
+				_txt( "state", "Error while resuming (" + msg + ")" );
+			});
 			session.addEventListener('reset', function() { // Reset
 				_txt( "state", "Session restarted" );
+			});
+			session.addEventListener('resetError', function(msg, id) { // Reset Error
+				_txt( "state", "Error while reseting (" + msg + ")" );
 			});
 			session.addEventListener('progress', function( step, total, msg) { // Progress updates
 				var perc = Math.round( 100 * step / total );
@@ -172,25 +186,25 @@
 		///////////////////////////////////////////////////
 		
 		function restartVM() {
-			if (session.reset() != 0) {
+			if (session.reset() != 1) {
 				alert('Unable to restart the VM');
 			}
 		}
 		
 		function pauseVM() {
-			if (session.pause() != 0) {
+			if (session.pause() != 1) {
 				alert('Unable to pause the VM');
 			}
 		}
 		
 		function resumeVM() {
-			if (session.resume() != 0) {
+			if (session.resume() != 1) {
 				alert('Unable to resume the VM');
 			}
 		}
 		
 		function stopVM() {
-			if (session.stop() != 0) {
+			if (session.stop() != 1) {
 				alert('Unable to stop the VM');
 			}
 		}

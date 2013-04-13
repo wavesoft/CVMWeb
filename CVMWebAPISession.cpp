@@ -52,6 +52,10 @@ CVMWebPtr CVMWebAPISession::getPlugin()
 
 // Functions
 int CVMWebAPISession::pause() {
+    
+    /* Validate state */
+    if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
+    
     boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
     return HVE_SHEDULED;
 }
@@ -67,6 +71,12 @@ void CVMWebAPISession::thread_pause() {
 }
 
 int CVMWebAPISession::close(){
+    
+    /* Validate state */
+    if ((this->session->state != STATE_OPEN) && 
+        (this->session->state != STATE_STARTED) && 
+        (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
+
     boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
     return HVE_SHEDULED;
 }
@@ -82,6 +92,10 @@ void CVMWebAPISession::thread_close(){
 }
 
 int CVMWebAPISession::resume(){
+
+    /* Validate state */
+    if (this->session->state != STATE_PAUSED) return HVE_INVALID_STATE;
+    
     boost::thread t(boost::bind(&CVMWebAPISession::thread_resume, this ));
     return HVE_SHEDULED;
 }
@@ -97,6 +111,10 @@ void CVMWebAPISession::thread_resume(){
 }
 
 int CVMWebAPISession::reset(){
+    
+    /* Validate state */
+    if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
+    
     boost::thread t(boost::bind(&CVMWebAPISession::thread_reset, this ));
     return HVE_SHEDULED;
 }
@@ -112,6 +130,10 @@ void CVMWebAPISession::thread_reset(){
 }
 
 int CVMWebAPISession::stop(){
+    
+    /* Validate state */
+    if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
+
     boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
     return HVE_SHEDULED;
 }
@@ -127,6 +149,11 @@ void CVMWebAPISession::thread_stop(){
 }
 
 int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
+
+    /* Validate state */
+    if ((this->session->state != STATE_CLOSED) && 
+        (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
+
     boost::thread t(boost::bind(&CVMWebAPISession::thread_open, this, o ));
     return HVE_SHEDULED;
 }
@@ -153,6 +180,10 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
 }
 
 int CVMWebAPISession::start( const FB::variant& cfg ) {
+    
+    /* Validate state */
+    if (this->session->state != STATE_OPEN) return HVE_INVALID_STATE;
+    
     boost::thread t(boost::bind(&CVMWebAPISession::thread_start, this, cfg ));
     return HVE_SHEDULED;
 }
