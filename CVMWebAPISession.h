@@ -91,8 +91,6 @@ public:
     FB_JSAPI_EVENT(close,       0, ());
     FB_JSAPI_EVENT(closeError,  2, ( const std::string&, int ));
     FB_JSAPI_EVENT(progress,    3, ( int, int, const std::string& ));
-    FB_JSAPI_EVENT(live,        0, ());
-    FB_JSAPI_EVENT(dead,        0, ());
     FB_JSAPI_EVENT(pause,       0, ());
     FB_JSAPI_EVENT(pauseError,  2, ( const std::string&, int ));
     FB_JSAPI_EVENT(resume,      0, ());
@@ -102,6 +100,8 @@ public:
     FB_JSAPI_EVENT(stop,        0, ());
     FB_JSAPI_EVENT(stopError,   2, ( const std::string&, int ));
     FB_JSAPI_EVENT(error,       3, ( const std::string&, int, const std::string& ));
+    FB_JSAPI_EVENT(live,        0, ());
+    FB_JSAPI_EVENT(dead,        0, ());
     
     // Threads
     void thread_close( );

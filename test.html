@@ -34,6 +34,10 @@
 			core = document.getElementById('cvmweb'); 
 			if (core.hypervisorName == "") {
 				_txt("hv", "Unable to detect your hypervisor!");
+				_txt("state", "Please make sure you have installed <a href=\"https://www.virtualbox.org/\">VirtualBox</a>");
+				_dis("session-name", true);
+				_dis("session-key", true);
+				_dis("session-request", true);
 			} else {
 				_txt("hv", "Using " + core.hypervisorName + " (version "+ core.hypervisorVersion +")");
 			}
