@@ -14,7 +14,7 @@ You can always find the latest binary builds for your operating system in the *b
 
 ## Installing on Mac OSX
 
-Simply copy the plugin to your **/Users/*username*/Library/Internet Plug-Ins** directory. The plugin will be
+Simply copy the plugin to your **Library/Internet Plug-Ins** directory. The plugin will be
 immediately available to all of your browsers.
 
 ## Installation on Windows

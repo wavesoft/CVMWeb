@@ -45,7 +45,7 @@
 				_dis("session-key", true);
 				_dis("session-request", true);
 			} else {
-				_txt("hv", "Using " + core.hypervisorName + " (version "+ core.hypervisorVersion +", WebAPI v" + core.version + ")");
+				_txt("hv", "Using " + core.hypervisorName + " v"+ core.hypervisorVersion +" (WebAPI v" + core.version + ")");
 			}
 		};
 		
@@ -140,7 +140,14 @@
 			});
 			session.addEventListener('progress', function( step, total, msg) { // Progress updates
 				var perc = Math.round( 100 * step / total );
-				_txt( "state", msg + " ("+perc+" %)" );
+				_txt( "state", msg + " ("+perc+"%)" );
+				window.console.log( "[progress] "+perc+"% : "+ msg);
+			});
+			session.addEventListener('error', function( msg, code, category ) { // Generic error
+				window.console.error("[error] #" + code+" [" + category + "]: " + msg);
+			});
+			session.addEventListener('debug', function( msg ) { // Debug messages
+				window.console.log('[debug] ' + msg);
 			});
 			
 		};

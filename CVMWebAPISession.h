@@ -69,10 +69,10 @@ public:
         if (this->session != NULL) {
             this->session->cbObject = (void *) this;
             this->session->onProgress = &CVMWebAPISession::onProgress;
+            this->session->onDebug = &CVMWebAPISession::onDebug;
+            this->session->onError = &CVMWebAPISession::onError;
             this->session->onOpen = &CVMWebAPISession::onOpen;
-            this->session->onOpenError = &CVMWebAPISession::onOpenError;
             this->session->onStart = &CVMWebAPISession::onStart;
-            this->session->onStartError = &CVMWebAPISession::onStartError;
             this->session->onClose = &CVMWebAPISession::onClose;
             this->session->onLive = &CVMWebAPISession::onLive;
             this->session->onDead = &CVMWebAPISession::onDead;
@@ -102,6 +102,7 @@ public:
     FB_JSAPI_EVENT(error,       3, ( const std::string&, int, const std::string& ));
     FB_JSAPI_EVENT(live,        0, ());
     FB_JSAPI_EVENT(dead,        0, ());
+    FB_JSAPI_EVENT(debug,       1, ( const std::string& ));
     
     // Threads
     void thread_close( );
@@ -136,10 +137,10 @@ public:
     
     // Callback forwards
     static void onProgress(int, int, std::string, void *);
+    static void onError(std::string, int, std::string, void *);
+    static void onDebug(std::string, void * );
     static void onOpen( void * );
-    static void onOpenError(std::string, int, void *);
     static void onStart( void * );
-    static void onStartError(std::string, int, void *);
     static void onClose( void * );
     static void onLive( void * );
     static void onDead( void * );

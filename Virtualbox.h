@@ -47,6 +47,15 @@ public:
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
     
+    /* VirtualBox-specific functions */
+    int                     wrapExec( std::string cmd, std::vector<std::string> * stdout );
+    int                     getMachineUUID( std::string mname, std::string * ans_uuid );
+    std::string             getHostOnlyAdapter  ();
+    std::map<std::string, 
+        std::string>        getMachineInfo      ();
+    int                     startVM             ();
+    int                     controlVM           ( std::string how );
+    
 };
 
 /**
@@ -58,15 +67,10 @@ public:
     std::string             hvGuestAdditions;
     
     /* Internal parameters */
-    std::string             getHostOnlyAdapter  ();
-    std::string             getProperty         ( std::string vm, std::string name );
+    int                     prepareSession      ( VBoxSession * session );
     std::map<std::string, 
         std::string>        getMachineInfo      ( std::string uuid );
-    int                     getMachineUUID      ( std::string name, std::string * uuid );
-    int                     setProperty         ( std::string vm, std::string name, std::string value );
-    int                     startVM             ( std::string uuid );
-    int                     controlVM           ( std::string uuid, std::string how );
-    int                     prepareSession      ( VBoxSession * session );
+    std::string             getProperty         ( std::string uuid, std::string name );
 
     /* Overloads */
     virtual int             loadSessions        ( );

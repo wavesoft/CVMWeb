@@ -101,6 +101,36 @@ vector< map<string, string> > tokenizeList( vector<string> * lines, char delim )
 \** =========================================== **/
 
 /**
+ * Execute command and log debug message
+ */
+int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdout ) {
+    ostringstream oss;
+    string line;
+    int ans;
+    
+    /* Debug log command */
+    if (this->onDebug!=NULL) (this->onDebug)("Executing '"+cmd+"'", this->cbObject);
+    
+    /* Run command */
+    ans = this->host->exec( cmd, stdout );
+    
+    /* Debug log response */
+    if (this->onDebug!=NULL) {
+        if (stdout != NULL) {
+            for (vector<string>::iterator i = stdout->begin(); i != stdout->end(); i++) {
+                line = *i;
+                (this->onDebug)("Line: "+line, this->cbObject);
+            }
+        } else {
+            (this->onDebug)("(Output ignored)", this->cbObject);
+        }
+        oss << "return = " << ans;
+        (this->onDebug)(oss.str(), this->cbObject);
+    }
+    return ans;
+};
+
+/**
  * Open new session
  */
 int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) { 
@@ -122,15 +152,16 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     this->executionCap = 100;
         
     /* (1) Create slot */
-    if (this->onProgress!=NULL) (this->onProgress)(1, 10, "Allocating VM slot", this->cbObject);
-    if (this->host->getMachineUUID( this->name, &uuid ) != 0) {
+    if (this->onProgress!=NULL) (this->onProgress)(1, 11, "Allocating VM slot", this->cbObject);
+    ans = this->getMachineUUID( this->name, &uuid );
+    if (ans != 0) {
         this->state = STATE_ERROR;
-        return HVE_CREATE_ERROR;
+        return ans;
     }
     
     /* Detect the host-only adapter */
-    if (this->onProgress!=NULL) (this->onProgress)(2, 10, "Setting up local network", this->cbObject);
-    ifHO = this->host->getHostOnlyAdapter();
+    if (this->onProgress!=NULL) (this->onProgress)(2, 11, "Setting up local network", this->cbObject);
+    ifHO = this->getHostOnlyAdapter();
     if (ifHO.empty()) {
         this->state = STATE_ERROR;
         return HVE_CREATE_ERROR;
@@ -150,8 +181,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
         << " --natdnsproxy1 " << "on"
         << " --nic2 "         << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
     
-    if (this->onProgress!=NULL) (this->onProgress)(3, 10, "Setting up VM", this->cbObject);
-    ans = this->host->exec(args.str(), NULL);
+    if (this->onProgress!=NULL) (this->onProgress)(3, 11, "Setting up VM", this->cbObject);
+    ans = this->wrapExec(args.str(), NULL);
     cout << "Modify VM=" << ans << "\n";
     if (ans != 0) {
         this->state = STATE_ERROR;
@@ -159,7 +190,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     }
 
     /* Fetch information to validate disks */
-    map<string, string> machineInfo = this->host->getMachineInfo(uuid);
+    if (this->onProgress!=NULL) (this->onProgress)(4, 11, "Fetching machine info", this->cbObject);
+    map<string, string> machineInfo = this->getMachineInfo();
 
     /* Check for scratch disk */
     if (machineInfo.find("SATA (0, 0)") == machineInfo.end()) {
@@ -175,8 +207,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --filename "   << "\"" << vmDisk << "\""
             << " --size "       << disk;
     
-        if (this->onProgress!=NULL) (this->onProgress)(4, 10, "Creating scratch disk", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        if (this->onProgress!=NULL) (this->onProgress)(5, 11, "Creating scratch disk", this->cbObject);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Create HD=" << ans << "\n";
         if (ans != 0) {
             this->state = STATE_ERROR;
@@ -188,8 +220,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             args.str("");
             args << "openmedium "
                 << " disk "   << "\"" << vmDisk << "\"";
-            if (this->onProgress!=NULL) (this->onProgress)(5, 10, "Importing disk", this->cbObject);
-            ans = this->host->exec(args.str(), NULL);
+            if (this->onProgress!=NULL) (this->onProgress)(6, 11, "Importing disk", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
             cout << "Close medium=" << ans << "\n";
             if (ans != 0) {
                 this->state = STATE_ERROR;
@@ -208,8 +240,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --setuuid "    << "\"\"" 
             << " --medium "     << "\"" << vmDisk << "\"";
 
-        if (this->onProgress!=NULL) (this->onProgress)(6, 10, "Attaching hard disk", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        if (this->onProgress!=NULL) (this->onProgress)(7, 11, "Attaching hard disk", this->cbObject);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach=" << ans << "\n";
         if (ans != 0) {
             this->state = STATE_ERROR;
@@ -245,8 +277,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
                 << " --device "     << "0"
                 << " --medium "     << "none";
 
-            if (this->onProgress!=NULL) (this->onProgress)(7, 10, "Detachining previous CernVM ISO", this->cbObject);
-            ans = this->host->exec(args.str(), NULL);
+            if (this->onProgress!=NULL) (this->onProgress)(8, 11, "Detachining previous CernVM ISO", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
             cout << "Detaching ISO=" << ans << "\n";
             if (ans != 0) {
                 this->state = STATE_ERROR;
@@ -260,7 +292,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     if (needsUpdate) {
         
         /* Download CernVM */
-        if (this->onProgress!=NULL) (this->onProgress)(8, 10, "Downloading CernVM", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(9, 11, "Downloading CernVM", this->cbObject);
         if (this->host->cernVMDownload( cvmVersion, &vmIso ) != 0) {
             this->state = STATE_ERROR;
             return HVE_IO_ERROR;
@@ -277,8 +309,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --setuuid "    << "\"\"" 
             << " --medium "     << "\"" << vmIso << "\"";
     
-        if (this->onProgress!=NULL) (this->onProgress)(9, 10, "Attaching CD-ROM", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        if (this->onProgress!=NULL) (this->onProgress)(10, 11, "Attaching CD-ROM", this->cbObject);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (CernVM)=" << ans << "\n";
         if (ans != 0) {
             this->state = STATE_ERROR;
@@ -287,10 +319,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     }
     
     /* Store web-secret on the guest properties */
-    this->host->setProperty(uuid, "web-secret", this->key);
+    this->setProperty("web-secret", this->key);
 
     /* Last callbacks */
-    if (this->onProgress!=NULL) (this->onProgress)(10, 10, "Completed", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(11, 11, "Completed", this->cbObject);
     if (this->onOpen!=NULL) (this->onOpen)(this->cbObject);
     this->state = STATE_OPEN;
     this->uuid = uuid;
@@ -312,7 +344,7 @@ int VBoxSession::start( std::string userData ) {
     this->state = STATE_STARTING;
 
     /* Fetch information to validate disks */
-    map<string, string> machineInfo = this->host->getMachineInfo(uuid);
+    map<string, string> machineInfo = this->getMachineInfo();
     
     /* Detach & Delete previous context ISO */
     if (machineInfo.find("IDE (1, 1)") != machineInfo.end()) {
@@ -333,7 +365,7 @@ int VBoxSession::start( std::string userData ) {
             << " --medium "     << "none";
 
         if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (context)=" << ans << "\n";
         if (ans != 0) {
             this->state = STATE_OPEN;
@@ -346,7 +378,7 @@ int VBoxSession::start( std::string userData ) {
             << "\"" << kk << "\"";
 
         if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing contextualization CD-ROM", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Closemedium (context)=" << ans << "\n";
         if (ans != 0) {
             this->state = STATE_OPEN;
@@ -376,7 +408,7 @@ int VBoxSession::start( std::string userData ) {
         << " --medium "     << "\"" << vmContextISO << "\"";
 
     if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
-    ans = this->host->exec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL);
     cout << "StorageAttach (context)=" << ans << "\n";
     if (ans != 0) {
         this->state = STATE_OPEN;
@@ -385,7 +417,7 @@ int VBoxSession::start( std::string userData ) {
     
     /* Start VM */
     if (this->onProgress!=NULL) (this->onProgress)(6, 7, "Starting VM", this->cbObject);
-    ans = this->host->exec("startvm \"" + this->uuid + "\" --type headless", NULL);
+    ans = this->wrapExec("startvm \"" + this->uuid + "\" --type headless", NULL);
     cout << "Start VM=" << ans << "\n";
     if (ans != 0) {
         this->state = STATE_OPEN;
@@ -412,10 +444,10 @@ int VBoxSession::close() {
 
     /* Stop the VM if it's running (we don't care about the warnings) */
     if (this->onProgress!=NULL) (this->onProgress)(1, 9, "Shutting down the VM", this->cbObject);
-    this->host->controlVM( this->uuid, "poweroff");
+    this->controlVM( "poweroff");
     
     /* Unmount, release and delete media */
-    map<string, string> machineInfo = this->host->getMachineInfo(uuid);
+    map<string, string> machineInfo = this->getMachineInfo();
     
     /* Detach & Delete context ISO */
     if (machineInfo.find("IDE (1, 1)") != machineInfo.end()) {
@@ -436,7 +468,7 @@ int VBoxSession::close() {
             << " --medium "     << "none";
 
         if (this->onProgress!=NULL) (this->onProgress)(2, 9, "Detaching contextualization CD-ROM", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (context)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -446,7 +478,7 @@ int VBoxSession::close() {
             << "\"" << kk << "\"";
 
         if (this->onProgress!=NULL) (this->onProgress)(3, 9, "Closing contextualization CD-ROM", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Closemedium (context)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -475,7 +507,7 @@ int VBoxSession::close() {
             << " --medium "     << "none";
 
         if (this->onProgress!=NULL) (this->onProgress)(5, 9, "Detaching data disk", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (context)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -485,7 +517,7 @@ int VBoxSession::close() {
             << "\"" << kk << "\"";
 
         if (this->onProgress!=NULL) (this->onProgress)(6, 9, "Closing data disk medium", this->cbObject);
-        ans = this->host->exec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL);
         cout << "Closemedium (disk)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -497,7 +529,7 @@ int VBoxSession::close() {
     
     /* Unregister and delete VM */
     if (this->onProgress!=NULL) (this->onProgress)(8, 9, "Deleting VM", this->cbObject);
-    ans = this->host->exec("unregistervm \"" + this->uuid + "\" --delete", NULL);
+    ans = this->wrapExec("unregistervm \"" + this->uuid + "\" --delete", NULL);
     cout << "Unregister VM=" << ans << "\n";
     if (ans != 0) {
         this->state = STATE_ERROR;
@@ -511,160 +543,19 @@ int VBoxSession::close() {
 }
 
 /**
- * Resume VM
- */
-int VBoxSession::resume() {
-    int ans;
-    
-    /* Validate state */
-    if (this->state != STATE_PAUSED) return HVE_INVALID_STATE;
-    
-    /* Resume VM */
-    ans = this->host->controlVM( this->uuid, "resume");
-    this->state = STATE_STARTED;
-    return ans;
-}
-
-/**
- * Pause VM
- */
-int VBoxSession::pause() {
-    int ans; 
-    
-    /* Validate state */
-    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
-
-    /* Pause VM */
-    ans = this->host->controlVM( this->uuid, "pause");
-    this->state = STATE_PAUSED;
-    return ans;
-}
-
-/**
- * Reset VM
- */
-int VBoxSession::reset() {
-    
-    /* Validate state */
-    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
-    
-    /* Reset VM */
-    return this->host->controlVM( this->uuid, "reset" );
-}
-
-/**
- * Stop VM
- */
-int VBoxSession::stop() {
-    int ans;
-    
-    /* Validate state */
-    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
-    
-    /* Stop VM */
-    ans = this->host->controlVM( this->uuid, "poweroff" );
-    this->state = STATE_OPEN;
-    return ans;
-    
-}
-
-/**
- * Set execution cap
- */
-int VBoxSession::setExecutionCap(int cap) {
-    
-    /* Validate state */
-    if ((this->state != STATE_STARTED) && (this->state != STATE_OPEN)) return HVE_INVALID_STATE;
-
-    ostringstream os;
-    os << "cpuexecutioncap " << cap;
-    this->executionCap = cap;
-    this->host->controlVM( this->uuid, os.str());
-    return 0;
-}
-
-/**
- * Set guest parameters
- */
-int VBoxSession::setProperty( std::string name, std::string key ) { 
-    
-    /* Validate state */
-    if ((this->state != STATE_STARTED) && (this->state != STATE_OPEN)) return HVE_INVALID_STATE;
-
-    return this->host->setProperty( this->uuid, name, key );
-}
-
-/**
- * Get guest parameters
- */
-std::string VBoxSession::getProperty( std::string name ) { 
-    
-    /* Validate state */
-    if ((this->state != STATE_STARTED) && (this->state != STATE_OPEN)) return "";
-
-    return this->host->getProperty( this->uuid, name );
-}
-
-/** =========================================== **\
-            Virtualbox Implementation
-\** =========================================== **/
-
-/**
- * Ensure the existance and return the name of the host-only adapter in the system
- */
-std::string Virtualbox::getHostOnlyAdapter() {
-
-    vector<string> lines;
-    vector< map<string, string> > ifs;
-    string ifName;
-    
-    /* Check if we already have host-only interfaces */
-    int ans = this->exec("list hostonlyifs", &lines);
-    if (ans != 0) return "";
-    
-    /* Check if there is really nothing */
-    if (lines.size() == 0) {
-        ans = this->exec("hostonlyif create", NULL);
-        if (ans != 0) return "";
-    
-        /* Repeat check */
-        ans = this->exec("list hostonlyifs", &lines);
-        if (ans != 0) return "";
-        
-        /* Still couldn't pick anything? Error! */
-        if (lines.size() == 0) return "";
-    }
-    
-    /* Process interfaces */
-    ifs = tokenizeList( &lines, ':' );
-    for (vector< map<string, string> >::iterator i = ifs.begin(); i != ifs.end(); i++) {
-        map<string, string> iface = *i;
-        ifName = iface["Name"];
-        /*
-        if (iface["DHCP"].compare("Disabled")) {
-            ans = this->exec("VBoxManage dhcpserver modify --ifname "+ifName+" --enable", NULL);
-            if (ans != 0) return NULL;
-        }
-        */
-        break;
-    }
-    
-    /* Got my interface */
-    return ifName;
-};
-
-/**
  * Create or fetch the UUID of the VM with the given name
  */
-int Virtualbox::getMachineUUID( std::string mname, std::string * ans_uuid ) {
+int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid ) {
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
     string secret, name, uuid;
     
     /* List the running VMs in the system */
-    int ans = this->exec("list vms", &lines);
-    if (ans != 0) return HVE_QUERY_ERROR;
+    int ans = this->wrapExec("list vms", &lines);
+    if (ans != 0) {
+        return HVE_QUERY_ERROR;
+    }
     
     /* Tokenize */
     toks = tokenize( &lines, '{' );
@@ -688,7 +579,7 @@ int Virtualbox::getMachineUUID( std::string mname, std::string * ans_uuid ) {
         << " --ostype Linux26_64"
         << " --register";
     
-    ans = this->exec(args.str(), &lines);
+    ans = this->wrapExec(args.str(), &lines);
     if (ans != 0) return HVE_CREATE_ERROR;
     
     /* Parse output */
@@ -702,7 +593,7 @@ int Virtualbox::getMachineUUID( std::string mname, std::string * ans_uuid ) {
         << " --name "       << "IDE"
         << " --add "        << "ide";
     
-    ans = this->exec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL);
     if (ans != 0) return HVE_MODIFY_ERROR;
 
     /* (3b) Attach a SATA controller */
@@ -712,13 +603,217 @@ int Virtualbox::getMachineUUID( std::string mname, std::string * ans_uuid ) {
         << " --name "       << "SATA"
         << " --add "        << "sata";
     
-    ans = this->exec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL);
     if (ans != 0) return HVE_MODIFY_ERROR;
     
     /* OK */
     *ans_uuid = uuid;
     return 0;
 }
+
+/**
+ * Resume VM
+ */
+int VBoxSession::resume() {
+    int ans;
+    
+    /* Validate state */
+    if (this->state != STATE_PAUSED) return HVE_INVALID_STATE;
+    
+    /* Resume VM */
+    ans = this->controlVM("resume");
+    this->state = STATE_STARTED;
+    return ans;
+}
+
+/**
+ * Pause VM
+ */
+int VBoxSession::pause() {
+    int ans; 
+    
+    /* Validate state */
+    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
+
+    /* Pause VM */
+    ans = this->controlVM("pause");
+    this->state = STATE_PAUSED;
+    return ans;
+}
+
+/**
+ * Reset VM
+ */
+int VBoxSession::reset() {
+    
+    /* Validate state */
+    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
+    
+    /* Reset VM */
+    return this->controlVM( "reset" );
+}
+
+/**
+ * Stop VM
+ */
+int VBoxSession::stop() {
+    int ans;
+    
+    /* Validate state */
+    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
+    
+    /* Stop VM */
+    ans = this->controlVM( "poweroff" );
+    this->state = STATE_OPEN;
+    return ans;
+    
+}
+
+/**
+ * Set execution cap
+ */
+int VBoxSession::setExecutionCap(int cap) {
+    
+    /* Validate state */
+    if ((this->state != STATE_STARTED) && (this->state != STATE_OPEN)) return HVE_INVALID_STATE;
+
+    ostringstream os;
+    os << "cpuexecutioncap " << cap;
+    this->executionCap = cap;
+    this->controlVM( os.str());
+    return 0;
+}
+
+/**
+ * Ensure the existance and return the name of the host-only adapter in the system
+ */
+std::string VBoxSession::getHostOnlyAdapter() {
+
+    vector<string> lines;
+    vector< map<string, string> > ifs;
+    string ifName;
+    
+    /* Check if we already have host-only interfaces */
+    int ans = this->wrapExec("list hostonlyifs", &lines);
+    if (ans != 0) return "";
+    
+    /* Check if there is really nothing */
+    if (lines.size() == 0) {
+        ans = this->wrapExec("hostonlyif create", NULL);
+        if (ans != 0) return "";
+    
+        /* Repeat check */
+        ans = this->wrapExec("list hostonlyifs", &lines);
+        if (ans != 0) return "";
+        
+        /* Still couldn't pick anything? Error! */
+        if (lines.size() == 0) return "";
+    }
+    
+    /* Process interfaces */
+    ifs = tokenizeList( &lines, ':' );
+    for (vector< map<string, string> >::iterator i = ifs.begin(); i != ifs.end(); i++) {
+        map<string, string> iface = *i;
+        ifName = iface["Name"];
+        /*
+        if (iface["DHCP"].compare("Disabled")) {
+            ans = this->wrapExec("VBoxManage dhcpserver modify --ifname "+ifName+" --enable", NULL);
+            if (ans != 0) return NULL;
+        }
+        */
+        break;
+    }
+    
+    /* Got my interface */
+    return ifName;
+};
+
+/**
+ * Return a property from the VirtualBox guest
+ */
+std::string VBoxSession::getProperty( std::string name ) { 
+    vector<string> lines;
+    string value;
+    
+    /* Invoke property query */
+    int ans = this->wrapExec("guestproperty get \""+this->uuid+"\" \""+name+"\"", &lines);
+    if (ans != 0) return "";
+    
+    /* Process response */
+    value = lines[0];
+    if (value.substr(0,6).compare("Value:") == 0) {
+        return value.substr(7);
+    } else {
+        return "";
+    }
+    
+}
+
+/**
+ * Set a property to the VirtualBox guest
+ */
+int VBoxSession::setProperty( std::string name, std::string value ) { 
+    vector<string> lines;
+    
+    /* Perform property update */
+    int ans = this->wrapExec("guestproperty set \""+this->uuid+"\" \""+name+"\" \""+value+"\"", &lines);
+    if (ans != 0) return HVE_QUERY_ERROR;
+    return 0;
+    
+}
+
+/**
+ * Send a controlVM something
+ */
+int VBoxSession::controlVM( std::string how ) {
+    int ans = this->wrapExec("controlvm \""+this->uuid+"\" "+how, NULL);
+    if (ans != 0) return HVE_CONTROL_ERROR;
+    return 0;
+}
+
+/**
+ * Start the Virtual Machine
+ */
+int VBoxSession::startVM() {
+    int ans = this->wrapExec("startvm \""+this->uuid+"\" --type headless", NULL);
+    if (ans != 0) return HVE_CONTROL_ERROR;
+    return 0;
+}
+
+/** 
+ * Return virtual machine information
+ */
+map<string, string> VBoxSession::getMachineInfo() {
+    vector<string> lines;
+    map<string, string> dat;
+    
+    /* Perform property update */
+    int ans = this->wrapExec("showvminfo \""+this->uuid+"\"", &lines);
+    if (ans != 0) return dat;
+    
+    /* Tokenize response */
+    return tokenize( &lines, ':' );
+};
+
+/** =========================================== **\
+            Virtualbox Implementation
+\** =========================================== **/
+
+/** 
+ * Return virtual machine information
+ */
+map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
+    vector<string> lines;
+    map<string, string> dat;
+    
+    /* Perform property update */
+    int ans = this->exec("showvminfo \""+uuid+"\"", &lines);
+    if (ans != 0) return dat;
+    
+    /* Tokenize response */
+    return tokenize( &lines, ':' );
+};
+
 
 /**
  * Return a property from the VirtualBox guest
@@ -740,52 +835,6 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
     }
     
 }
-
-/**
- * Set a property to the VirtualBox guest
- */
-int Virtualbox::setProperty( std::string uuid, std::string name, std::string value ) {
-    vector<string> lines;
-    
-    /* Perform property update */
-    int ans = this->exec("guestproperty set \""+uuid+"\" \""+name+"\" \""+value+"\"", &lines);
-    if (ans != 0) return HVE_QUERY_ERROR;
-    return 0;
-    
-}
-
-/**
- * Send a controlVM something
- */
-int Virtualbox::controlVM( std::string uuid, std::string how ) {
-    int ans = this->exec("controlvm \""+uuid+"\" "+how, NULL);
-    if (ans != 0) return HVE_CONTROL_ERROR;
-    return 0;
-}
-
-/**
- * Start the Virtual Machine
- */
-int Virtualbox::startVM( std::string uuid ) {
-    int ans = this->exec("startvm \""+uuid+"\" --type headless", NULL);
-    if (ans != 0) return HVE_CONTROL_ERROR;
-    return 0;
-}
-
-/** 
- * Return virtual machine information
- */
-map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
-    vector<string> lines;
-    map<string, string> dat;
-    
-    /* Perform property update */
-    int ans = this->exec("showvminfo \""+uuid+"\"", &lines);
-    if (ans != 0) return dat;
-    
-    /* Tokenize response */
-    return tokenize( &lines, ':' );
-};
 
 /**
  * Return Virtualbox sessions instead of classic

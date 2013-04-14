@@ -77,13 +77,13 @@ public:
     HVSession() {
         this->onProgress = NULL;
         this->onOpen = NULL;
-        this->onOpenError = NULL;
         this->onStart = NULL;
-        this->onStartError = NULL;
         this->onClose = NULL;
+        this->onError = NULL;
         this->onLive = NULL;
         this->onDead = NULL;
         this->onStop = NULL;
+        this->onDebug = NULL;
     };
     
     std::string             ip;
@@ -112,10 +112,10 @@ public:
 
     void *                  cbObject;
     void (*onProgress)      (int, int, std::string, void *);
+    void (*onError)         (std::string, int, std::string, void *);
+    void (*onDebug)         (std::string, void *);
     void (*onOpen)          (void *);
-    void (*onOpenError)     (std::string, int, void *);
     void (*onStart)         (void *);
-    void (*onStartError)    (std::string, int, void *);
     void (*onStop)          (void *);
     void (*onClose )        (void *);
     void (*onLive )         (void *);
