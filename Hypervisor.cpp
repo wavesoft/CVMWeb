@@ -270,49 +270,54 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename ) {
  */
 int Hypervisor::exec( string args, vector<string> * stdout ) {
 
-    string cmdline( this->hvBinary );
-    cmdline += " " + args;
-
-
-    #ifdef _WIN32
-    
-    // TODO: Implement this
-    
-    #else
-    FILE *fp;
+    int ret;
     char data[1035];
-    string rawStdout = "";
-    
-    /* Concat multiple */
     string cmdline( this->hvBinary );
+    string item;
+    string rawStdout = "";
+    FILE *fp;
+
+    /* Build cmdline */
     cmdline += " " + args;
 
-    /* Open the command for reading. */
-    fp = popen(cmdline.c_str(), "r");
-    if (fp == NULL) {
-      return NULL;
-    }
+    /* Open process and red contents using the POSIX pipe interface */
+    #ifdef _WIN32
+        fp = _popen(cmdline.c_str(), "r");
+    #else
+        fp = popen(cmdline.c_str(), "r");
+    #endif
+
+    /* Check for error */
+    if (fp == NULL) return HVE_IO_ERROR;
 
     /* Read the output a line at a time - output it. */
     if (stdout != NULL) {
+        
+        /* Read to buffer */
         while (fgets(data, sizeof(data)-1, fp) != NULL) {
             rawStdout += data;
         }
         
-        /* Parse output into stream */
+        /* Pass output into an input stream */
         istringstream ss(rawStdout);
-        string item;
 
-        /* Split new lines in the vector */
+        /* Split new lines and store them in the vector */
         stdout->clear();
         while (getline(ss, item)) {
             stdout->push_back(item);
         }
+        
     }
 
     /* close */
-    return pclose(fp);
+    #ifdef _WIN32
+        ret = _pclose(fp);
+    #else
+        ret = pclose(fp);
     #endif
+
+    /* Return exit code */
+    return ret;
 }
 
 /**
