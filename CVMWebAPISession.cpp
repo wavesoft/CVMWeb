@@ -203,13 +203,13 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     }
 }
 
-void CVMWebAPISession::setExecutionCap(int cap) {
-    this->session->setExecutionCap( cap );
+int CVMWebAPISession::setExecutionCap(int cap) {
+    return this->session->setExecutionCap( cap );
 }
 
-void CVMWebAPISession::setProperty( const std::string& name, const std::string& value ) {
-    if (name.compare("web-secret") == 0) return;
-    this->session->setProperty( name, value );
+int CVMWebAPISession::setProperty( const std::string& name, const std::string& value ) {
+    if (name.compare("web-secret") == 0) return HVE_ACCESS_DENIED;
+    return this->session->setProperty( name, value );
 }
 
 std::string CVMWebAPISession::getProperty( const std::string& name ) {

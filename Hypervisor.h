@@ -57,6 +57,7 @@
 #define HVE_EXTERNAL_ERROR      -7
 #define HVE_INVALID_STATE       -8
 #define HVE_NOT_FOUND           -9
+#define HVE_ACCESS_DENIED       -10
 #define HVE_NOT_IMPLEMENTED     -100
 
 /* Session states */

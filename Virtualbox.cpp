@@ -675,15 +675,20 @@ int VBoxSession::stop() {
  * Set execution cap
  */
 int VBoxSession::setExecutionCap(int cap) {
+    ostringstream os;
+    int ans;
     
     /* Validate state */
     if ((this->state != STATE_STARTED) && (this->state != STATE_OPEN)) return HVE_INVALID_STATE;
 
-    ostringstream os;
     os << "cpuexecutioncap " << cap;
-    this->executionCap = cap;
-    this->controlVM( os.str());
-    return 0;
+    ans = this->controlVM( os.str());
+    if (ans == 0) {
+        this->executionCap = cap;
+        return cap;
+    } else {
+        return ans; /* Failed */
+    }
 }
 
 /**
@@ -759,7 +764,7 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
     
     /* Perform property update */
     int ans = this->wrapExec("guestproperty set "+this->uuid+" \""+name+"\" \""+value+"\"", &lines);
-    if (ans != 0) return HVE_QUERY_ERROR;
+    if (ans != 0) return HVE_MODIFY_ERROR;
     return 0;
     
 }

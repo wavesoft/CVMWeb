@@ -121,8 +121,8 @@ public:
     int stop();
     int open( const FB::JSObjectPtr &o );
     int start( const FB::variant& cfg );
-    void setExecutionCap(int cap);
-    void setProperty( const std::string& name, const std::string& value );
+    int setExecutionCap(int cap);
+    int setProperty( const std::string& name, const std::string& value );
     std::string getProperty( const std::string& name );
     
     // Read-only parameters

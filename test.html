@@ -229,6 +229,16 @@
 			}
 		}
 		
+		function setProperty(propName, propValue) {
+			if (session.setProperty(propName, propValue) != 0) {
+				alert('Unable to set property');
+			}
+		}
+		
+		function getProperty(propName) {
+			return session.getProperty(propName);
+		}
+		
 		///////////////////////////////////////////////////
 		// 6) When you are done, don't forget to close your
 		//    session. This will also erase the VM and it's
@@ -251,11 +261,12 @@
 		#hv {
 			color: #FF0000;
 		}
-		#tbl-request, #tbl-open, #tbl-run {
+		#tbl-request, #tbl-open, #tbl-run > table {
 			border: solid 1px #333;
 			background: #CCF;
 			border-radius: 10px;
 			padding: 8px;
+			margin-bottom: 8px;
 		}
 		</style>
 	</head>
@@ -308,8 +319,8 @@
 						</tr>
 					</table>
 				</td>
-				<td valign="top">
-					<table id="tbl-run" style="visibility: hidden">
+				<td valign="top" id="tbl-run" style="visibility: hidden">
+					<table>
 						<tr>
 							<td align="right">User-Data:</td>
 							<td><textarea id="user-data" rows="4" cols="30">[cernvm]
@@ -328,6 +339,22 @@ users=user:users:s3cret
 						<tr>
 							<td colspan="2" align="center">
 								<input type="button" value="Close Session" id="session-start" onclick="closeSession();" />
+							</td>
+						</tr>
+					</table>
+					<table>
+						<tr>
+							<td align="right">Property:</td>
+							<td><input id="prop-name" value="1024" type="text" /> Mb</td>
+						</tr>
+						<tr>
+							<td align="right">Value:</td>
+							<td><input id="prop-value" value="1024" type="text" /> Mb</td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center">
+								<input type="button" value="Get Property" onclick="_sval('prop-value', getProperty(_val('prop-name')));" />
+								<input type="button" value="Set Property" onclick="setProperty(_val('prop-name'), _val('prop-value'));" />
 							</td>
 						</tr>
 					</table>
