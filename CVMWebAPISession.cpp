@@ -75,6 +75,7 @@ int CVMWebAPISession::close(){
     /* Validate state */
     if ((this->session->state != STATE_OPEN) && 
         (this->session->state != STATE_STARTED) && 
+        (this->session->state != STATE_PAUSED) &&
         (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));

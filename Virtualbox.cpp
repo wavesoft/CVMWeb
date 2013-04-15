@@ -157,6 +157,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     if (ans != 0) {
         this->state = STATE_ERROR;
         return ans;
+    } else {
+        this->uuid = uuid;
     }
     
     /* Detect the host-only adapter */
@@ -306,7 +308,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --port "       << "1"
             << " --device "     << "0"
             << " --type "       << "dvddrive"
-            << " --setuuid "    << "\"\"" 
             << " --medium "     << "\"" << vmIso << "\"";
     
         if (this->onProgress!=NULL) (this->onProgress)(10, 11, "Attaching CD-ROM", this->cbObject);
@@ -325,7 +326,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     if (this->onProgress!=NULL) (this->onProgress)(11, 11, "Completed", this->cbObject);
     if (this->onOpen!=NULL) (this->onOpen)(this->cbObject);
     this->state = STATE_OPEN;
-    this->uuid = uuid;
     
     return HVE_OK;
 
@@ -404,7 +404,6 @@ int VBoxSession::start( std::string userData ) {
         << " --port "       << "1"
         << " --device "     << "1"
         << " --type "       << "dvddrive"
-        << " --setuuid "    << "\"\"" 
         << " --medium "     << "\"" << vmContextISO << "\"";
 
     if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
@@ -417,7 +416,7 @@ int VBoxSession::start( std::string userData ) {
     
     /* Start VM */
     if (this->onProgress!=NULL) (this->onProgress)(6, 7, "Starting VM", this->cbObject);
-    ans = this->wrapExec("startvm \"" + this->uuid + "\" --type headless", NULL);
+    ans = this->wrapExec("startvm " + this->uuid + " --type headless", NULL);
     cout << "Start VM=" << ans << "\n";
     if (ans != 0) {
         this->state = STATE_OPEN;
@@ -440,7 +439,10 @@ int VBoxSession::close() {
     int ans;
 
     /* Validate state */
-    if ((this->state != STATE_OPEN) && (this->state != STATE_STARTED) && (this->state != STATE_ERROR)) return HVE_INVALID_STATE;
+    if ((this->state != STATE_OPEN) && 
+        (this->state != STATE_STARTED) && 
+        (this->state != STATE_PAUSED) &&
+        (this->state != STATE_ERROR)) return HVE_INVALID_STATE;
 
     /* Stop the VM if it's running (we don't care about the warnings) */
     if (this->onProgress!=NULL) (this->onProgress)(1, 9, "Shutting down the VM", this->cbObject);
@@ -529,7 +531,7 @@ int VBoxSession::close() {
     
     /* Unregister and delete VM */
     if (this->onProgress!=NULL) (this->onProgress)(8, 9, "Deleting VM", this->cbObject);
-    ans = this->wrapExec("unregistervm \"" + this->uuid + "\" --delete", NULL);
+    ans = this->wrapExec("unregistervm " + this->uuid + " --delete", NULL);
     cout << "Unregister VM=" << ans << "\n";
     if (ans != 0) {
         this->state = STATE_ERROR;
@@ -567,7 +569,7 @@ int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid ) {
         
         /* Compare name */
         if (name.compare(mname) == 0)  {
-            *ans_uuid = uuid;
+            *ans_uuid = "{" + uuid + "}";
             return 0;
         }
     }
@@ -607,7 +609,7 @@ int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid ) {
     if (ans != 0) return HVE_MODIFY_ERROR;
     
     /* OK */
-    *ans_uuid = uuid;
+    *ans_uuid = "{" + uuid + "}";
     return 0;
 }
 
@@ -736,7 +738,7 @@ std::string VBoxSession::getProperty( std::string name ) {
     string value;
     
     /* Invoke property query */
-    int ans = this->wrapExec("guestproperty get \""+this->uuid+"\" \""+name+"\"", &lines);
+    int ans = this->wrapExec("guestproperty get "+this->uuid+" \""+name+"\"", &lines);
     if (ans != 0) return "";
     
     /* Process response */
@@ -756,7 +758,7 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
     vector<string> lines;
     
     /* Perform property update */
-    int ans = this->wrapExec("guestproperty set \""+this->uuid+"\" \""+name+"\" \""+value+"\"", &lines);
+    int ans = this->wrapExec("guestproperty set "+this->uuid+" \""+name+"\" \""+value+"\"", &lines);
     if (ans != 0) return HVE_QUERY_ERROR;
     return 0;
     
@@ -766,7 +768,7 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
  * Send a controlVM something
  */
 int VBoxSession::controlVM( std::string how ) {
-    int ans = this->wrapExec("controlvm \""+this->uuid+"\" "+how, NULL);
+    int ans = this->wrapExec("controlvm "+this->uuid+" "+how, NULL);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
 }
@@ -775,7 +777,7 @@ int VBoxSession::controlVM( std::string how ) {
  * Start the Virtual Machine
  */
 int VBoxSession::startVM() {
-    int ans = this->wrapExec("startvm \""+this->uuid+"\" --type headless", NULL);
+    int ans = this->wrapExec("startvm "+this->uuid+" --type headless", NULL);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
 }
@@ -788,7 +790,7 @@ map<string, string> VBoxSession::getMachineInfo() {
     map<string, string> dat;
     
     /* Perform property update */
-    int ans = this->wrapExec("showvminfo \""+this->uuid+"\"", &lines);
+    int ans = this->wrapExec("showvminfo "+this->uuid, &lines);
     if (ans != 0) return dat;
     
     /* Tokenize response */
@@ -807,7 +809,7 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     map<string, string> dat;
     
     /* Perform property update */
-    int ans = this->exec("showvminfo \""+uuid+"\"", &lines);
+    int ans = this->exec("showvminfo "+uuid, &lines);
     if (ans != 0) return dat;
     
     /* Tokenize response */
@@ -823,7 +825,7 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
     string value;
     
     /* Invoke property query */
-    int ans = this->exec("guestproperty get \""+uuid+"\" \""+name+"\"", &lines);
+    int ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines);
     if (ans != 0) return "";
     
     /* Process response */
@@ -881,7 +883,7 @@ int Virtualbox::loadSessions() {
             
             /* Create a populate session object */
             HVSession * session = this->allocateSession( name, secret );
-            ((VBoxSession*)session)->uuid = uuid;
+            ((VBoxSession*)session)->uuid = "{" + uuid + "}";
             
             /* Collect details */
             map<string, string> info = this->getMachineInfo( uuid );
