@@ -269,6 +269,11 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename ) {
  * Cross-platform exec and return for the hypervisor control binary
  */
 int Hypervisor::exec( string args, vector<string> * stdout ) {
+
+    string cmdline( this->hvBinary );
+    cmdline += " " + args;
+
+
     #ifdef _WIN32
     
     // TODO: Implement this

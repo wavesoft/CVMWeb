@@ -59,6 +59,8 @@
 			session = core.requestSession( name, key );
 			if (session === false) {
 				alert('Your session key is invalid!');
+				return;
+				
 			} else {
 				_vis('tbl-open', true);
 				_dis("session-name", true);
