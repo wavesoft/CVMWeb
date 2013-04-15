@@ -173,15 +173,18 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     args.str("");
     args << "modifyvm "
         << uuid
-        << " --cpus "         << cpus
-        << " --memory "       << memory
-        << " --vram "         << "32"
-        << " --acpi "         << "on"
-        << " --ioapic "       << "on"
-        << " --boot1 "        << "dvd" << " --boot2 " << "none" << " --boot3 " << "none" << " --boot4 " << "none"
-        << " --nic1 "         << "nat"
-        << " --natdnsproxy1 " << "on"
-        << " --nic2 "         << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
+        << " --cpus "                   << cpus
+        << " --memory "                 << memory
+        << " --vram "                   << "32"
+        << " --acpi "                   << "on"
+        << " --ioapic "                 << "on"
+        << " --boot1 "                  << "dvd" 
+        << " --boot2 "                  << "none" 
+        << " --boot3 "                  << "none" 
+        << " --boot4 "                  << "none"
+        << " --nic1 "                   << "nat"
+        << " --natdnshostresolver1 "    << "on"
+        << " --nic2 "                   << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
     
     if (this->onProgress!=NULL) (this->onProgress)(3, 11, "Setting up VM", this->cbObject);
     ans = this->wrapExec(args.str(), NULL);
