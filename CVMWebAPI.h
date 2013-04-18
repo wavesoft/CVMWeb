@@ -34,6 +34,11 @@
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI
 
+#define CVME_OK                 0
+#define CVME_ACCESS_DENIED      -10 /* Same to HVE_NOT_ALLOWED */
+#define CVME_UNSUPPORTED        -11 /* Same to HVE_NOT_SUPPORTED */
+#define CVME_PASSWORD_DENIED    -20
+
 class CVMWebAPI : public FB::JSAPIAuto
 {
 public:
@@ -52,11 +57,16 @@ public:
         m_plugin(plugin), m_host(host)
     {
         registerMethod("requestSession",    make_method(this, &CVMWebAPI::requestSession));
+        registerMethod("authenticate",      make_method(this, &CVMWebAPI::authenticate));
 
         // Read-only property
-        registerProperty("version", make_property(this, &CVMWebAPI::get_version));
-        registerProperty("hypervisorName", make_property(this, &CVMWebAPI::get_hv_name));
+        registerProperty("version",         make_property(this, &CVMWebAPI::get_version));
+        registerProperty("hypervisorName",  make_property(this, &CVMWebAPI::get_hv_name));
         registerProperty("hypervisorVersion", make_property(this, &CVMWebAPI::get_hv_version));
+        registerProperty("domain",          make_property(this, &CVMWebAPI::getDomainName));
+        
+        // Reset AuthType
+        this->m_authType = 0;
         
     }
 
@@ -78,28 +88,17 @@ public:
 
     // Methods
     FB::variant requestSession(const FB::variant& vm, const FB::variant& code);
+    std::string getDomainName();
+    int         authenticate( const std::string& key );
+    
+    // Forward proxy to browser's confirm
+    bool        confirm( std::string );
     
 private:
-    CVMWebWeakPtr m_plugin;
-    FB::BrowserHostPtr m_host;
+    CVMWebWeakPtr       m_plugin;
+    FB::BrowserHostPtr  m_host;
+    int                 m_authType;
 
 };
 
 #endif // H_CVMWebAPI
-
-
-/*** -- CODE BIN --
-        
-    // Read-write property
-    registerProperty("testString",
-                     make_property(this,
-                                   &CVMWebAPI::get_testString,
-                                   &CVMWebAPI::set_testString));
-
-    // Read/Write property ${PROPERTY.ident}
-    std::string get_testString();
-    void set_testString(const std::string& val);
-
-    std::string m_testString;
-
-****/

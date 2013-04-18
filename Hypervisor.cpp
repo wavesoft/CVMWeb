@@ -416,6 +416,26 @@ int Hypervisor::freeSession ( HVSession * session ) {
 }
 
 /**
+ * Check the status of the session. It returns the following values:
+ *  0 - Does not exist
+ *  1 - Exist and has a valid key
+ *  2 - Exists and has an invalid key
+ */
+int Hypervisor::sessionValidate ( std::string name, std::string key ) {
+    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSession* sess = *i;
+        if (sess->name.compare(name) == 0) {
+            if (sess->key.compare(key) == 0) { /* Check secret key */
+                return 1;
+            } else {
+                return 2;
+            }
+        }
+    }
+    return 0;
+}
+
+/**
  * Open or reuse a hypervisor session
  */
 HVSession * Hypervisor::sessionOpen( std::string name, std::string key ) { 

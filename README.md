@@ -156,7 +156,8 @@ the errors that can occur.
 	-7   External library / server error
 	-8   Not a valid operation for the current state
 	-9   Not found
-	-10	 Access denied
+	-10	 Not allowed
+	-11	 Not supported
 	-100 Function is not implemented
 
 # Appendix B - Events

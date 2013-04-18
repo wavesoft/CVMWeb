@@ -208,7 +208,7 @@ int CVMWebAPISession::setExecutionCap(int cap) {
 }
 
 int CVMWebAPISession::setProperty( const std::string& name, const std::string& value ) {
-    if (name.compare("web-secret") == 0) return HVE_ACCESS_DENIED;
+    if (name.compare("web-secret") == 0) return HVE_NOT_ALLOWED;
     return this->session->setProperty( name, value );
 }
 

@@ -57,7 +57,8 @@
 #define HVE_EXTERNAL_ERROR      -7
 #define HVE_INVALID_STATE       -8
 #define HVE_NOT_FOUND           -9
-#define HVE_ACCESS_DENIED       -10
+#define HVE_NOT_ALLOWED         -10
+#define HVE_NOT_SUPPORTED       -11
 #define HVE_NOT_IMPLEMENTED     -100
 
 /* Session states */
@@ -143,6 +144,7 @@ public:
     HVSession *             sessionOpen     ( std::string name, std::string key );
     HVSession *             sessionGet      ( int id );
     int                     sessionFree     ( int id );
+    int                     sessionValidate ( std::string name, std::string key );
 
     /* Overridable functions */
     virtual int             loadSessions    ( );

@@ -27,10 +27,15 @@
 #include "JSObject.h"
 #include "variant_list.h"
 #include "DOM/Document.h"
+#include "DOM/Window.h"
 #include "global/config.h"
+#include "URI.h"
 
 #include "CVMWebAPI.h"
 #include "CVMWebAPISession.h"
+
+#include "DialogManager.h"
+#include "DialogManagerMac.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWebPtr CVMWebAPI::getPlugin()
@@ -79,15 +84,85 @@ std::string CVMWebAPI::get_hv_version() {
     }
 }
 
+/**
+ * Grant access to the plugin API
+ */
+int CVMWebAPI::authenticate( const std::string& key ) {
+    this->m_authType = 1;
+    return HVE_OK;
+};
+
+/**
+ * Return the current domain name
+ */
+std::string CVMWebAPI::getDomainName() {
+    FB::URI loc = FB::URI::fromString(m_host->getDOMWindow()->getLocation());
+    return loc.domain;
+};
+
+/**
+ * Create and return a session object. 
+ */
 FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& secret) {
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
-        return false;
+        return CVME_UNSUPPORTED;
     } else {
+
+        /* Fetch info */
         std::string vmName = vm.cast<std::string>();
         std::string vmSecret = secret.cast<std::string>();
+        
+        /* Try to open the session */
+        int ans = p->hv->sessionValidate( vmName, vmSecret );
+        
+        /* Notify user that a new session will open */
+        if (ans == 0) {
+            std::string msg = "The website " + this->getDomainName() + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine. Do you want to allow it?";
+            if (!this->confirm(msg)) return CVME_ACCESS_DENIED;
+        
+        /* Notify invalid passwords */
+        } else if (ans == 2) {
+            return CVME_PASSWORD_DENIED;
+        }
+        
+        /* Open session */
         HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
-        if (session == NULL) return false;
+        if (session == NULL) return CVME_PASSWORD_DENIED;
         return boost::make_shared<CVMWebAPISession>(p, m_host, session);
     }
+}
+
+/**
+ * Show a confirmation dialog using browser's API
+ */
+bool CVMWebAPI::confirm( std::string msg ) {
+    
+    DialogManager * i = DialogManagerMac::get();
+    CVMWebPtr p = this->getPlugin();
+    return i->ConfirmDialog( m_host, p->GetWindow(), msg );;
+    
+    /*
+    // Retrieve a reference to the DOM Window
+    FB::DOM::WindowPtr window = m_host->getDOMWindow();
+    
+    // Check if the DOM Window has an alert property
+    if (window && window->getJSObject()->HasProperty("window")) {
+        
+        // Create a reference to alert
+        FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr>("window");
+        
+        // Make sure the function is valid native function and not a hack 
+        FB::variant f = obj->GetProperty("confirm");
+        FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
+        std::string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<std::string>();
+        obj->Invoke("alert", FB::variant_list_of( fType ));
+        
+        // Invoke alert with some text
+        return obj->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
+    } else {
+        return false;
+    }
+    */
+    
 }

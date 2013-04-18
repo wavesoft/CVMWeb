@@ -37,5 +37,12 @@ target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
     )
 
+# Include QT
+#find_package (Qt4)
+#include(${QT_USE_FILE})
+#add_definitions(${QT_DEFINITIONS})
+#include_directories(${QT_INCLUDE_DIRS})
+#target_link_libraries ( ${PROJECT_NAME} ${QT_LIBRARIES})
+
 #To create a DMG, include the following file
 #include(Mac/installer.cmake)

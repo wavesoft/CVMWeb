@@ -48,6 +48,12 @@
 				_dis("session-request", true);
 			} else {
 				_txt("hv", "Using " + core.hypervisorName + " v"+ core.hypervisorVersion +" (WebAPI v" + core.version + ")");
+				
+				//////////////////////////////////////////////////////
+				// 1.b) Authenticate in order to activate the plugin
+				//////////////////////////////////////////////////////
+				core.authenticate("PRIVATE KEY HERE");
+				
 			}
 		};
 		
@@ -57,10 +63,18 @@
 
 		function requestSession( name, key ) {
 			session = core.requestSession( name, key );
-			if (session === false) {
+			if (session == -20) {
 				alert('Your session key is invalid!');
 				return;
 				
+			} else if (session == -10) {
+				_txt( "state", "Access denied" );
+				return;
+
+			} else if (session == -11) {
+				_txt( "state", "Hypervisor not detected" );
+				return;
+
 			} else {
 				_vis('tbl-open', true);
 				_dis("session-name", true);
