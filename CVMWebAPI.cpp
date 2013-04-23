@@ -35,7 +35,10 @@
 #include "CVMWebAPISession.h"
 
 #include "DialogManager.h"
-#include "DialogManagerMac.h"
+
+#if defined(__APPLE__) && defined(__MACH__)
+#include "Mac/DialogManagerMac.h"
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWebPtr CVMWebAPI::getPlugin()

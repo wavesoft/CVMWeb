@@ -4,7 +4,7 @@
 #include <boost/noncopyable.hpp>
 #include <string>
  
-#include "DialogManager.h"
+#include "../DialogManager.h"
  
 class DialogManagerMac : public DialogManager
 {
