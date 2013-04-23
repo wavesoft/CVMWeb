@@ -28,6 +28,7 @@
 #include <iterator>
 #include <vector>
 
+#include "openssl/sha.h"
 #include "Hypervisor.h"
 #include "Virtualbox.h"
 #include "contextiso.h"
@@ -69,6 +70,129 @@ template <typename T> T ston( const string &Text ) {
 }
 
 /**
+ * Split the given line into a key and value using the delimited provided
+ */
+int getKV( string line, string * key, string * value, char delim, int offset ) {
+    int a = line.find( delim, offset );
+    if (a == string::npos) return 0;
+    *key = line.substr(offset, a-offset);
+    int b = a+1;
+    while ( ((line[b] == ' ') || (line[b] == '\t')) && (b<line.length())) b++;
+    *value = line.substr(b, string::npos);
+    return a;
+}
+
+/**
+ * Split lines from the given raw buffer
+ */
+void splitLines( string rawString, vector<string> * out ) {
+    
+    /* Pass output into an input stream */
+    istringstream ss( rawString );
+
+    /* Split new lines and store them in the vector */
+    string item;
+    out->clear();
+    while (getline(ss, item)) {
+        out->push_back(item);
+    }
+    
+}
+
+/**
+ * Tokenize a key-value like output from VBoxManage into an easy-to-use hashmap
+ */
+map<string, string> tokenize( vector<string> * lines, char delim ) {
+    map<string, string> ans;
+    string line, key, value;
+    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
+        line = *i;
+        if (line.find(delim) != string::npos) {
+            getKV(line, &key, &value, delim, 0);
+            if (ans.find(key) == ans.end()) {
+                ans[key] = value;
+            }
+        }
+    }
+    return ans;
+};
+
+/**
+ * Tokenize a list of repeating key-value groups
+ */
+vector< map<string, string> > tokenizeList( vector<string> * lines, char delim ) {
+    vector< map<string, string> > ans;
+    map<string, string> row;
+    string line, key, value;
+    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
+        line = *i;
+        if (line.find(delim) != string::npos) {
+            getKV(line, &key, &value, delim, 0);
+            row[key] = value;
+        } else if (line.length() == 0) { // Empty line -> List delimiter
+            ans.push_back(row);
+            row.clear();
+        }
+    }
+    return ans;
+};
+
+/**
+ * Return a temporary filename
+ */
+std::string getTmpFile( std::string suffix ) {
+    char * tmp = tmpnam(NULL);
+    string tmpFile = tmp;
+    tmpFile += suffix;
+    return tmpFile;
+}
+
+/**
+ * Cross-platform exec and return function
+ */
+int sysExec( string cmdline, vector<string> * stdout ) {
+    
+    int ret;
+    char data[1035];
+    string item;
+    string rawStdout = "";
+    FILE *fp;
+
+    /* Open process and red contents using the POSIX pipe interface */
+    #ifdef _WIN32
+        fp = _popen(cmdline.c_str(), "r");
+    #else
+        fp = popen(cmdline.c_str(), "r");
+    #endif
+
+    /* Check for error */
+    if (fp == NULL) return HVE_IO_ERROR;
+
+    /* Read the output a line at a time - output it. */
+    if (stdout != NULL) {
+        
+        /* Read to buffer */
+        while (fgets(data, sizeof(data)-1, fp) != NULL) {
+            rawStdout += data;
+        }
+        
+        /* Split lines into stdout */
+        splitLines( rawStdout, stdout );
+        
+    }
+
+    /* close */
+    #ifdef _WIN32
+        ret = _pclose(fp);
+    #else
+        ret = pclose(fp);
+    #endif
+
+    /* Return exit code */
+    return ret;
+}
+
+/**
  * Helper function for writing data
  */
 size_t __curl_write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
@@ -78,6 +202,47 @@ size_t __curl_write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 size_t __curl_write_string(void *contents, size_t size, size_t nmemb, void *userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
+}
+
+/**
+ * Sha256 from binary to hex
+ */
+void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {
+    int i = 0;
+    for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
+    }
+    outputBuffer[64] = 0;
+}
+
+/**
+ * OpenSSL 
+ */
+int sha256_file( string path, string * checksum ) {
+    
+    FILE *file = fopen(path.c_str(), "rb");
+    if(!file) return -534;
+
+    char outputBuffer[65];
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    const int bufSize = 32768;
+    unsigned char *buffer = (unsigned char *) malloc(bufSize);
+    int bytesRead = 0;
+    if(!buffer) return -1;
+    while((bytesRead = fread(buffer, 1, bufSize, file))) {
+        SHA256_Update(&sha256, buffer, bytesRead);
+    }
+    SHA256_Final(hash, &sha256);
+
+    __sha256_hash_string( hash, outputBuffer);
+    fclose(file);
+    free(buffer);
+    *checksum = outputBuffer;
+    
+    return 0;
+
 }
 
 /**
@@ -133,6 +298,8 @@ int downloadFile( std::string url, std::string target ) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_write_file);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
         res = curl_easy_perform(curl);
         /* always cleanup */
@@ -160,6 +327,8 @@ int downloadText( std::string url, std::string * buffer ) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_write_string);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
+        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
         res = curl_easy_perform(curl);
         /* always cleanup */
@@ -189,27 +358,20 @@ std::string hypervisorErrorStr( int error ) {
     if (error == -7) return "External error";
     if (error == -8) return "Not in a valid state";
     if (error == -9) return "Not found";
+    if (error == -10) return "Not found";
+    if (error == -11) return "Not allowed";
+    if (error == -12) return "Not supported";
+    if (error == -20) return "Password denied";
     if (error == -100) return "Not implemented";
     return "Unknown error";
 };
-
-
-/**
- * Return a temporary filename
- */
-std::string Hypervisor::getTmpFile( std::string suffix ) {
-    char * tmp = tmpnam(NULL);
-    string tmpFile = tmp;
-    tmpFile += suffix;
-    return tmpFile;
-}
 
 /**
  * Use LibcontextISO to create a cd-rom for this VM
  */
 int Hypervisor::buildContextISO ( std::string userData, std::string * filename ) {
     ofstream isoFile;
-    string iso = this->getTmpFile(".iso");
+    string iso = getTmpFile(".iso");
     
     const char * cData = userData.c_str();
     string ctxFileContents = base64_encode( cData, userData.length() );
@@ -269,55 +431,14 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename ) {
  * Cross-platform exec and return for the hypervisor control binary
  */
 int Hypervisor::exec( string args, vector<string> * stdout ) {
-
-    int ret;
-    char data[1035];
-    string cmdline( this->hvBinary );
-    string item;
-    string rawStdout = "";
-    FILE *fp;
-
+    
     /* Build cmdline */
+    string cmdline( this->hvBinary );
     cmdline += " " + args;
+    
+    /* Execute */
+    return sysExec( cmdline, stdout );
 
-    /* Open process and red contents using the POSIX pipe interface */
-    #ifdef _WIN32
-        fp = _popen(cmdline.c_str(), "r");
-    #else
-        fp = popen(cmdline.c_str(), "r");
-    #endif
-
-    /* Check for error */
-    if (fp == NULL) return HVE_IO_ERROR;
-
-    /* Read the output a line at a time - output it. */
-    if (stdout != NULL) {
-        
-        /* Read to buffer */
-        while (fgets(data, sizeof(data)-1, fp) != NULL) {
-            rawStdout += data;
-        }
-        
-        /* Pass output into an input stream */
-        istringstream ss(rawStdout);
-
-        /* Split new lines and store them in the vector */
-        stdout->clear();
-        while (getline(ss, item)) {
-            stdout->push_back(item);
-        }
-        
-    }
-
-    /* close */
-    #ifdef _WIN32
-        ret = _pclose(fp);
-    #else
-        ret = pclose(fp);
-    #endif
-
-    /* Return exit code */
-    return ret;
 }
 
 /**
@@ -588,4 +709,118 @@ Hypervisor * detectHypervisor() {
     
     /* No hypervisor found */
     return NULL;
+}
+
+/**
+ * Install hypervisor
+ */
+int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData ) {
+    
+    /**
+     * Contact the information point
+     */
+    string requestBuf;
+    cout << "INFO: Fetching data\n";
+    if (cbProgress!=NULL) (cbProgress)(1, 5, "Checking the appropriate hypervisor for your system", cbData);
+    int res = downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
+    if ( res != HVE_OK ) return res;
+    
+    /**
+     * Extract information
+     */
+    vector<string> lines;
+    splitLines( requestBuf, &lines );
+    map<string, string> data = tokenize( &lines, '=' );
+    
+    /**
+     * Pick the URLs to download from
+     */
+    #ifdef _WIN32
+    const string kDownloadUrl = "win";
+    const string kChecksum = "win-sha256";
+    const string kInstallerName = "win-installer";
+    #endif
+    #if defined(__APPLE__) && defined(__MACH__)
+    const string kDownloadUrl = "osx";
+    const string kChecksum = "osx-sha256";
+    const string kInstallerName = "osx-installer";
+    #endif
+    #ifdef __linux__
+    const string kDownloadUrl = "linux";
+    const string kChecksum = "linux-sha256";
+    const string kInstallerName = "linux-installer";
+    #endif
+    
+    /**
+     * Verify that the keys we are looking for exist
+     */
+    if (data.find( kDownloadUrl ) == data.end()) {
+        cout << "ERROR: No download URL data found\n";
+        return HVE_EXTERNAL_ERROR;
+    }
+    if (data.find( kChecksum ) == data.end()) {
+        cout << "ERROR: No checksum data found\n";
+        return HVE_EXTERNAL_ERROR;
+    }
+    if (data.find( kInstallerName ) == data.end()) {
+        cout << "ERROR: No installer program found\n";
+        return HVE_EXTERNAL_ERROR;
+    }
+    
+    /**
+     * Download
+     */
+    string dmgVirtualBox = getTmpFile( ".dmg" );
+    if (cbProgress!=NULL) (cbProgress)(2, 5, "Downloading hypervisor", cbData);
+    cout << "INFO: Downloading " << data[kDownloadUrl] << " to " << dmgVirtualBox << "\n";
+    res = downloadFile( data[kDownloadUrl], dmgVirtualBox );
+    cout << "    : Got " << res << "\n";
+    if ( res != HVE_OK ) return res;
+    
+    /**
+     * Validate checksum
+     */
+    string checksum;
+    sha256_file( dmgVirtualBox, &checksum );
+    if (cbProgress!=NULL) (cbProgress)(3, 5, "Validating download", cbData);
+    cout << "INFO: File checksum " << checksum << " <-> " << data[kChecksum] << "\n";
+    if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
+    
+    /**
+     * OS-Dependant installation process
+     */
+    #if defined(__APPLE__) && defined(__MACH__)
+    cout << "INFO: Attaching\n";
+    if (cbProgress!=NULL) (cbProgress)(3, 5, "Mounting hypervisor DMG disk", cbData);
+    res = sysExec("hdiutil attach " + dmgVirtualBox, &lines);
+    if (res != 0) {
+        remove( dmgVirtualBox.c_str() );
+        return HVE_EXTERNAL_ERROR;
+    }
+    string infoLine = lines.back();
+    string dskDev, dskVolume, extra;
+    getKV( infoLine, &dskDev, &extra, ' ', 0);
+    getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
+    cout << "Got disk '" << dskDev << "', volume: '" << dskVolume << "'\n";
+    
+    if (cbProgress!=NULL) (cbProgress)(4, 5, "Starting installer", cbData);
+    cout << "INFO: Installing using " << dskVolume << "/" << data[kInstallerName] << "\n";
+    res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
+    if (res != 0) {
+        cout << "INFO: Detaching\n";
+        res = sysExec("hdiutil detach " + dskDev, NULL);
+        remove( dmgVirtualBox.c_str() );
+        return HVE_EXTERNAL_ERROR;
+    }
+    cout << "INFO: Detaching\n";
+    if (cbProgress!=NULL) (cbProgress)(5, 5, "Cleaning-up", cbData);
+    res = sysExec("hdiutil detach " + dskDev, NULL);
+    remove( dmgVirtualBox.c_str() );
+    #endif
+    
+    /**
+     * Completed
+     */
+    return HVE_OK;
+    
 }

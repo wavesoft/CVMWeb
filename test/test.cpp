@@ -41,6 +41,8 @@ int main( int argc, char ** argv ) {
     } else {
         printf("No hypervisor found!\n");
     }
+    
+    installHypervisor( "1.0", NULL, NULL );
 
     return 0;
 };

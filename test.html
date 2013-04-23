@@ -58,6 +58,28 @@
 		};
 		
 		///////////////////////////////////////////////////
+		// 1b) If hypervisor os not found you have the ability
+		//     to install a new right away.
+		///////////////////////////////////////////////////
+		function installHypervisor() {
+			core.addEventListener('install', function() { // Installation completed
+				alert('Ready!');
+				document.location.reload(true);
+			});
+			core.addEventListener('installError', function(err, id) { // Installation failed
+				alert('Unable to install: '+err+'!');
+			});
+			core.addEventListener('installProgress', function(step, total, msg) { // Installation progress events
+				var perc = Math.round( 100 * step / total );
+				_txt( "state", msg + " ("+perc+"%)" );
+				window.console.log( "[install progress] "+perc+"% : "+ msg);
+			});
+			_txt("state", "Starting installation of the hypervisor. Please wait and follow the on-screen instructions.");
+			_dis("session-install", true);
+			core.installHypervisor();
+		}
+		
+		///////////////////////////////////////////////////
 		// 2) Request a computation session
 		///////////////////////////////////////////////////
 
@@ -308,7 +330,10 @@
 							<td><input id="session-key" type="text" /></td>
 						</tr>
 						<tr>
-							<td colspan="2" align="center"><input type="button" value="Request Session" id="session-request" onclick="requestSession(_val('session-name'), _val('session-key'));" /></td>
+							<td colspan="2" align="center">
+								<input type="button" value="Request Session" id="session-request" onclick="requestSession(_val('session-name'), _val('session-key'));" />
+								<input type="button" value="Install Hypervisor" id="session-install" onclick="installHypervisor();" />
+							</td>
 						</tr>
 					</table>
 				</td>

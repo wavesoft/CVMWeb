@@ -43,6 +43,7 @@
 #endif
 
 /* Hypervisor types */
+#define HV_NONE                 0
 #define HV_VIRTUALBOX           1
 
 /* Error messages */
@@ -59,6 +60,7 @@
 #define HVE_NOT_FOUND           -9
 #define HVE_NOT_ALLOWED         -10
 #define HVE_NOT_SUPPORTED       -11
+#define HVE_NOT_VALIDATED       -12
 #define HVE_NOT_IMPLEMENTED     -100
 
 /* Session states */
@@ -159,16 +161,27 @@ public:
     int                     cernVMCached    ( std::string version, std::string * filename );
     std::string             cernVMVersion   ( std::string filename );
     int                     buildContextISO ( std::string userData, std::string * filename );
-    std::string             getTmpFile      ( std::string suffix );
     
 private:
     int                     sessionID;
     
 };
 
-Hypervisor *                detectHypervisor        ();
-std::string                 hypervisorErrorStr      ( int error );
+/**
+ * Exposed functions
+ */
+Hypervisor *                    detectHypervisor    ();
+int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData );
+std::string                     hypervisorErrorStr  ( int error );
 
-template <typename T> T ston( const std::string &Text );
+/**
+ * Tool functions
+ */
+std::string                                         getTmpFile      ( std::string suffix );
+int                                                 getKV           ( std::string line, std::string * key, std::string * value, char delim, int offset );
+std::map<std::string, std::string>                  tokenize        ( std::vector<std::string> * lines, char delim );
+std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vector<std::string> * lines, char delim );
+template <typename T> T                             ston            ( const std::string &Text );
+int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdout );
 
 #endif /* end of include guard: HVENV_H */

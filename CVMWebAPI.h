@@ -58,6 +58,7 @@ public:
     {
         registerMethod("requestSession",    make_method(this, &CVMWebAPI::requestSession));
         registerMethod("authenticate",      make_method(this, &CVMWebAPI::authenticate));
+        registerMethod("installHypervisor", make_method(this, &CVMWebAPI::installHV));
 
         // Read-only property
         registerProperty("version",         make_property(this, &CVMWebAPI::get_version));
@@ -86,10 +87,20 @@ public:
     std::string get_hv_name();
     std::string get_hv_version();
 
+    // Threads
+    void thread_install( );
+
     // Methods
     FB::variant requestSession(const FB::variant& vm, const FB::variant& code);
     std::string getDomainName();
     int         authenticate( const std::string& key );
+    int         installHV();
+    bool        hasHypervisor();
+    
+    // Events
+    FB_JSAPI_EVENT(install,         0, ());
+    FB_JSAPI_EVENT(installError,    2, ( const std::string&, int ));
+    FB_JSAPI_EVENT(installProgress, 3, ( int, int, const std::string& ));
     
     // Forward proxy to browser's confirm
     bool        confirm( std::string );
@@ -98,7 +109,6 @@ private:
     CVMWebWeakPtr       m_plugin;
     FB::BrowserHostPtr  m_host;
     int                 m_authType;
-
 };
 
 #endif // H_CVMWebAPI

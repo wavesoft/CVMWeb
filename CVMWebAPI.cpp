@@ -54,6 +54,21 @@ CVMWebPtr CVMWebAPI::getPlugin()
     return plugin;
 }
 
+/**
+ * Forward progress events
+ */
+void __fwProgress( int step, int total, std::string msg, void * ptr ) {
+    CVMWebAPI * self = (CVMWebAPI * ) ptr;
+    self->fire_installProgress( step, total, msg );
+}
+
+/**
+ * Check if a hypervisor was detected
+ */
+bool CVMWebAPI::hasHypervisor() {
+    CVMWebPtr p = this->getPlugin();
+    return (p->hv->type != 0);
+};
 
 // Read-only property version
 std::string CVMWebAPI::get_version() {
@@ -134,13 +149,44 @@ FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& 
 }
 
 /**
+ * Hypervisor installation thread
+ */
+void CVMWebAPI::thread_install() {
+    CVMWebPtr p = this->getPlugin();
+    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this );
+    if (ans == HVE_OK) {
+        this->fire_install();
+    } else {
+        this->fire_installError(hypervisorErrorStr(ans), ans);
+    }
+};
+
+/**
+ * Request a hypervisor installation
+ */
+int CVMWebAPI::installHV( ) {
+    
+    /* Validate plugin */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) {
+        return CVME_UNSUPPORTED;
+    }
+    
+    /* Start installation thread */
+    boost::thread t(boost::bind(&CVMWebAPI::thread_install, this ));
+    return HVE_SHEDULED;
+};
+
+/**
  * Show a confirmation dialog using browser's API
  */
 bool CVMWebAPI::confirm( std::string msg ) {
     
+    #if defined(__APPLE__) && defined(__MACH__)
     DialogManager * i = DialogManagerMac::get();
     CVMWebPtr p = this->getPlugin();
-    return i->ConfirmDialog( m_host, p->GetWindow(), msg );;
+    return i->ConfirmDialog( m_host, p->GetWindow(), msg );
+    #endif
     
     /*
     // Retrieve a reference to the DOM Window

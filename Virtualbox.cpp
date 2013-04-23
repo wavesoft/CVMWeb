@@ -45,57 +45,6 @@ void mapDump(map<string, string> m) {
     }
 }
 
-
-/**
- * Split the given line into a key and value using the delimited provided
- */
-int getKV( string line, string * key, string * value, char delim, int offset ) {
-    int a = line.find( delim, offset );
-    *key = line.substr(offset, a-offset);
-    int b = a+1;
-    while ( ((line[b] == ' ') || (line[b] == '\t')) && (b<line.length())) b++;
-    *value = line.substr(b, string::npos);
-    return a;
-}
-
-/**
- * Tokenize a key-value like output from VBoxManage into an easy-to-use hashmap
- */
-map<string, string> tokenize( vector<string> * lines, char delim ) {
-    map<string, string> ans;
-    string line, key, value;
-    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
-        line = *i;
-        if (line.find(delim) != string::npos) {
-            getKV(line, &key, &value, delim, 0);
-            if (ans.find(key) == ans.end()) {
-                ans[key] = value;
-            }
-        }
-    }
-    return ans;
-};
-
-/**
- * Tokenize a list of repeating key-value groups
- */
-vector< map<string, string> > tokenizeList( vector<string> * lines, char delim ) {
-    vector< map<string, string> > ans;
-    map<string, string> row;
-    string line, key, value;
-    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
-        line = *i;
-        if (line.find(delim) != string::npos) {
-            getKV(line, &key, &value, delim, 0);
-            row[key] = value;
-        } else if (line.length() == 0) { // Empty line -> List delimiter
-            ans.push_back(row);
-            row.clear();
-        }
-    }
-    return ans;
-};
-
 /** =========================================== **\
             VBoxSession Implementation
 \** =========================================== **/
