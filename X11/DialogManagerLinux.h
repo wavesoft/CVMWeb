@@ -1,20 +1,20 @@
-#ifndef DialogManagerMac_h__
-#define DialogManagerMac_h__
+#ifndef DialogManagerLinux_h__
+#define DialogManagerLinux_h__
  
 #include <boost/noncopyable.hpp>
 #include <string>
  
 #include "../DialogManager.h"
  
-class DialogManagerMac : public DialogManager
+class DialogManagerLinux : public DialogManager
 {
 public:
     void OpenFolderDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, const PathCallback& cb);
     bool ConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message);
  
 protected:
-    DialogManagerMac() {};
-    ~DialogManagerMac() {};
+    DialogManagerWin() {};
+    ~DialogManagerWin() {};
     friend class DialogManager;
 };
-#endif // DialogManagerMac_h__
+#endif // DialogManagerLinux_h__
