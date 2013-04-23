@@ -191,7 +191,7 @@ bool CVMWebAPI::confirm( std::string msg ) {
     return i->ConfirmDialog( m_host, p->GetWindow(), msg );
     #endif
     
-    /*
+    #ifdef __linux__
     // Retrieve a reference to the DOM Window
     FB::DOM::WindowPtr window = m_host->getDOMWindow();
     
@@ -212,6 +212,6 @@ bool CVMWebAPI::confirm( std::string msg ) {
     } else {
         return false;
     }
-    */
+    #endif
     
 }
