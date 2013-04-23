@@ -16,7 +16,7 @@ DialogManager* DialogManager::get()
     return &inst;
 }
 
-bool ConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
+bool DialogManagerWin::ConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
     FB::PluginWindowWin* wndWin = dynamic_cast<FB::PluginWindowWin*>(win);
     FB::PluginWindowlessWin* wndlessWin = dynamic_cast<FB::PluginWindowlessWin*>(win);
  
