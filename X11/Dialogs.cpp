@@ -1,19 +1,13 @@
 
 #include <string>
 #include <gtk/gtk.h>
-#include "DialogManagerWin.h"
+#include "../Dialogs.h"
 
 typedef struct {
     int type;
     int result;
     const char * text;
 } DialogData;
-
-DialogManager* DialogManager::get()
-{
-    static DialogManagerLinux inst;
-    return &inst;
-}
 
 static gboolean display_dialog( gpointer user_data ) {
     DialogData *dialog_data = user_data;
@@ -37,10 +31,11 @@ static gboolean display_dialog( gpointer user_data ) {
     return FALSE;
 }
 
-bool DialogManagerLinux::ConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
+bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
     DialogData dialog_data;
     dialog_data.type = type;
     dialog_data.text = (const char * ) message.c_str();
     gtk_idle_add(display_dialog, &dialog_data);
     gtk_main();
+    return (dialog_data.result == GTK_RESPONSE_OK);
 }

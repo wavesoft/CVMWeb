@@ -34,11 +34,7 @@
 #include "CVMWebAPI.h"
 #include "CVMWebAPISession.h"
 
-#include "DialogManager.h"
-
-#if defined(__APPLE__) && defined(__MACH__)
-#include "Mac/DialogManagerMac.h"
-#endif
+#include "Dialogs.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWebPtr CVMWebAPI::getPlugin()
@@ -169,15 +165,10 @@ void CVMWebAPI::thread_install() {
  */
 int CVMWebAPI::installHV( ) {
     
-    /* Validate plugin */
-    CVMWebPtr p = this->getPlugin();
-    if (p->hv == NULL) {
-        return CVME_UNSUPPORTED;
-    }
-    
     /* Start installation thread */
     boost::thread t(boost::bind(&CVMWebAPI::thread_install, this ));
     return HVE_SHEDULED;
+    
 };
 
 /**
@@ -185,13 +176,10 @@ int CVMWebAPI::installHV( ) {
  */
 bool CVMWebAPI::confirm( std::string msg ) {
     
-    #if defined(__APPLE__) && defined(__MACH__)
-    DialogManager * i = DialogManagerMac::get();
     CVMWebPtr p = this->getPlugin();
-    return i->ConfirmDialog( m_host, p->GetWindow(), msg );
-    #endif
-    
-    #ifdef __linux__
+    return CVMConfirmDialog( m_host, p->GetWindow(), msg );
+
+    #ifdef _WIN32
     // Retrieve a reference to the DOM Window
     FB::DOM::WindowPtr window = m_host->getDOMWindow();
     

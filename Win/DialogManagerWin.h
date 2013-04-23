@@ -9,7 +9,6 @@
 class DialogManagerWin : public DialogManager
 {
 public:
-    void OpenFolderDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, const PathCallback& cb);
     bool ConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message);
  
 protected:
