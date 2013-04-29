@@ -1,5 +1,5 @@
 
-# What is this
+# What is this?
 
 This is an NPAPI plugin for web browsers that enables real-time interaction with the CernVM guest OS. 
 This plugin identifies the hypervisors installed in the system and picks the most appropriate one to
@@ -40,8 +40,8 @@ You can always find the latest binary builds for your operating system in the *b
 
 ## Installing on Mac OSX
 
-Simply copy the plugin to your **Library/Internet Plug-Ins** directory. The plugin will be
-immediately available to all of your browsers.
+Copy the plugin from the **build/projects/CVMWeb/Debug** or **build/projects/CVMWeb/Release** directory to your 
+**Library/Internet Plug-Ins** directory. The plugin will be immediately available to all of your browsers.
 
 ## Installation on Windows
 
@@ -49,7 +49,8 @@ immediately available to all of your browsers.
 
 ## Installation on Linux
 
-*(Not yet available)*
+Copy the plugin from the **build/bin/CVMWeb** directory to your **~/.mozilla/plugins** directory. The plugin will be immediately 
+available to Firefox.
 
 # How to use the plugin
 
