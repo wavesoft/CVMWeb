@@ -6,21 +6,60 @@
 
 #include "Virtualbox.h"
 #include "Hypervisor.h"
+#include "ThinIPC.h"
 
 void logUpdates(std::string msg, int progress, void * o) {
     std::cout << "(" << progress << " %) " << msg << "\n";
 };
 
 int main( int argc, char ** argv ) {
+    ThinIPCMessage   msg;
+    char buf[512];
+    
+    // Initialize IPC
+    ThinIPCInitialize(); 
+    
+    /*
+    msg.writeString("Hello-world");
+    msg.writeString("I am god");
+    msg.writeInt(41412);
+    msg.writeInt(512);
+    
+    ThinIPCEndpoint ep(51301);
+    int dlen = ep.send( 51302, &msg );
+    std::cout << "Return = " << dlen << "\n";
+    */
+    
+    ThinIPCEndpoint ep(51302);
+    int dlen = ep.recv( 51301, &msg );
 
+    std::cout << "Return = " << dlen << "\n";
+    std::cout << "String: " << msg.readString() << "\n";
+    std::cout << "String: " << msg.readString() << "\n";
+    std::cout << "Int: " << msg.readInt() << "\n";
+    std::cout << "Int: " << msg.readInt() << "\n";
+
+}
+
+int none() {
     Hypervisor * hv;
     hv = detectHypervisor();
-    
+        
     if (hv != NULL) {
         printf("Hypervisor Type     = %i\n", hv->type);
         printf("Hypervisor Root     = %s\n", hv->hvRoot.c_str());
         printf("Hypervisor Binary   = %s\n", hv->hvBinary.c_str());
         printf("Hypervisor Version  = %s (%i.%i)\n", hv->verString.c_str(), hv->verMajor, hv->verMinor);
+        
+        HVINFO_CAPS caps;
+        hv->getCapabilities( &caps );
+        std::cout << "CPU: " << caps.cpu.vendor << "(" << (int)caps.cpu.family << "/" << (int)caps.cpu.model << "." << (int)caps.cpu.stepping << ")\n";
+        std::cout << "VT-x: " << ( caps.cpu.hasVT ? "yes" : "no" ) << "\n";
+        std::cout << "64-bit: " << ( caps.cpu.has64bit ? "yes" : "no" ) << "\n";
+        std::cout << "Max CPU: " << caps.max.cpus << "\n";
+        std::cout << "Max RAM: " << caps.max.memory << "\n";
+        std::cout << "Max HDD: " << caps.max.disk << "\n";
+        
         
         if (hv->type == 1) {
             printf("Guest Additions     = %s\n", ((Virtualbox *)hv)->hvGuestAdditions.c_str());
@@ -42,7 +81,7 @@ int main( int argc, char ** argv ) {
         printf("No hypervisor found!\n");
     }
     
-    installHypervisor( "1.0", NULL, NULL );
+    //installHypervisor( "1.0", NULL, NULL );
 
     return 0;
 };

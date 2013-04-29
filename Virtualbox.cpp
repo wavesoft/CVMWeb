@@ -814,6 +814,86 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
 }
 
 /**
+ * Load capabilities
+ */
+int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
+    map<string, string> data;
+    vector<string> lines, parts;
+    int v;
+    
+    /* List the CPUID information */
+    int ans = this->exec("list hostcpuids", &lines);
+    if (ans != 0) return HVE_QUERY_ERROR;
+    
+    /* Process lines */
+    for (vector<string>::iterator i = lines.begin(); i != lines.end(); i++) {
+        string line = *i;
+        if (trimSplit( &line, &parts, " \t", " \t") == 0) continue;
+        if (parts[0].compare("00000000") == 0) { // Leaf 0 -> Vendor
+            v = hex_ston<int>( parts[2] ); // EBX
+            caps->cpu.vendor[0] = v & 0xFF;
+            caps->cpu.vendor[1] = (v & 0xFF00) >> 8;
+            caps->cpu.vendor[2] = (v & 0xFF0000) >> 16;
+            caps->cpu.vendor[3] = (v & 0xFF000000) >> 24;
+            v = hex_ston<int>( parts[4] ); // EDX
+            caps->cpu.vendor[4] = v & 0xFF;
+            caps->cpu.vendor[5] = (v & 0xFF00) >> 8;
+            caps->cpu.vendor[6] = (v & 0xFF0000) >> 16;
+            caps->cpu.vendor[7] = (v & 0xFF000000) >> 24;
+            v = hex_ston<int>( parts[3] ); // ECX
+            caps->cpu.vendor[8] = v & 0xFF;
+            caps->cpu.vendor[9] = (v & 0xFF00) >> 8;
+            caps->cpu.vendor[10] = (v & 0xFF0000) >> 16;
+            caps->cpu.vendor[11] = (v & 0xFF000000) >> 24;
+            caps->cpu.vendor[12] = '\0';
+            
+        } else if (parts[0].compare("00000001") == 0) { // Leaf 1 -> Features
+            caps->cpu.featuresA = hex_ston<int>( parts[3] ); // ECX
+            caps->cpu.featuresB = hex_ston<int>( parts[4] ); // EDX
+            v = hex_ston<int>( parts[1] ); // EAX
+            caps->cpu.stepping = v & 0xF;
+            caps->cpu.model = (v & 0xF0) >> 4;
+            caps->cpu.family = (v & 0xF00) >> 8;
+            caps->cpu.type = (v & 0x3000) >> 12;
+            caps->cpu.exmodel = (v & 0xF0000) >> 16;
+            caps->cpu.exfamily = (v & 0xFF00000) >> 20;
+            
+        } else if (parts[0].compare("80000001") == 0) { // Leaf 80000001 -> Extended features
+            caps->cpu.featuresC = hex_ston<int>( parts[3] ); // ECX
+            caps->cpu.featuresD = hex_ston<int>( parts[4] ); // EDX
+            
+        }
+    }
+    
+    /* Update flags */
+    caps->cpu.hasVM = false; // Needs MSR to detect
+    caps->cpu.hasVT = 
+        ( (caps->cpu.featuresA & 0x20) != 0 ) || // Intel 'vmx'
+        ( (caps->cpu.featuresC & 0x2)  != 0 );   // AMD 'svm'
+    caps->cpu.has64bit =
+        ( caps->cpu.featuresC & 0x20000000 != 0 ); // Long mode 'lm'
+        
+    /* List the system properties */
+    ans = this->exec("list systemproperties", &lines);
+    if (ans != 0) return HVE_QUERY_ERROR;
+
+    /* Default limits */
+    caps->max.cpus = 1;
+    caps->max.memory = 1024;
+    caps->max.disk = 2048;
+    
+    /* Tokenize into the data map */
+    parseLine( &lines, &data, ":", " \t", 0, 1 );
+    if (data.find("Maximum guest RAM size") != data.end()) 
+        caps->max.memory = ston<int>(data["Maximum guest RAM size"]);
+    if (data.find("Virtual disk limit (info)") != data.end()) 
+        caps->max.disk = ston<long>(data["Virtual disk limit (info)"]) / 1024;
+    if (data.find("Maximum guest CPU count") != data.end()) 
+        caps->max.cpus = ston<int>(data["Maximum guest CPU count"]);
+    
+};
+
+/**
  * Load session state from VirtualBox
  */
 int Virtualbox::loadSessions() {
@@ -840,7 +920,7 @@ int Virtualbox::loadSessions() {
             
             /* Create a populate session object */
             HVSession * session = this->allocateSession( name, secret );
-            ((VBoxSession*)session)->uuid = "{" + uuid + "}";
+            session->uuid = "{" + uuid + "}";
             
             /* Collect details */
             map<string, string> info = this->getMachineInfo( uuid );
@@ -897,7 +977,7 @@ int Virtualbox::loadSessions() {
             }
 
             /* Register this session */
-            cout << "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << ((VBoxSession*)session)->uuid << ", state=" << session->state << "\n";
+            cout << "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state << "\n";
             this->registerSession(session);
 
         }

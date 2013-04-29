@@ -75,6 +75,10 @@
 /* Default CernVM Version */
 #define DEFAULT_CERNVM_VERSION  "1.3"
 
+/**
+ * A hypervisor session is actually a VM instance.
+ * This is where the actual I/O happens
+ */
 class HVSession {
 public:
     
@@ -90,6 +94,7 @@ public:
         this->onDebug = NULL;
     };
     
+    std::string             uuid;
     std::string             ip;
     std::string             key;
     std::string             name;
@@ -127,6 +132,54 @@ public:
     
 };
 
+/**
+ * Resource information structure
+ */
+typedef struct {
+    
+    int         cpus;   // Maximum or currently used number of CPUs
+    int         memory; // Maximum or currently used RAM size (MBytes)
+    long int    disk;   // Maximum or currently used disk size (MBytes)
+    
+} HVINFO_RES;
+
+/**
+ * CPUID information
+ */
+typedef struct {
+    char            vendor[13]; // Vendor string + Null Char
+    int             featuresA;  // Raw feature flags from EAX=1/EDX
+    int             featuresB;  // Raw feature flags from EAX=1/ECX
+    int             featuresC;  // Raw feature flags from EAX=80000001h/EDX
+    int             featuresD;  // Raw feature flags from EAX=80000001h/ECX
+    
+    bool            hasVT;      // Hardware virtualization
+    bool            hasVM;      // Memory virtualization (nested page tables)
+    bool            has64bit;   // Is the 64-bit instruction set supported?
+    
+    unsigned char   stepping;   // CPU Stepping
+    unsigned char   model;      // CPU Model
+    unsigned char   family;     // CPU Family
+    unsigned char   type;       // CPU Type
+    unsigned char   exmodel;    // CPU Extended Model
+    unsigned char   exfamily;   // CPU Extended Family
+    
+} HVINFO_CPUID;
+
+/**
+ * Capabilities information
+ */
+typedef struct {
+    
+    HVINFO_RES          max;        // Maximum available resources
+    HVINFO_CPUID        cpu;        // CPU information
+    bool                isReady;    // Current configuration allows VMs to start without problems
+    
+} HVINFO_CAPS;
+
+/**
+ * Overloadable base hypervisor class
+ */
 class Hypervisor {
 public:
     
@@ -143,6 +196,7 @@ public:
         
     /* Session management commands */
     std::vector<HVSession*> sessions;
+    HVSession *             sessionLocate   ( std::string uuid );
     HVSession *             sessionOpen     ( std::string name, std::string key );
     HVSession *             sessionGet      ( int id );
     int                     sessionFree     ( int id );
@@ -153,6 +207,8 @@ public:
     virtual HVSession *     allocateSession ( std::string name, std::string key );
     virtual int             freeSession     ( HVSession * sess );
     virtual int             registerSession ( HVSession * sess );
+    virtual int             getUsage        ( HVINFO_RES * usage);
+    virtual int             getCapabilities ( HVINFO_CAPS * caps );
     
     /* Tool functions */
     int                     exec            ( std::string args, std::vector<std::string> * stdout );
@@ -177,11 +233,14 @@ std::string                     hypervisorErrorStr  ( int error );
 /**
  * Tool functions
  */
+int                                                 trimSplit       ( std::string * src, std::vector< std::string > * parts, std::string split, std::string trim );
+int                                                 parseLine       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, int key, int value );
 std::string                                         getTmpFile      ( std::string suffix );
 int                                                 getKV           ( std::string line, std::string * key, std::string * value, char delim, int offset );
 std::map<std::string, std::string>                  tokenize        ( std::vector<std::string> * lines, char delim );
 std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vector<std::string> * lines, char delim );
-template <typename T> T                             ston            ( const std::string &Text );
 int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdout );
+template <typename T> T                             hex_ston        ( const std::string &Text );
+template <typename T> T                             ston            ( const std::string &Text );
 
 #endif /* end of include guard: HVENV_H */

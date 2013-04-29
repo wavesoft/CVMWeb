@@ -1,8 +1,8 @@
 FLAGS=-DOSX -I.. -O2
-OBJECTS=contextiso.o Hypervisor.o Virtualbox.o ThinIPC.o
+OBJECTS=ThinIPC.o contextiso.o Hypervisor.o Virtualbox.o
 
-test: test.cpp $(OBJECTS)
-	g++ $(FLAGS) -o test $(OBJECTS) test.cpp -lcurl -lssl -lcrypto
+daemon: daemon.cpp $(OBJECTS)
+	g++ $(FLAGS) -o daemon $(OBJECTS) daemon.cpp -lcurl -lssl -lcrypto
 
 contextiso.o: ../contextiso.cpp ../contextiso.h 
 	g++ $(FLAGS) -c -o contextiso.o ../contextiso.cpp

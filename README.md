@@ -7,7 +7,33 @@ host the CernVM Guest OS.
 
 It then provides a simple interface to start/stop the VM and access it's data sets. 
 
-# How to install the plugin
+# Testing the plugin
+
+You can test the installation and the status of the plugin using the *test.html* file that comes with the source.
+
+# Building the plugin
+
+CVMWebAPI Plugin is built using the [FireBrath](http://www.firebreath.org/) framework. So, your very first step is to
+download the latest stable release of FireBreath : http://www.firebreath.org/display/documentation/Download
+
+Then create a 'projects' folder inside the extracted files:
+
+	wget https://github.com/firebreath/FireBreath/tarball/firebreath-1.7
+	tar -zxf firebreath-FireBreath-firebreath-1.7.0-8-gb73d799.tar.gz
+	cd firebreath-FireBreath-df8659e
+	mkdir projects
+
+Then clone the plugin GIT repository inside the projects folder:
+
+	git clone https://github.com/wavesoft/CVMWeb.git CVMWeb
+
+You can then follow the appropriate instructions for:
+
+ * [How to build on OSX](http://www.firebreath.org/display/documentation/Building+on+Mac+OS+X)
+ * [How to build on Linux](http://www.firebreath.org/display/documentation/Building+on+Linux)
+ * [How to build on Windows](http://www.firebreath.org/display/documentation/Building+on+Windows)
+
+# Installing the Plugin
 
 The plugin has no installation system yet, but you can install it manually using one of the following techniques.
 You can always find the latest binary builds for your operating system in the *builds* directory.

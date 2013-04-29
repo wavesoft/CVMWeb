@@ -1,2 +1,8 @@
 *.DS_Store
 test/test
+
+*.o
+
+launcher/launcher
+
+daemon/launcher

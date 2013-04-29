@@ -37,6 +37,7 @@ using namespace std;
 
 /* Incomplete type placeholders */
 int Hypervisor::loadSessions()                                      { return HVE_NOT_IMPLEMENTED; }
+int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; };
 int HVSession::pause()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::close()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
@@ -69,6 +70,19 @@ template <typename T> T ston( const string &Text ) {
 	return ss >> result ? result : 0;
 }
 
+template <typename T> T hex_ston( const std::string &Text ) {
+    stringstream ss; T result; ss << std::hex << Text;
+    return ss >> result ? result : 0;
+}
+
+/**
+ * LINK: Expose <int> implementations for the above templates
+ */
+template int hex_ston<int>( const std::string &Text );
+template long hex_ston<long>( const std::string &Text );
+template int ston<int>( const std::string &Text );
+template long ston<long>( const std::string &Text );
+
 /**
  * Split the given line into a key and value using the delimited provided
  */
@@ -80,6 +94,58 @@ int getKV( string line, string * key, string * value, char delim, int offset ) {
     while ( ((line[b] == ' ') || (line[b] == '\t')) && (b<line.length())) b++;
     *value = line.substr(b, string::npos);
     return a;
+}
+
+/**
+ * Split the given string into 
+ */
+int trimSplit( std::string * line, std::vector< std::string > * parts, std::string split, std::string trim ) {
+    int i, cout, pos, nextPos, ofs = 0;
+    parts->clear();
+    while (ofs < line->length()) {
+        
+        // Find the closest occurance of 'split' delimiters
+        nextPos = line->length();
+        for (i=0; i<split.length(); i++) {
+            pos = line->find( split[i], ofs+1 );
+            if ((pos != string::npos) && (pos < nextPos)) nextPos = pos;
+        }
+        
+        // Get part
+        parts->push_back( line->substr(ofs, nextPos-ofs) );
+        
+        // Cleanup and move forward
+        if (nextPos == line->length()) break;
+        bool ws = true; nextPos++; // Skip delimiter
+        while (ws && (nextPos < line->length())) {
+            ws = false;
+            if (trim.find(line->at(nextPos)) != string::npos) {
+                ws = true;
+                nextPos++;
+            }
+        }
+        ofs = nextPos;
+        
+    }
+    
+    return parts->size();
+}
+
+/**
+ * Read the specified list of lines and create a map
+ */
+int parseLine( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, int key, int value ) {
+    string line;
+    vector<string> parts;
+    map->clear();
+    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
+        line = *i;
+        trimSplit( &line, &parts, csplit, ctrim );
+        if ((key < parts.size()) && (value < parts.size())) {
+            map->insert(std::pair<string,string>(parts[key], parts[value]));
+        }
+    }
+    return HVE_OK;
 }
 
 /**
@@ -367,6 +433,23 @@ std::string hypervisorErrorStr( int error ) {
 };
 
 /**
+ * Measure the resources from the sessions
+ */
+int Hypervisor::getUsage( HVINFO_RES * resCount ) { 
+    resCount->memory = 0;
+    resCount->cpus = 0;
+    resCount->disk = 0;
+    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSession* sess = *i;
+        resCount->memory += sess->memory;
+        resCount->cpus += sess->cpus;
+        resCount->disk += sess->disk;
+    }
+    return HVE_OK;
+}
+
+
+/**
  * Use LibcontextISO to create a cd-rom for this VM
  */
 int Hypervisor::buildContextISO ( std::string userData, std::string * filename ) {
@@ -557,6 +640,24 @@ int Hypervisor::sessionValidate ( std::string name, std::string key ) {
 }
 
 /**
+ * Get a session using it's unique ID
+ */
+HVSession * Hypervisor::sessionLocate( std::string uuid ) {
+    
+    /* Check for running sessions with the given uuid */
+    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSession* sess = *i;
+        if (sess->uuid.compare(uuid) == 0) {
+            return sess;
+        }
+    }
+    
+    /* Not found */
+    return NULL;
+    
+}
+
+/**
  * Open or reuse a hypervisor session
  */
 HVSession * Hypervisor::sessionOpen( std::string name, std::string key ) { 
@@ -565,7 +666,7 @@ HVSession * Hypervisor::sessionOpen( std::string name, std::string key ) {
     std::cout << "Checking sessions (" << this->sessions.size() << ")\n";
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        std::cout << "Checking session name=" << sess->name << ", key=" << sess->key << ", uuid=" << ((VBoxSession*)sess)->uuid << ", state=" << sess->state << "\n";
+        std::cout << "Checking session name=" << sess->name << ", key=" << sess->key << ", uuid=" << sess->uuid << ", state=" << sess->state << "\n";
         
         if (sess->name.compare(name) == 0) {
             if (sess->key.compare(key) == 0) { /* Check secret key */
@@ -692,7 +793,7 @@ Hypervisor * detectHypervisor() {
         if (file_exists(bin)) {
             hv = new Virtualbox();
             hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p;
+            hv->hvRoot = p + "/bin";
             hv->hvBinary = bin;
             ((Virtualbox*)hv)->hvGuestAdditions = "";
             bin = p + "/VBoxGuestAdditions.iso";

@@ -33,7 +33,6 @@ class Virtualbox;
 class VBoxSession : public HVSession {
 public:
     
-    std::string             uuid;
     Virtualbox *            host;
     
     virtual int             pause();
@@ -75,7 +74,7 @@ public:
     /* Overloads */
     virtual int             loadSessions        ( );
     virtual HVSession *     allocateSession     ( std::string name, std::string key );
-    
+    virtual int             getCapabilities     ( HVINFO_CAPS * caps );
 };
 
 #endif /* end of include guard: VIRTUALBOX_H */
