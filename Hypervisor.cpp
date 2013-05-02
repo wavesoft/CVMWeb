@@ -217,6 +217,7 @@ std::string getTmpFile( std::string suffix ) {
 /**
  * Cross-platform exec and return function
  */
+#ifndef _WIN32
 int sysExec( string cmdline, vector<string> * stdoutList ) {
     
     int ret;
@@ -226,11 +227,7 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
     FILE *fp;
 
     /* Open process and red contents using the POSIX pipe interface */
-    #ifdef _WIN32
-        fp = _popen(cmdline.c_str(), "r");
-    #else
-        fp = popen(cmdline.c_str(), "r");
-    #endif
+    fp = popen(cmdline.c_str(), "r");
 
     /* Check for error */
     if (fp == NULL) return HVE_IO_ERROR;
@@ -249,15 +246,87 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
     }
 
     /* close */
-    #ifdef _WIN32
-        ret = _pclose(fp);
-    #else
-        ret = pclose(fp);
-    #endif
+    ret = pclose(fp);
 
     /* Return exit code */
     return ret;
 }
+#else
+int sysExec( std::string cmdline, std::vector<std::string> * stdoutList ) {
+
+	HANDLE g_hChildStdOut_Rd = NULL;
+	HANDLE g_hChildStdOut_Wr = NULL;
+	DWORD ret, dwRead;
+	CHAR chBuf[4096];
+	PROCESS_INFORMATION piProcInfo;
+	STARTUPINFO siStartInfo;
+	BOOL bSuccess = FALSE;
+	string rawStdout;
+
+	SECURITY_ATTRIBUTES sAttr;
+	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
+	sAttr.bInheritHandle = TRUE;
+	sAttr.lpSecurityDescriptor = NULL;
+
+    /* Create STDOUT pipe */
+	if (!CreatePipe(&g_hChildStdOut_Rd, &g_hChildStdOut_Wr, &sAttr, 0)) 
+		return HVE_IO_ERROR;
+	if (!SetHandleInformation(g_hChildStdOut_Rd, HANDLE_FLAG_INHERIT, 0))
+		return HVE_IO_ERROR;
+
+    /* Clean structures */
+	ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION));
+	ZeroMemory( &siStartInfo, sizeof( STARTUPINFO ));
+
+    /* Prepare startup information */
+	siStartInfo.cb = sizeof(STARTUPINFO);
+	siStartInfo.hStdOutput = g_hChildStdOut_Wr;
+	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+    /* Create process */
+	std::wstring wcmdline;
+	wcmdline.assign( cmdline.begin(), cmdline.end() );
+	if (!CreateProcess(
+		NULL,
+		(LPWSTR)wcmdline.c_str(),
+		NULL,
+		NULL,
+		TRUE,
+		CREATE_NO_WINDOW,
+		NULL,
+		NULL,
+		&siStartInfo,
+		&piProcInfo)) return HVE_IO_ERROR;
+
+    /* Process STDOUT */
+	CloseHandle( g_hChildStdOut_Wr );
+	if ( stdoutList != NULL ) {
+	    
+	    /* Read to buffer */
+    	for (;;) {
+    		bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
+    		if ( !bSuccess || dwRead == 0 ) break;
+    		rawStdout.append( chBuf, dwRead );
+    	}
+    	
+	    /* Split lines into stdout */
+        splitLines( rawStdout, stdoutList );
+        
+	}
+	CloseHandle( g_hChildStdOut_Rd );
+
+    /* Wait for completion */
+	WaitForSingleObject( piProcInfo.hProcess, INFINITE );
+	GetExitCodeProcess( piProcInfo.hProcess, &ret );
+
+    /* Close hanles */
+	CloseHandle( piProcInfo.hProcess );
+	CloseHandle( piProcInfo.hThread );
+
+    /* Return exit code */
+	return ret;
+}
+#endif
 
 /**
  * Sha256 from binary to hex
