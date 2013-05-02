@@ -26,7 +26,10 @@
 #include <sstream>
 #include <vector>
 
-#define HANDLE          int
+#ifndef _WIN32
+#define SOCKET          int
+#endif
+
 #define MAX_MSG_SIZE    1024
 
 #define SCKE_OK         0
@@ -89,7 +92,7 @@ public:
     int                         send        ( int port, ThinIPCMessage * msg );
     
 protected:
-    HANDLE                      sock;
+    SOCKET                      sock;
     int                         errorCode;
     
 };
