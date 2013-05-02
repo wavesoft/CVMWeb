@@ -18,26 +18,24 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include <string>
-#include <boost/thread.hpp>
-#include <AppKit/AppKit.h>
-#include <Cocoa/Cocoa.h>
-#include "logging.h"
- 
 #include "../Dialogs.h"
-#include "BrowserHost.h"
+#include <Windows.h>
+#include <Winuser.h>
 
-bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message)
-{
-	NSString *confirmMessage = [NSString stringWithUTF8String:message.c_str()];
+bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
 
-	NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-	[alert addButtonWithTitle:@"Yes"];
-	[alert addButtonWithTitle:@"No"];
-    [alert setAlertStyle:NSInformationalAlertStyle];
-    [alert setMessageText:@"CernVM Web API"];
-    [alert setInformativeText: confirmMessage ];
-
-	int ans = [alert runModal];
-	return (ans == NSAlertFirstButtonReturn);
+    /* Convert to WString */
+    std::wstring ws;
+    ws.assign(message.begin(), message.end());
+    
+    /* Display message box */
+    int msgboxID = MessageBox(
+        NULL,
+        (LPCWSTR)ws.c_str(),
+        (LPCWSTR)L"CernVM Web API",
+        MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2 | MB_APPLMODAL | MB_TOPMOST
+    );
+    
+    /* Return value */
+    return ( msgboxID == IDYES );
 }
