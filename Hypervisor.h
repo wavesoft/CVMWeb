@@ -25,7 +25,6 @@
 #include <vector>
 #include <map>
 #include <curl/curl.h>
-#include <curl/types.h>
 #include <curl/easy.h>
 
 #ifdef __linux__

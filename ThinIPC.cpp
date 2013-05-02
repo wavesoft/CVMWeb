@@ -397,8 +397,8 @@ ThinIPCEndpoint::ThinIPCEndpoint( int port ) {
  * Cleanup
  */
 ThinIPCEndpoint::~ThinIPCEndpoint() {
-#ifndef _WIN32
-    closeSocket(this->sock);
+#ifdef _WIN32
+    closesocket(this->sock);
 #else
     close(this->sock);
 #endif

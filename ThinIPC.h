@@ -28,6 +28,9 @@
 
 #ifndef _WIN32
 #define SOCKET          int
+#else
+#include <Winsock2.h>
+#include <Ws2tcpip.h>
 #endif
 
 #define MAX_MSG_SIZE    1024
