@@ -1,5 +1,6 @@
 
 #include "../platform.h"
+#include "../../Hypervisor.h"
 
 bool isUserIdle( ) {
     return false;

@@ -1,4 +1,6 @@
 *.DS_Store
 *.o
 test/test
+test/build
 daemon/daemon
+daemon/build

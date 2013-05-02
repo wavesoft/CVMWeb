@@ -42,6 +42,10 @@
 #include <pwd.h>
 #endif
 
+#ifdef _WIN32
+#include <direct.h>
+#endif
+
 /* Hypervisor types */
 #define HV_NONE                 0
 #define HV_VIRTUALBOX           1
@@ -225,7 +229,7 @@ public:
     virtual int             getCapabilities ( HVINFO_CAPS * caps );
     
     /* Tool functions */
-    int                     exec            ( std::string args, std::vector<std::string> * stdout );
+    int                     exec            ( std::string args, std::vector<std::string> * stdoutList );
     void                    detectVersion   ( );
     int                     cernVMDownload  ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
     int                     cernVMCached    ( std::string version, std::string * filename );
@@ -251,10 +255,10 @@ std::string                     hypervisorErrorStr  ( int error );
 int                                                 trimSplit       ( std::string * src, std::vector< std::string > * parts, std::string split, std::string trim );
 int                                                 parseLine       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, int key, int value );
 std::string                                         getTmpFile      ( std::string suffix );
-int                                                 getKV           ( std::string line, std::string * key, std::string * value, char delim, int offset );
+int                                                 getKV           ( std::string line, std::string * key, std::string * value, unsigned char delim, int offset );
 std::map<std::string, std::string>                  tokenize        ( std::vector<std::string> * lines, char delim );
 std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vector<std::string> * lines, char delim );
-int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdout );
+int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList );
 template <typename T> T                             hex_ston        ( const std::string &Text );
 template <typename T> T                             ston            ( const std::string &Text );
 

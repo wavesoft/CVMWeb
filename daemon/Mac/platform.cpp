@@ -1,5 +1,5 @@
 
-#include "../Hypervisor.h"
+#include "../../Hypervisor.h"
 #include "../platform.h"
 
 int platformMeasureResources( PLAF_USAGE * usage ) {

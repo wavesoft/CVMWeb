@@ -52,7 +52,7 @@ void mapDump(map<string, string> m) {
 /**
  * Execute command and log debug message
  */
-int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdout ) {
+int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList ) {
     ostringstream oss;
     string line;
     int ans;
@@ -61,12 +61,12 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdout ) 
     if (this->onDebug!=NULL) (this->onDebug)("Executing '"+cmd+"'", this->cbObject);
     
     /* Run command */
-    ans = this->host->exec( cmd, stdout );
+    ans = this->host->exec( cmd, stdoutList );
     
     /* Debug log response */
     if (this->onDebug!=NULL) {
-        if (stdout != NULL) {
-            for (vector<string>::iterator i = stdout->begin(); i != stdout->end(); i++) {
+        if (stdoutList != NULL) {
+            for (vector<string>::iterator i = stdoutList->begin(); i != stdoutList->end(); i++) {
                 line = *i;
                 (this->onDebug)("Line: "+line, this->cbObject);
             }
@@ -86,7 +86,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
-    string stdout, uuid, ifHO, vmIso, kk, kv;
+    string stdoutList, uuid, ifHO, vmIso, kk, kv;
     char * tmp;
     int ans;
     bool needsUpdate;

@@ -87,7 +87,7 @@ template long ston<long>( const std::string &Text );
 /**
  * Split the given line into a key and value using the delimited provided
  */
-int getKV( string line, string * key, string * value, char delim, int offset ) {
+int getKV( string line, string * key, string * value, unsigned char delim, int offset ) {
     int a = line.find( delim, offset );
     if (a == string::npos) return 0;
     *key = line.substr(offset, a-offset);
@@ -217,7 +217,7 @@ std::string getTmpFile( std::string suffix ) {
 /**
  * Cross-platform exec and return function
  */
-int sysExec( string cmdline, vector<string> * stdout ) {
+int sysExec( string cmdline, vector<string> * stdoutList ) {
     
     int ret;
     char data[1035];
@@ -236,7 +236,7 @@ int sysExec( string cmdline, vector<string> * stdout ) {
     if (fp == NULL) return HVE_IO_ERROR;
 
     /* Read the output a line at a time - output it. */
-    if (stdout != NULL) {
+    if (stdoutList != NULL) {
         
         /* Read to buffer */
         while (fgets(data, sizeof(data)-1, fp) != NULL) {
@@ -244,7 +244,7 @@ int sysExec( string cmdline, vector<string> * stdout ) {
         }
         
         /* Split lines into stdout */
-        splitLines( rawStdout, stdout );
+        splitLines( rawStdout, stdoutList );
         
     }
 
@@ -534,14 +534,14 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, HVP
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
-int Hypervisor::exec( string args, vector<string> * stdout ) {
+int Hypervisor::exec( string args, vector<string> * stdoutList ) {
     
     /* Build cmdline */
     string cmdline( this->hvBinary );
     cmdline += " " + args;
     
     /* Execute */
-    return sysExec( cmdline, stdout );
+    return sysExec( cmdline, stdoutList );
 
 }
 

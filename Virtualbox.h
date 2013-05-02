@@ -47,7 +47,7 @@ public:
     virtual std::string     getProperty( std::string name );
     
     /* VirtualBox-specific functions */
-    int                     wrapExec( std::string cmd, std::vector<std::string> * stdout );
+    int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList );
     int                     getMachineUUID( std::string mname, std::string * ans_uuid );
     std::string             getHostOnlyAdapter  ();
     std::map<std::string, 
