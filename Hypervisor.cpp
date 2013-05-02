@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <cmath>
 
 #include "openssl/sha.h"
 #include "Hypervisor.h"
@@ -259,18 +260,6 @@ int sysExec( string cmdline, vector<string> * stdout ) {
 }
 
 /**
- * Helper function for writing data
- */
-size_t __curl_write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
-size_t __curl_write_string(void *contents, size_t size, size_t nmemb, void *userp) {
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
-    return size * nmemb;
-}
-
-/**
  * Sha256 from binary to hex
  */
 void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {
@@ -350,11 +339,37 @@ std::string base64_encode(char const* bytes_to_encode, unsigned int in_len) {
   return ret;
 }
 
+/**
+ * Helper function for writing data
+ */
+size_t __curl_write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+size_t __curl_write_string(void *contents, size_t size, size_t nmemb, void *userp) {
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+/**
+ * Helper function for delegating progress
+ */
+int __curl_progress_proxy(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+    HVPROGRESS_FEEDBACK * fb = (HVPROGRESS_FEEDBACK *) clientp;
+    int ipos = fb->min;
+    if (dltotal != 0) {
+        double pos = (fb->max - fb->min) * dlnow / dltotal;
+        ipos += (int)pos;
+    }
+    cout << "INFO: dltotal=" << dltotal << ", dlnow=" << dlnow << ", ultotal=" << ultotal << ", ulnow=" << ulnow << ", ipos=" << ipos << "\n";
+    fb->callback( ipos, fb->total, fb->message, fb->data );
+    return 0;
+};
 
 /**
  * Generic purpose download to file function
  */
-int downloadFile( std::string url, std::string target ) {
+int downloadFile( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb ) {
     CURL *curl;
     FILE *fp;
     CURLcode res;
@@ -367,6 +382,12 @@ int downloadFile( std::string url, std::string target ) {
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+        if ((fb != NULL) && (fb->callback != NULL)) {
+            cout << "INFO: Using feedbac callback\n";
+            curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
+            curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, __curl_progress_proxy );
+            curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, fb);
+        }
         res = curl_easy_perform(curl);
         /* always cleanup */
         curl_easy_cleanup(curl);
@@ -424,9 +445,9 @@ std::string hypervisorErrorStr( int error ) {
     if (error == -7) return "External error";
     if (error == -8) return "Not in a valid state";
     if (error == -9) return "Not found";
-    if (error == -10) return "Not found";
-    if (error == -11) return "Not allowed";
-    if (error == -12) return "Not supported";
+    if (error == -10) return "Not allowed";
+    if (error == -11) return "Not supported";
+    if (error == -12) return "Not validated";
     if (error == -20) return "Password denied";
     if (error == -100) return "Not implemented";
     return "Unknown error";
@@ -499,14 +520,14 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
 /**
  * Download the specified CernVM version
  */
-int Hypervisor::cernVMDownload( std::string version, std::string * filename ) {
+int Hypervisor::cernVMDownload( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * fb ) {
     string sURL = "http://cernvm.cern.ch/portal/sites/cernvm.cern.ch/files/ucernvm-" + version + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
     *filename = sOutput;
     if (file_exists(sOutput)) {
         return 0;
     } else {
-        return downloadFile(sURL, sOutput);
+        return downloadFile(sURL, sOutput, fb);
     }
 };
 
@@ -813,6 +834,13 @@ Hypervisor * detectHypervisor() {
 }
 
 /**
+ * Free the pointer(s) allocated by the detectHypervisor()
+ */
+void freeHypervisor( Hypervisor * hv ) {
+    delete hv;
+};
+
+/**
  * Install hypervisor
  */
 int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData ) {
@@ -822,7 +850,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     string requestBuf;
     cout << "INFO: Fetching data\n";
-    if (cbProgress!=NULL) (cbProgress)(1, 5, "Checking the appropriate hypervisor for your system", cbData);
+    if (cbProgress!=NULL) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system", cbData);
     int res = downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
     if ( res != HVE_OK ) return res;
     
@@ -869,12 +897,23 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     }
     
     /**
+     * Prepare download feedback
+     */
+    HVPROGRESS_FEEDBACK feedback;
+    feedback.total = 100;
+    feedback.min = 2;
+    feedback.max = 90;
+    feedback.callback = cbProgress;
+    feedback.data = cbData;
+    feedback.message = "Downloading hypervisor";
+
+    /**
      * Download
      */
     string dmgVirtualBox = getTmpFile( ".dmg" );
-    if (cbProgress!=NULL) (cbProgress)(2, 5, "Downloading hypervisor", cbData);
+    if (cbProgress!=NULL) (cbProgress)(2, 100, "Downloading hypervisor", cbData);
     cout << "INFO: Downloading " << data[kDownloadUrl] << " to " << dmgVirtualBox << "\n";
-    res = downloadFile( data[kDownloadUrl], dmgVirtualBox );
+    res = downloadFile( data[kDownloadUrl], dmgVirtualBox, &feedback );
     cout << "    : Got " << res << "\n";
     if ( res != HVE_OK ) return res;
     
@@ -883,7 +922,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     string checksum;
     sha256_file( dmgVirtualBox, &checksum );
-    if (cbProgress!=NULL) (cbProgress)(3, 5, "Validating download", cbData);
+    if (cbProgress!=NULL) (cbProgress)(90, 100, "Validating download", cbData);
     cout << "INFO: File checksum " << checksum << " <-> " << data[kChecksum] << "\n";
     if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
     
@@ -892,7 +931,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     #if defined(__APPLE__) && defined(__MACH__)
     cout << "INFO: Attaching\n";
-    if (cbProgress!=NULL) (cbProgress)(3, 5, "Mounting hypervisor DMG disk", cbData);
+    if (cbProgress!=NULL) (cbProgress)(94, 100, "Mounting hypervisor DMG disk", cbData);
     res = sysExec("hdiutil attach " + dmgVirtualBox, &lines);
     if (res != 0) {
         remove( dmgVirtualBox.c_str() );
@@ -904,7 +943,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
     cout << "Got disk '" << dskDev << "', volume: '" << dskVolume << "'\n";
     
-    if (cbProgress!=NULL) (cbProgress)(4, 5, "Starting installer", cbData);
+    if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
     cout << "INFO: Installing using " << dskVolume << "/" << data[kInstallerName] << "\n";
     res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
     if (res != 0) {
@@ -914,10 +953,19 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         return HVE_EXTERNAL_ERROR;
     }
     cout << "INFO: Detaching\n";
-    if (cbProgress!=NULL) (cbProgress)(5, 5, "Cleaning-up", cbData);
+    if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
     res = sysExec("hdiutil detach " + dskDev, NULL);
     remove( dmgVirtualBox.c_str() );
     #endif
+    
+    /**
+     * Check if it was successful
+     */
+    Hypervisor * hv = detectHypervisor();
+    if (hv == NULL) {
+        cout << "ERROR: Could not install hypervisor!\n";
+        return HVE_NOT_VALIDATED;
+    };
     
     /**
      * Completed

@@ -46,7 +46,7 @@ public:
     ThinIPCMessage( char* payload, short size );
     virtual ~ThinIPCMessage( );
     
-    /* Shorthand */
+    /* Shorthands */
     static ThinIPCMessage       __shorthandInstance;
     static ThinIPCMessage *     I( int );
     static ThinIPCMessage *     S( std::string );

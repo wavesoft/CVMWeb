@@ -167,6 +167,11 @@ Take for example the following handler:
 		window.console.log( "Performing: " + msg + ", " + current + " out of " + total + " tasks completed" );
 	});
 
+# Assisting daemon process
+
+Since the running VM needs to be calibrated at real-time, depending on the CPU load or other factors, a tiny daemon process
+is started along with every VM.
+
 # Appendix A - Error codes
 
 Most of the functions return a number. If the value is less than zero, an error has occurred. Here is a short list of 

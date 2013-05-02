@@ -73,7 +73,7 @@
 #define STATE_PAUSED            6
 
 /* Default CernVM Version */
-#define DEFAULT_CERNVM_VERSION  "1.3"
+#define DEFAULT_CERNVM_VERSION  "1.3.1"
 
 /**
  * A hypervisor session is actually a VM instance.
@@ -178,6 +178,20 @@ typedef struct {
 } HVINFO_CAPS;
 
 /**
+ * Progress feedback structure
+ */
+typedef struct {
+    
+    int                 min;
+    int                 max;
+    int                 total;
+    void *              data;
+    std::string         message;
+    void (*callback)    (int, int, std::string, void *);
+    
+} HVPROGRESS_FEEDBACK;
+
+/**
  * Overloadable base hypervisor class
  */
 class Hypervisor {
@@ -213,7 +227,7 @@ public:
     /* Tool functions */
     int                     exec            ( std::string args, std::vector<std::string> * stdout );
     void                    detectVersion   ( );
-    int                     cernVMDownload  ( std::string version, std::string * filename );
+    int                     cernVMDownload  ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
     int                     cernVMCached    ( std::string version, std::string * filename );
     std::string             cernVMVersion   ( std::string filename );
     int                     buildContextISO ( std::string userData, std::string * filename );
@@ -227,6 +241,7 @@ private:
  * Exposed functions
  */
 Hypervisor *                    detectHypervisor    ();
+void                            freeHypervisor      ( Hypervisor * );
 int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData );
 std::string                     hypervisorErrorStr  ( int error );
 

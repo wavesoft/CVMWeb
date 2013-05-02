@@ -8,13 +8,16 @@
 #include "Hypervisor.h"
 #include "ThinIPC.h"
 
-void logUpdates(std::string msg, int progress, void * o) {
-    std::cout << "(" << progress << " %) " << msg << "\n";
+void logUpdates(int curr, int tot, std::string msg, void * o) {
+    std::cout << "(" << curr << "/" << tot << " %) " << msg << "\n";
 };
 
 int main( int argc, char ** argv ) {
     ThinIPCMessage   msg;
     char buf[512];
+    
+    installHypervisor( "1.0", logUpdates, NULL );
+    return 0;
     
     // Initialize IPC
     ThinIPCInitialize(); 
@@ -81,7 +84,7 @@ int none() {
         printf("No hypervisor found!\n");
     }
     
-    //installHypervisor( "1.0", NULL, NULL );
+    installHypervisor( "1.0", NULL, NULL );
 
     return 0;
 };

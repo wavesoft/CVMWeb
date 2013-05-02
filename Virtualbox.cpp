@@ -101,7 +101,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     this->executionCap = 100;
         
     /* (1) Create slot */
-    if (this->onProgress!=NULL) (this->onProgress)(1, 11, "Allocating VM slot", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(5, 100, "Allocating VM slot", this->cbObject);
     ans = this->getMachineUUID( this->name, &uuid );
     if (ans != 0) {
         this->state = STATE_ERROR;
@@ -111,7 +111,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     }
     
     /* Detect the host-only adapter */
-    if (this->onProgress!=NULL) (this->onProgress)(2, 11, "Setting up local network", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(10, 100, "Setting up local network", this->cbObject);
     ifHO = this->getHostOnlyAdapter();
     if (ifHO.empty()) {
         this->state = STATE_ERROR;
@@ -135,7 +135,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
         << " --natdnshostresolver1 "    << "on"
         << " --nic2 "                   << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
     
-    if (this->onProgress!=NULL) (this->onProgress)(3, 11, "Setting up VM", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(15, 100, "Setting up VM", this->cbObject);
     ans = this->wrapExec(args.str(), NULL);
     cout << "Modify VM=" << ans << "\n";
     if (ans != 0) {
@@ -144,7 +144,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     }
 
     /* Fetch information to validate disks */
-    if (this->onProgress!=NULL) (this->onProgress)(4, 11, "Fetching machine info", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(20, 100, "Fetching machine info", this->cbObject);
     map<string, string> machineInfo = this->getMachineInfo();
 
     /* Check for scratch disk */
@@ -161,7 +161,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --filename "   << "\"" << vmDisk << "\""
             << " --size "       << disk;
     
-        if (this->onProgress!=NULL) (this->onProgress)(5, 11, "Creating scratch disk", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(25, 100, "Creating scratch disk", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Create HD=" << ans << "\n";
         if (ans != 0) {
@@ -174,7 +174,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             args.str("");
             args << "openmedium "
                 << " disk "   << "\"" << vmDisk << "\"";
-            if (this->onProgress!=NULL) (this->onProgress)(6, 11, "Importing disk", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(30, 100, "Importing disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
             cout << "Close medium=" << ans << "\n";
             if (ans != 0) {
@@ -194,7 +194,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --setuuid "    << "\"\"" 
             << " --medium "     << "\"" << vmDisk << "\"";
 
-        if (this->onProgress!=NULL) (this->onProgress)(7, 11, "Attaching hard disk", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(35, 100, "Attaching hard disk", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach=" << ans << "\n";
         if (ans != 0) {
@@ -231,7 +231,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
                 << " --device "     << "0"
                 << " --medium "     << "none";
 
-            if (this->onProgress!=NULL) (this->onProgress)(8, 11, "Detachining previous CernVM ISO", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Detachining previous CernVM ISO", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
             cout << "Detaching ISO=" << ans << "\n";
             if (ans != 0) {
@@ -245,9 +245,20 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     /* Check if we need to update the CD-ROM attaching business */
     if (needsUpdate) {
         
+        /**
+         * Prepare download feedback
+         */
+        HVPROGRESS_FEEDBACK feedback;
+        feedback.total = 100;
+        feedback.min = 40;
+        feedback.max = 90;
+        feedback.callback = this->onProgress;
+        feedback.data = this->cbObject;
+        feedback.message = "Downloading CernVM";
+
         /* Download CernVM */
-        if (this->onProgress!=NULL) (this->onProgress)(9, 11, "Downloading CernVM", this->cbObject);
-        if (this->host->cernVMDownload( cvmVersion, &vmIso ) != 0) {
+        if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Downloading CernVM", this->cbObject);
+        if (this->host->cernVMDownload( cvmVersion, &vmIso, &feedback ) != 0) {
             this->state = STATE_ERROR;
             return HVE_IO_ERROR;
         }
@@ -262,7 +273,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             << " --type "       << "dvddrive"
             << " --medium "     << "\"" << vmIso << "\"";
     
-        if (this->onProgress!=NULL) (this->onProgress)(10, 11, "Attaching CD-ROM", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching CD-ROM", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (CernVM)=" << ans << "\n";
         if (ans != 0) {
@@ -275,7 +286,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     this->setProperty("web-secret", this->key);
 
     /* Last callbacks */
-    if (this->onProgress!=NULL) (this->onProgress)(11, 11, "Completed", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(100, 100, "Completed", this->cbObject);
     if (this->onOpen!=NULL) (this->onOpen)(this->cbObject);
     this->state = STATE_OPEN;
     
