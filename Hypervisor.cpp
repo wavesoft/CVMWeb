@@ -286,7 +286,7 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
     /* Create process */
 	if (!CreateProcessA(
 		NULL,
-		(LPCSTR)cmdline.c_str(),
+		(LPSTR)cmdline.c_str(),
 		NULL,
 		NULL,
 		TRUE,
@@ -1005,7 +1005,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 		if (cbProgress!=NULL) (cbProgress)(94, 100, "Mounting hypervisor DMG disk", cbData);
 		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
 		if (res != 0) {
-			remove( dmgVirtualBox.c_str() );
+			remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}
 		string infoLine = lines.back();
@@ -1068,8 +1068,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 		res = system( cmdline.c_str() );
 		if (res < 0) {
 
-			cout << "INFO: Detaching\n";
-			res = sysExec("hdiutil detach " + dskDev, NULL);
+			cout << "ERROR: Could not start. Return code: " << res << endl;
 			remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}

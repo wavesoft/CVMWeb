@@ -41,7 +41,7 @@ int platformIdleTime( ) {
     /* Allocate screensaver info */
     mit_info = XScreenSaverAllocInfo();
     if (mit_info == NULL)
-        return HVE_HVE_EXTERNAL_ERROR;
+        return HVE_EXTERNAL_ERROR;
     
     /* Open display */
     if ((display=XOpenDisplay(NULL)) == NULL) 
