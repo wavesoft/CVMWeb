@@ -22,6 +22,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <time.h>
 
 #include "Hypervisor.h"
 #include "Virtualbox.h"
@@ -30,45 +31,115 @@
 
 using namespace std;
 
+#define             RELOAD_TIME     30
+
+ThinIPCEndpoint     * ipc;
+Hypervisor          * hv;
+time_t                reloadTimer;
+int                   idleTime;
+bool                  isIdle = false;
+
+/**
+ * Switch the idle states of the VMs
+ */
+void switchIdleStates( bool idle ) {
+    
+    /* Pause all the VMs if we are not idle */
+    if (!idle) {
+        
+        for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
+            HVSession* sess = *i;
+            if (sess->state == STATE_STARTED ) {
+                cout << "INFO: Pausing VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                sess->pause();
+            }
+        }
+        
+    } else {
+        
+        for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
+            HVSession* sess = *i;
+            if (sess->state == STATE_PAUSED ) {
+                cout << "INFO: Resuming VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                sess->resume();
+            }
+        }
+        
+    }
+    
+}
+
+/**
+ * Entry point
+ */
 int main( int argc, char ** argv ) {
     
-    /*
-    // Validate cmdline
+    /* Validate cmdline */
     if (argc < 3) {
-        cerr << "ERROR: Use syntax: daemon \"<VM UUID>\" \"<IPC Port>\"\n";
+        cerr << "ERROR: Use syntax: daemon \"<IPC Port>\" \"<idle time>\"\n";
         return 1;
     }
     
-    // Get a hypervisor control instance
-    Hypervisor *hv = detectHypervisor();
+    /* Get a hypervisor control instance */
+    hv = detectHypervisor();
     if (hv == NULL) {
         cerr << "ERROR: Unable to detect hypervisor!\n";
         return 2;
     }
     
-    // This is working only with VirtualBox
+    /* This is working only with VirtualBox */
     if (hv->type != HV_VIRTUALBOX) {
         cerr << "ERROR: Only VirtualBox is currently supproted!\n";
         return 3;
     }
     
-    // Open the specified session
-    HVSession * sess = hv->sessionLocate( argv[1] );
-    if (sess == NULL) {
-        cerr << "ERROR: Unable to find the specified session!\n";
-        return 2;
-    }
+    /* Initialize ThinIPC */
+    ThinIPCInitialize();
     
-    // Start VM
-    string cmdline = hv->hvRoot;
-    cout << "Launching ... \n";
-    cmdline += "/VBoxHeadless -s \"";
-    cmdline += argv[1];
-    cmdline += "\"";
-    system( cmdline.c_str() );
-    */
+    /* Initialize arguments */
+    ipc = new ThinIPCEndpoint( atoi(argv[1]) );
+    idleTime = atoi( argv[2] );
     
-    cout << "Idle = " << platformIdleTime() << endl;
+    /* Reset state */
+    reloadTimer = time( NULL );
     
+    /* Main loop */
+    for (;;) {
+        
+        /* Check if we have IPC data to read */
+        if (ipc->isPending( 500000 )) {
+            cout << "INFO: DATA!" << endl;
+        }
+        
+        /* Check for reload times */
+        if ( time( NULL ) > ( reloadTimer + RELOAD_TIME ) ) {
+            if (isIdle) { // Reload only on IDLE state
+                cout << "INFO: Reloading sessions" << endl;
+                hv->loadSessions();
+                reloadTimer = time(NULL);
+            }
+        }
+        
+        /* Check for idle state switch */
+        if (isIdle) {
+            if ( platformIdleTime() < idleTime ) {
+                isIdle = false;
+                cout << "INFO: Switching to ACTIVE state" << endl;
+                switchIdleStates( false );
+            }
+        } else {
+            if ( platformIdleTime() >= idleTime ) {
+                isIdle = true;
+                cout << "INFO: Reloading sessions" << endl;
+                hv->loadSessions();
+                cout << "INFO: Switching to IDLE state" << endl;
+                switchIdleStates( true );
+            }
+        }
+        
+    } 
+    
+    /* Graceful cleanup */
     return 0;
+    
 }

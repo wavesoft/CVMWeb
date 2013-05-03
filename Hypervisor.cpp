@@ -88,10 +88,10 @@ template long ston<long>( const std::string &Text );
  * Split the given line into a key and value using the delimited provided
  */
 int getKV( string line, string * key, string * value, unsigned char delim, int offset ) {
-    int a = line.find( delim, offset );
+    size_t a = line.find( delim, offset );
     if (a == string::npos) return 0;
     *key = line.substr(offset, a-offset);
-    int b = a+1;
+    size_t b = a+1;
     while ( ((line[b] == ' ') || (line[b] == '\t')) && (b<line.length())) b++;
     *value = line.substr(b, string::npos);
     return a;
@@ -101,7 +101,7 @@ int getKV( string line, string * key, string * value, unsigned char delim, int o
  * Split the given string into 
  */
 int trimSplit( std::string * line, std::vector< std::string > * parts, std::string split, std::string trim ) {
-    int i, cout, pos, nextPos, ofs = 0;
+    size_t i, pos, nextPos, ofs = 0;
     parts->clear();
     while (ofs < line->length()) {
         
@@ -135,7 +135,7 @@ int trimSplit( std::string * line, std::vector< std::string > * parts, std::stri
 /**
  * Read the specified list of lines and create a map
  */
-int parseLine( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, int key, int value ) {
+int parseLine( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value ) {
     string line;
     vector<string> parts;
     map->clear();
@@ -223,15 +223,15 @@ std::string getTmpFile( std::string suffix ) {
     #ifdef _WIN32
         DWORD wRet;
         int lRet;
-        unsigned char tmpPath[MAX_PATH];
-        unsigned char tmpName[MAX_PATH];
+        char tmpPath[MAX_PATH];
+        char tmpName[MAX_PATH];
         
         /* Get temporary folder */
-        wRet = GetTempPath( tmpPath, MAX_PATH );
+        wRet = GetTempPathA( MAX_PATH, tmpPath );
         if (wRet == 0) return "";
         
         /* Get temporary file name */
-        lRet = GetTempFileName( tmpPath, "cvm", 0, tmpName );
+        lRet = GetTempFileNameA( tmpPath, "cvm", 0, tmpName );
         if (lRet == 0) return "";
         
         /* Create string */

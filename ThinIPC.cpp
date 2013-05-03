@@ -467,3 +467,31 @@ int ThinIPCEndpoint::recv( int port, ThinIPCMessage * msg ) {
     }
     
 }
+
+/**
+ * Check if there are messages pending in the IPC chain
+ */
+bool ThinIPCEndpoint::isPending( int timeout ) {
+    
+    /* Prepare timeout */
+    struct timeval tv;
+    tv.tv_usec = timeout;
+    tv.tv_sec = 0;
+    
+    /* Prepare descriptors */
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(this->sock, &rfds);
+
+    /* Wait for read on socket for timeout */
+    int retval = select(1, &rfds, NULL, NULL, &tv);
+
+    /* Check for result */
+    if (retval == -1)
+        return false;   // Error
+     else if (retval)
+         return true;   // Has data
+     else
+         return false;  // Timed out
+
+}

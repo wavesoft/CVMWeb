@@ -87,7 +87,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     vector<string> lines;
     map<string, string> toks;
     string stdoutList, uuid, ifHO, vmIso, kk, kv;
-    char * tmp;
     int ans;
     bool needsUpdate;
 
@@ -880,7 +879,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
         ( (caps->cpu.featuresA & 0x20) != 0 ) || // Intel 'vmx'
         ( (caps->cpu.featuresC & 0x2)  != 0 );   // AMD 'svm'
     caps->cpu.has64bit =
-        ( caps->cpu.featuresC & 0x20000000 != 0 ); // Long mode 'lm'
+        ( (caps->cpu.featuresC & 0x20000000) != 0 ); // Long mode 'lm'
         
     /* List the system properties */
     ans = this->exec("list systemproperties", &lines);

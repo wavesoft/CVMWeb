@@ -93,6 +93,7 @@ public:
     
     int                         recv        ( int port, ThinIPCMessage * msg );
     int                         send        ( int port, ThinIPCMessage * msg );
+    bool                        isPending   ( int timeout );
     
 protected:
     SOCKET                      sock;

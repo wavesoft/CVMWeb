@@ -253,7 +253,7 @@ std::string                     hypervisorErrorStr  ( int error );
  * Tool functions
  */
 int                                                 trimSplit       ( std::string * src, std::vector< std::string > * parts, std::string split, std::string trim );
-int                                                 parseLine       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, int key, int value );
+int                                                 parseLine       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value );
 std::string                                         getTmpFile      ( std::string suffix );
 int                                                 getKV           ( std::string line, std::string * key, std::string * value, unsigned char delim, int offset );
 std::map<std::string, std::string>                  tokenize        ( std::vector<std::string> * lines, char delim );
