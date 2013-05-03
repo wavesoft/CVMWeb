@@ -1,4 +1,4 @@
 
-# Include the X11 and the XSS library
+# Include the X11 & Xss library
 FIND_LIBRARY(X11_LIBRARY X11)
-FIND_LIBRARY(XSS_LIBRARY XSS)
+FIND_LIBRARY(Xss_LIBRARY Xss)
