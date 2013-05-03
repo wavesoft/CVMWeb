@@ -13,6 +13,17 @@ void logUpdates(int curr, int tot, std::string msg, void * o) {
 };
 
 int main( int argc, char ** argv ) {
+    Hypervisor * hv;
+    hv = detectHypervisor();
+        
+    if (hv != NULL) {
+        std::string data;
+        hv->buildContextISO( "Here are some user data", &data );
+        std::cout << "Your file is at " << data << std::endl;
+    }
+}
+
+int zmain( int argc, char ** argv ) {
     ThinIPCMessage   msg;
     char buf[512];
     

@@ -583,7 +583,7 @@ int Hypervisor::buildContextISO ( std::string userData, std::string * filename )
     const char * fData = ctxFileContents.c_str();
     
     char * data = build_simple_cdrom( "CONTEXT_INFO", "CONTEXT.SH", fData, ctxFileContents.length() );
-    isoFile.open( iso.c_str() );
+    isoFile.open( iso.c_str(), std::ios_base::out | std::ios_base::binary );
     if (!isoFile.fail()) {
         isoFile.write( data, CONTEXTISO_CDROM_SIZE );
         isoFile.close();

@@ -74,7 +74,7 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     memset(&descPrimary.unused4[0], 0, 1);
     
     // Copy defaults to the primary sector descriptor
-    memcpy(&descPrimary, &ISO9660_PRIMARY_DESCRIPTOR, sizeof(ISO9660_PRIMARY_DESCRIPTOR));
+    memcpy(&descPrimary, ISO9660_PRIMARY_DESCRIPTOR, ISO9660_PRIMARY_DESCRIPTOR_SIZE);
     
     // Build the current date
     char dateNow[17];
@@ -90,10 +90,10 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
         );
         
     // Set date fields
-    memcpy(&descPrimary.creation_date[0], &dateNow[0], 17);
-    memcpy(&descPrimary.modification_date[0], &dateNow[0], 17);
-    memcpy(&descPrimary.effective_date[0], &dateNow[0], 17);
-    memcpy(&descPrimary.expiration_date[0], &dateZero[0], 17);
+    memcpy(&descPrimary.creation_date[0], dateNow, 17);
+    memcpy(&descPrimary.modification_date[0], dateNow, 17);
+    memcpy(&descPrimary.effective_date[0], dateNow, 17);
+    memcpy(&descPrimary.expiration_date[0], dateZero, 17);
     memcpy(&descPrimary.application_id, LIBCONTEXTISO_APP, 127);
     
     // Update volume_id on the primary sector
