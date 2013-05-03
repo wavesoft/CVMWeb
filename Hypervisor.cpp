@@ -158,9 +158,20 @@ void splitLines( string rawString, vector<string> * out ) {
     istringstream ss( rawString );
 
     /* Split new lines and store them in the vector */
+    int iTrim;
     string item;
     out->clear();
     while (getline(ss, item)) {
+        
+        /* Trim junk */
+        iTrim = item.find('\r');
+        if (iTrim != string::npos)
+            item = item.substr(0, iTrim);
+        iTrim = item.find('\n');
+        if (iTrim != string::npos)
+            item = item.substr(0, iTrim);
+        
+        /* Push back */
         out->push_back(item);
     }
     
@@ -201,6 +212,7 @@ vector< map<string, string> > tokenizeList( vector<string> * lines, char delim )
             row.clear();
         }
     }
+    if (!row.empty()) ans.push_back(row);
     return ans;
 };
 
@@ -208,10 +220,31 @@ vector< map<string, string> > tokenizeList( vector<string> * lines, char delim )
  * Return a temporary filename
  */
 std::string getTmpFile( std::string suffix ) {
-    char * tmp = tmpnam(NULL);
-    string tmpFile = tmp;
-    tmpFile += suffix;
-    return tmpFile;
+    #ifdef _WIN32
+        DWORD wRet;
+        int lRet;
+        unsigned char tmpPath[MAX_PATH];
+        unsigned char tmpName[MAX_PATH];
+        
+        /* Get temporary folder */
+        wRet = GetTempPath( tmpPath, MAX_PATH );
+        if (wRet == 0) return "";
+        
+        /* Get temporary file name */
+        lRet = GetTempFileName( tmpPath, "cvm", 0, tmpName );
+        if (lRet == 0) return "";
+        
+        /* Create string */
+        string tmpStr( tmpName );
+        tmpStr += suffix;
+        return tmpStr;
+    
+    #else
+        char * tmp = tmpnam(NULL);
+        string tmpFile = tmp;
+        tmpFile += suffix;
+        return tmpFile;
+    #endif
 }
 
 /**

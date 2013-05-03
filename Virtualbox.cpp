@@ -151,9 +151,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     if (machineInfo.find("SATA (0, 0)") == machineInfo.end()) {
         
         /* Create a hard disk for this VM */
-        tmp = tmpnam(NULL);
-        string vmDisk = tmp;
-        vmDisk += ".vdi";
+        string vmDisk = getTmpFile(".vdi");
     
         /* (4) Create disk */
         args.str("");
@@ -901,6 +899,9 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
         caps->max.disk = ston<long>(data["Virtual disk limit (info)"]) / 1024;
     if (data.find("Maximum guest CPU count") != data.end()) 
         caps->max.cpus = ston<int>(data["Maximum guest CPU count"]);
+    
+    /* Ok! */
+    return HVE_OK;
     
 };
 
