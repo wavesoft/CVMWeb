@@ -164,6 +164,10 @@ void CVMWebAPI::thread_install() {
  * Request a hypervisor installation
  */
 int CVMWebAPI::installHV( ) {
+
+    /* If we already have a hypervisor, we don't need to install it */
+    if ( hasHypervisor() )
+        return HVE_INVALID_STATE;
     
     /* Start installation thread */
     boost::thread t(boost::bind(&CVMWebAPI::thread_install, this ));

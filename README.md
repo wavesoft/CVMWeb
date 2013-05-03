@@ -45,12 +45,29 @@ Copy the plugin from the **build/projects/CVMWeb/Debug** or **build/projects/CVM
 
 ## Installation on Windows
 
-*(Not yet available)*
+Copy the .dll to a directory that it's going to stay for the rest of it's time (ex. C:\Program Files\Common Files\CernVM) and
+then run:
+
+	regsvr32 C:\Program Files\Common Files\CernVM\npCVMWeb.dll
 
 ## Installation on Linux
 
 Copy the plugin from the **build/bin/CVMWeb** directory to your **~/.mozilla/plugins** directory. The plugin will be immediately 
 available to Firefox.
+
+## Installation on Firefox
+
+**NEW** Now the plugin is available as an .xpi plugin! (Check the builds folder). To install it, simply drag it onto a firefox
+instance...
+
+The .xpi plugin contains precompiled binaries for the following platforms:
+
+ * Darwin/GCC3 x86 ( Mac OSX 10.2+ )
+ * Darwin/GCC3 x86_64 ( Mac OSX 10.6+ )
+ * Linux/GCC3 x86 (Also works on x86_64)
+ * Windows XP/7 32bit (Also works on 64-bit)
+
+The only linux platform currently tested was Ubuntu 12.04.2 LTS (32 bit) but in principle it should work on many more...
 
 # How to use the plugin
 
