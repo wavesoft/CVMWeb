@@ -23,17 +23,13 @@
 #include <Winuser.h>
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
-
-    /* Convert to WString */
-    std::wstring ws;
-    ws.assign(message.begin(), message.end());
     
     /* Display message box */
-    int msgboxID = MessageBox(
+    int msgboxID = MessageBoxA(
         NULL,
-        (LPCWSTR)ws.c_str(),
-        (LPCWSTR)L"CernVM Web API",
-        MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2 | MB_APPLMODAL | MB_TOPMOST
+        (LPCSTR)message.c_str(),
+        (LPCSTR)"CernVM Web API",
+        MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2 | MB_TASKMODAL | MB_TOPMOST
     );
     
     /* Return value */

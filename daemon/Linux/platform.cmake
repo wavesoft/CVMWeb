@@ -1,0 +1,4 @@
+
+# Include the X11 and the XSS library
+FIND_LIBRARY(X11_LIBRARY X11)
+FIND_LIBRARY(XSS_LIBRARY XSS)

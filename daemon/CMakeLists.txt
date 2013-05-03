@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (CVMWADaemon)
+project ( CVMWADaemon )
 include_directories( .. )
 
 # Find FireBreath libs dir
@@ -49,13 +49,15 @@ endif()
 if (WIN32)
 	file ( GLOB PLATFORM_SOURCES ${PROJECT_SOURCE_DIR}/Win/*.cpp  )
 elseif(APPLE)
-	file ( GLOB PLATFORM_SOURCES ${PROJECT_SOURCE_DIR}/Mac/*.cpp  )
+	file ( GLOB PLATFORM_SOURCES ${PROJECT_SOURCE_DIR}/Mac/*.mm  )
+	include ( ${PROJECT_SOURCE_DIR}/Mac/platform.cmake )
 elseif(UNIX)
 	file ( GLOB PLATFORM_SOURCES ${PROJECT_SOURCE_DIR}/Linux/*.cpp  )
+	include ( ${PROJECT_SOURCE_DIR}/Linux/platform.cmake )
 ENDIF(WIN32)
 
 # Sources
-add_executable( CVMWADaemon 
+add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/daemon.cpp 
 	${PLATFORM_SOURCES}
 	${PROJECT_SOURCE_DIR}/../Hypervisor.cpp
@@ -66,10 +68,18 @@ add_executable( CVMWADaemon
 
 # Windows libraries
 if (WIN32)
-	target_link_libraries (CVMWADaemon ws2_32.lib)
-	target_link_libraries (CVMWADaemon wsock32.lib)
+	target_link_libraries (${PROJECT_NAME} ws2_32.lib)
+	target_link_libraries (${PROJECT_NAME} wsock32.lib)
 endif()
 
 # Libraries
-target_link_libraries (CVMWADaemon ${CURL_LIBRARIES})
-target_link_libraries (CVMWADaemon ${OPENSSL_LIBRARIES})
+target_link_libraries (${PROJECT_NAME} ${CURL_LIBRARIES})
+target_link_libraries (${PROJECT_NAME} ${OPENSSL_LIBRARIES})
+
+# Custom link details
+if (WIN32)
+elseif(APPLE)
+	include ( ${PROJECT_SOURCE_DIR}/Mac/link.cmake )
+elseif(UNIX)
+	include ( ${PROJECT_SOURCE_DIR}/Linux/link.cmake )
+ENDIF(WIN32)

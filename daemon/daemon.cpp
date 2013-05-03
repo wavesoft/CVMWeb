@@ -18,8 +18,6 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include <boost/thread.hpp>
-
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -28,11 +26,13 @@
 #include "Hypervisor.h"
 #include "Virtualbox.h"
 #include "ThinIPC.h"
+#include "platform.h"
 
 using namespace std;
 
 int main( int argc, char ** argv ) {
     
+    /*
     // Validate cmdline
     if (argc < 3) {
         cerr << "ERROR: Use syntax: daemon \"<VM UUID>\" \"<IPC Port>\"\n";
@@ -66,6 +66,9 @@ int main( int argc, char ** argv ) {
     cmdline += argv[1];
     cmdline += "\"";
     system( cmdline.c_str() );
+    */
+    
+    cout << "Idle = " << platformIdleTime() << endl;
     
     return 0;
 }

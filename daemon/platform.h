@@ -39,5 +39,6 @@ typedef struct {
 
 /* Resource fetching */
 int                     platformMeasureResources( PLAF_USAGE * usage );
+int                     platformIdleTime( );
 
 #endif /* end of include guard: PLATFORM_H_X4S3J8HJ */

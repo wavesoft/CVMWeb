@@ -252,14 +252,14 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
     return ret;
 }
 #else
-int sysExec( std::string cmdline, std::vector<std::string> * stdoutList ) {
+int sysExec( string cmdline, vector<string> * stdoutList ) {
 
 	HANDLE g_hChildStdOut_Rd = NULL;
 	HANDLE g_hChildStdOut_Wr = NULL;
 	DWORD ret, dwRead;
 	CHAR chBuf[4096];
 	PROCESS_INFORMATION piProcInfo;
-	STARTUPINFO siStartInfo;
+	STARTUPINFOA siStartInfo;
 	BOOL bSuccess = FALSE;
 	string rawStdout;
 
@@ -276,19 +276,17 @@ int sysExec( std::string cmdline, std::vector<std::string> * stdoutList ) {
 
     /* Clean structures */
 	ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION));
-	ZeroMemory( &siStartInfo, sizeof( STARTUPINFO ));
+	ZeroMemory( &siStartInfo, sizeof( STARTUPINFOA ));
 
     /* Prepare startup information */
-	siStartInfo.cb = sizeof(STARTUPINFO);
+	siStartInfo.cb = sizeof(STARTUPINFOA);
 	siStartInfo.hStdOutput = g_hChildStdOut_Wr;
 	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
     /* Create process */
-	std::wstring wcmdline;
-	wcmdline.assign( cmdline.begin(), cmdline.end() );
-	if (!CreateProcess(
+	if (!CreateProcessA(
 		NULL,
-		(LPWSTR)wcmdline.c_str(),
+		(LPCSTR)cmdline.c_str(),
 		NULL,
 		NULL,
 		TRUE,
@@ -836,7 +834,7 @@ Hypervisor * detectHypervisor() {
     #ifdef __linux__
     paths.push_back( "/usr" );
     paths.push_back( "/usr/local" );
-    paths.push_bach( "/opt/VirtualBox" );
+    paths.push_back( "/opt/VirtualBox" );
     #endif
     
     /* Detect hypervisor */
@@ -934,19 +932,22 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      * Pick the URLs to download from
      */
     #ifdef _WIN32
-    const string kDownloadUrl = "win";
-    const string kChecksum = "win-sha256";
-    const string kInstallerName = "win-installer";
+    const string kDownloadUrl = "win32";
+    const string kChecksum = "win32-sha256";
+    const string kInstallerName = "win32-installer";
+	const string kFileExt = ".exe";
     #endif
     #if defined(__APPLE__) && defined(__MACH__)
     const string kDownloadUrl = "osx";
     const string kChecksum = "osx-sha256";
     const string kInstallerName = "osx-installer";
+	const string kFileExt = ".dmg";
     #endif
     #ifdef __linux__
     const string kDownloadUrl = "linux";
     const string kChecksum = "linux-sha256";
     const string kInstallerName = "linux-installer";
+	const string kFileExt = ".run";
     #endif
     
     /**
@@ -961,7 +962,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( kInstallerName ) == data.end()) {
-        cout << "ERROR: No installer program found\n";
+        cout << "ERROR: No installer program data found\n";
         return HVE_EXTERNAL_ERROR;
     }
     
@@ -979,10 +980,10 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     /**
      * Download
      */
-    string dmgVirtualBox = getTmpFile( ".dmg" );
+    string tmpHypervisorInstall = getTmpFile( kFileExt );
     if (cbProgress!=NULL) (cbProgress)(2, 100, "Downloading hypervisor", cbData);
-    cout << "INFO: Downloading " << data[kDownloadUrl] << " to " << dmgVirtualBox << "\n";
-    res = downloadFile( data[kDownloadUrl], dmgVirtualBox, &feedback );
+    cout << "INFO: Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall << "\n";
+    res = downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
     cout << "    : Got " << res << "\n";
     if ( res != HVE_OK ) return res;
     
@@ -990,7 +991,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      * Validate checksum
      */
     string checksum;
-    sha256_file( dmgVirtualBox, &checksum );
+    sha256_file( tmpHypervisorInstall, &checksum );
     if (cbProgress!=NULL) (cbProgress)(90, 100, "Validating download", cbData);
     cout << "INFO: File checksum " << checksum << " <-> " << data[kChecksum] << "\n";
     if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
@@ -999,32 +1000,80 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      * OS-Dependant installation process
      */
     #if defined(__APPLE__) && defined(__MACH__)
-    cout << "INFO: Attaching\n";
-    if (cbProgress!=NULL) (cbProgress)(94, 100, "Mounting hypervisor DMG disk", cbData);
-    res = sysExec("hdiutil attach " + dmgVirtualBox, &lines);
-    if (res != 0) {
-        remove( dmgVirtualBox.c_str() );
-        return HVE_EXTERNAL_ERROR;
-    }
-    string infoLine = lines.back();
-    string dskDev, dskVolume, extra;
-    getKV( infoLine, &dskDev, &extra, ' ', 0);
-    getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
-    cout << "Got disk '" << dskDev << "', volume: '" << dskVolume << "'\n";
+
+		cout << "INFO: Attaching\n";
+		if (cbProgress!=NULL) (cbProgress)(94, 100, "Mounting hypervisor DMG disk", cbData);
+		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
+		if (res != 0) {
+			remove( dmgVirtualBox.c_str() );
+			return HVE_EXTERNAL_ERROR;
+		}
+		string infoLine = lines.back();
+		string dskDev, dskVolume, extra;
+		getKV( infoLine, &dskDev, &extra, ' ', 0);
+		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
+		cout << "Got disk '" << dskDev << "', volume: '" << dskVolume << "'\n";
     
-    if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
-    cout << "INFO: Installing using " << dskVolume << "/" << data[kInstallerName] << "\n";
-    res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
-    if (res != 0) {
-        cout << "INFO: Detaching\n";
-        res = sysExec("hdiutil detach " + dskDev, NULL);
-        remove( dmgVirtualBox.c_str() );
-        return HVE_EXTERNAL_ERROR;
-    }
-    cout << "INFO: Detaching\n";
-    if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
-    res = sysExec("hdiutil detach " + dskDev, NULL);
-    remove( dmgVirtualBox.c_str() );
+		if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
+		cout << "INFO: Installing using " << dskVolume << "/" << data[kInstallerName] << "\n";
+		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
+		if (res != 0) {
+			cout << "INFO: Detaching\n";
+			res = sysExec("hdiutil detach " + dskDev, NULL);
+			remove( tmpHypervisorInstall.c_str() );
+			return HVE_EXTERNAL_ERROR;
+		}
+		cout << "INFO: Detaching\n";
+		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
+		res = sysExec("hdiutil detach " + dskDev, NULL);
+		remove( tmpHypervisorInstall.c_str() );
+
+	#elif defined(_WIN32)
+
+		/* Start installer */
+		if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
+		cout << "INFO: Starting installer\n";
+
+		/* CreateProcess does not work because we need elevated permissions,
+		 * use the classic ShellExecute to run the installer... */
+		SHELLEXECUTEINFOA shExecInfo = {0};
+		shExecInfo.cbSize = sizeof( SHELLEXECUTEINFO );
+		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+		shExecInfo.hwnd = NULL;
+		shExecInfo.lpVerb = NULL;
+		shExecInfo.lpFile = (LPCSTR)tmpHypervisorInstall.c_str();
+		shExecInfo.lpParameters = (LPCSTR)"";
+		shExecInfo.lpDirectory = NULL;
+		shExecInfo.nShow = SW_SHOW;
+		shExecInfo.hInstApp = NULL;
+
+		/* Validate handle */
+		if ( !ShellExecuteExA( &shExecInfo ) ) {
+			cout << "ERROR: Installation could not start! Error = " << res << endl;
+			remove( tmpHypervisorInstall.c_str() );
+			return HVE_EXTERNAL_ERROR;
+		}
+
+		/* Wait for termination */
+		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
+
+		/* Cleanup */
+		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
+		remove( tmpHypervisorInstall.c_str() );
+
+	#elif defined(__linux__)
+
+		/* Install using GKSudo */
+		string cmdline = "gksudo sh \"" + tmpHypervisorInstall + "\"";
+		res = system( cmdline.c_str() );
+		if (res < 0) {
+
+			cout << "INFO: Detaching\n";
+			res = sysExec("hdiutil detach " + dskDev, NULL);
+			remove( tmpHypervisorInstall.c_str() );
+			return HVE_EXTERNAL_ERROR;
+		}
+
     #endif
     
     /**
