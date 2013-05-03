@@ -234,7 +234,10 @@ std::string getTmpFile( std::string suffix ) {
         lRet = GetTempFileNameA( tmpPath, "cvm", 0, tmpName );
         if (lRet == 0) return "";
         
-        /* Create string */
+        /* Delete the file that windows create automatically */
+        remove( tmpName );
+        
+        /* Create string with the appropriate suffix */
         string tmpStr( tmpName );
         tmpStr += suffix;
         return tmpStr;

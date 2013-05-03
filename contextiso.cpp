@@ -63,7 +63,6 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     // Local variables
     iso_primary_descriptor  descPrimary;
     iso_directory_record    descFile;
-    int i;
     time_t rawTimeNow;
     struct tm * tmNow;
     
@@ -77,10 +76,10 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     memcpy(&descPrimary, ISO9660_PRIMARY_DESCRIPTOR, ISO9660_PRIMARY_DESCRIPTOR_SIZE);
     
     // Build the current date
-    char dateNow[17];
+    static char dateNow[17];
     time(&rawTimeNow);
     tmNow = gmtime(&rawTimeNow);
-    sprintf(&dateNow[0], "%04u%02u%02u%02u%02u%02u000", // <-- Last 0x30 ('0') is GMT Timezone
+    sprintf(dateNow, "%04u%02u%02u%02u%02u%02u000", // <-- Last 0x30 ('0') is GMT Timezone
             tmNow->tm_year + 1900,
             tmNow->tm_mon,
             tmNow->tm_mday,
@@ -115,7 +114,7 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     
     // Update CONTEXT.SH record
     isosetl(lDataSize, descFile.size);      // <-- File size
-    i=0; for (;i<strlen(filename);i++) {    // <-- File name
+    size_t i=0; for (;i<strlen(filename);i++) {    // <-- File name
         if (i>=12) break;
         char c = toupper(filename[i]);
         if (c==' ') c='_';
