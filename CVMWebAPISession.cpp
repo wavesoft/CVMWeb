@@ -190,8 +190,8 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
 }
 
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
-    int ans = 0;
-    std::string vmUserData = "";
+    int ans;
+    std::string vmUserData;
     vmUserData = cfg.cast<std::string>();
     
     ans = this->session->start(vmUserData);

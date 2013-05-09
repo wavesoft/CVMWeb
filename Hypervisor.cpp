@@ -380,7 +380,10 @@ int sha256_file( string path, string * checksum ) {
     const int bufSize = 32768;
     unsigned char *buffer = (unsigned char *) malloc(bufSize);
     int bytesRead = 0;
-    if(!buffer) return -1;
+    if(!buffer) {
+        fclose(file);
+        return -1;
+    }
     while((bytesRead = fread(buffer, 1, bufSize, file))) {
         SHA256_Update(&sha256, buffer, bytesRead);
     }
@@ -660,7 +663,7 @@ Hypervisor::Hypervisor() {
     #endif
     
     #if defined(__APPLE__) && defined(__MACH__)
-    struct passwd *p = getpwuid(getuid());
+    struct passwd *p = getpwuid_r(getuid());
     char *home = p->pw_dir;
     homeDir = home;
     homeDir += "/Library/Application Support/CernVM";
@@ -673,7 +676,7 @@ Hypervisor::Hypervisor() {
     #endif
     
     #ifdef __linux__
-    struct passwd *p = getpwuid(getuid());
+    struct passwd *p = getpwuid_r(getuid());
     char *home = p->pw_dir;
     homeDir = home;
     homeDir += "/.cernvm";

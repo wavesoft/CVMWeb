@@ -98,6 +98,15 @@ public:
         this->onDead = NULL;
         this->onStop = NULL;
         this->onDebug = NULL;
+        
+        this->cpus = 0;
+        this->memory = 0;
+        this->disk = 0;
+        this->executionCap = 100;
+        this->state = 0;
+        this->internalID = 0;
+        this->cbObject = NULL;
+        
     };
     
     std::string             uuid;

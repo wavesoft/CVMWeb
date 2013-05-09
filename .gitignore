@@ -6,3 +6,4 @@ daemon/daemon
 daemon/build
 
 test/code.txt
+err.txt

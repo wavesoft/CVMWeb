@@ -134,7 +134,8 @@ int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
  * (Shorthand for calling daemonIPC with ThinIPCMessage structures)
  */
 long int daemonGet( long int action ) {
-    ThinIPCMessage send, recv;
+    static ThinIPCMessage send, recv;
+    send.reset(); recv.reset();
     send.writeInt( action );
     int res = daemonIPC( &send, &recv );
     if (res != 0) return res;
@@ -146,7 +147,9 @@ long int daemonGet( long int action ) {
  * (Shorthand for calling daemonIPC with ThinIPCMessage structures)
  */
 long int daemonSet( long int action, long int value ) {
-    ThinIPCMessage send, recv;
+    static ThinIPCMessage send, recv;
+    send.reset();
+    recv.reset();
     send.writeInt( action );
     send.writeInt( value );
     int res = daemonIPC( &send, &recv );

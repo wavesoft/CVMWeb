@@ -142,20 +142,22 @@ int CVMWebAPIDaemon::stop() {
 /**
  * Query daemon to get the current idle time settings
  */
-int CVMWebAPIDaemon::getIdleTime() {
-    return daemonGet( DIPC_GET_IDLETIME );
+long int CVMWebAPIDaemon::getIdleTime() {
+    long int idleTime = daemonGet( DIPC_GET_IDLETIME );
+    return idleTime;
 }
 
 /**
  * Query daemon to set the current idle time settings
  */
-void CVMWebAPIDaemon::setIdleTime( int idleTime ) {
+void CVMWebAPIDaemon::setIdleTime( long int idleTime ) {
     daemonSet( DIPC_SET_IDLETIME, idleTime );
 }
 
 /**
  * Query daemon to get the current idle status
  */
-int CVMWebAPIDaemon::getIdleStatus( ) {
-    return daemonGet( DIPC_IDLESTATE );
+bool CVMWebAPIDaemon::getIdleStatus( ) {
+    long int idleStatus = daemonGet( DIPC_IDLESTATE );
+    return ( idleStatus == 1 );
 }

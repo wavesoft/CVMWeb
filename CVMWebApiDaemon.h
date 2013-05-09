@@ -69,11 +69,11 @@ public:
     std::string             getDaemonBin();
     std::string             toString();
     int                     getStatus();
-    int                     getIdleStatus();
+    bool                    getIdleStatus();
 
     // Read-Write properties    
-    int                     getIdleTime();
-    void                    setIdleTime( int idleTime );
+    long int                getIdleTime();
+    void                    setIdleTime( long int idleTime );
     
 private:
     CVMWebWeakPtr           m_plugin;
