@@ -65,7 +65,7 @@ public:
         registerProperty("hypervisorName",  make_property(this, &CVMWebAPI::get_hv_name));
         registerProperty("hypervisorVersion", make_property(this, &CVMWebAPI::get_hv_version));
         registerProperty("domain",          make_property(this, &CVMWebAPI::getDomainName));
-        registerProperty("service",         make_property(this, &CVMWebAPI::getIdleDaemon));
+        registerProperty("daemon",          make_property(this, &CVMWebAPI::getIdleDaemon));
         
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPI::toString));

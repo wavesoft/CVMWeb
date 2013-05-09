@@ -36,6 +36,10 @@
 #include <stdlib.h>
 #endif
 
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
+
 using namespace std;
 
 /* ***************************************************************************** */
@@ -58,7 +62,13 @@ int ThinIPCInitialize() {
     #endif
     
     // Seed random engine
-    srandomdev();
+    #ifndef _WIN32
+    struct timeval  tv;
+    gettimeofday(&tv, NULL);
+    srand( (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 );
+    #else
+    srand( GetTickCount() / 1000 );
+    #endif
     
     return 0;
 }
