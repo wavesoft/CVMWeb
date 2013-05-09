@@ -142,7 +142,7 @@ int CVMWebAPIDaemon::stop() {
 /**
  * Query daemon to get the current idle time settings
  */
-long int CVMWebAPIDaemon::getIdleTime() {
+FB::variant CVMWebAPIDaemon::getIdleTime() {
     long int idleTime = daemonGet( DIPC_GET_IDLETIME );
     return idleTime;
 }

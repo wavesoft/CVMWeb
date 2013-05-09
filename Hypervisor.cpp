@@ -663,7 +663,7 @@ Hypervisor::Hypervisor() {
     #endif
     
     #if defined(__APPLE__) && defined(__MACH__)
-    struct passwd *p = getpwuid_r(getuid());
+    struct passwd *p = getpwuid(getuid());
     char *home = p->pw_dir;
     homeDir = home;
     homeDir += "/Library/Application Support/CernVM";
@@ -676,7 +676,7 @@ Hypervisor::Hypervisor() {
     #endif
     
     #ifdef __linux__
-    struct passwd *p = getpwuid_r(getuid());
+    struct passwd *p = getpwuid(getuid());
     char *home = p->pw_dir;
     homeDir = home;
     homeDir += "/.cernvm";

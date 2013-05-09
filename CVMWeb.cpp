@@ -191,3 +191,8 @@ std::string CVMWeb::getDataFolderPath() {
     /* Return path component */
     return dPath;
 }
+
+boost::shared_ptr<CVMWebAPIDaemon> CVMWeb::getDaemonInstance( ) {
+    static boost::shared_ptr<CVMWebAPIDaemon> inst = boost::make_shared<CVMWebAPIDaemon>(FB::ptr_cast<CVMWeb>(shared_from_this()), m_host);
+    return inst;
+}

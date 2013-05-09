@@ -36,6 +36,8 @@
 #include "PluginCore.h"
 #include "Hypervisor.h"
 
+class CVMWebAPIDaemon;
+
 FB_FORWARD_PTR(CVMWeb)
 class CVMWeb : public FB::PluginCore
 {
@@ -51,11 +53,13 @@ public:
 public:
     
     /* Public functions */
-    void                    onPluginReady();
-    void                    shutdown();
-    virtual FB::JSAPIPtr    createJSAPI();
-    std::string             getFilesystemPath();
-    std::string             getDataFolderPath();
+    void                                onPluginReady();
+    void                                shutdown();
+    virtual FB::JSAPIPtr                createJSAPI();
+    std::string                         getFilesystemPath();
+    std::string                         getDataFolderPath();
+    boost::shared_ptr<CVMWebAPIDaemon>  getDaemonInstance( );
+    
     
     /* Always windowless */
     virtual bool isWindowless() { return true; }
@@ -77,6 +81,7 @@ public:
     /** END EVENTDEF -- DON'T CHANGE THIS LINE **/
 };
 
+#include "CVMWebAPIDaemon.h"
 
 #endif
 

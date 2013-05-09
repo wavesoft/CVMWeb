@@ -217,8 +217,7 @@ FB::variant CVMWebAPI::getIdleDaemon( ) {
     if (p->hv == NULL) {
         return CVME_UNSUPPORTED;
     } else {
-        /* Open session */
-        return boost::make_shared<CVMWebAPIDaemon>(p, m_host);
+        return p->getDaemonInstance();
     }
 }
 

@@ -72,7 +72,7 @@ public:
     bool                    getIdleStatus();
 
     // Read-Write properties    
-    long int                getIdleTime();
+    FB::variant             getIdleTime();
     void                    setIdleTime( long int idleTime );
     
 private:

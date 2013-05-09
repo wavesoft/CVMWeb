@@ -3,6 +3,7 @@
 #include "Hypervisor.h" // For the utilities
 
 #include <sstream>
+#include <stdlib.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <libproc.h>
