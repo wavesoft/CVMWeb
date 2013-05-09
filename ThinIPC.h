@@ -27,7 +27,10 @@
 #include <vector>
 
 #ifndef _WIN32
+
 #define SOCKET          int
+#include <fcntl.h>
+
 #else
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -62,10 +65,10 @@ public:
     static ThinIPCMessage *     SI( std::string, int );
     
     /* Object I/O */
-    int                         readInt();
+    long int                    readInt();
     std::string                 readString();
     template <typename T> short readPtr( T * ptr );
-    short                       writeInt( int v );
+    short                       writeInt( long int v );
     short                       writeString( std::string v );
     template <typename T> short writePtr( T * ptr );
     
@@ -91,7 +94,7 @@ public:
     ThinIPCEndpoint( int port );
     virtual ~ThinIPCEndpoint();
     
-    int                         recv        ( int port, ThinIPCMessage * msg );
+    int                         recv        ( int * port, ThinIPCMessage * msg );
     int                         send        ( int port, ThinIPCMessage * msg );
     bool                        isPending   ( int timeout );
     

@@ -49,13 +49,15 @@ public:
     virtual ~CVMWeb();
 
 public:
-    void onPluginReady();
-    void shutdown();
-    virtual FB::JSAPIPtr createJSAPI();
-    // If you want your plugin to always be windowless, set this to true
-    // If you want your plugin to be optionally windowless based on the
-    // value of the "windowless" param tag, remove this method or return
-    // FB::PluginCore::isWindowless()
+    
+    /* Public functions */
+    void                    onPluginReady();
+    void                    shutdown();
+    virtual FB::JSAPIPtr    createJSAPI();
+    std::string             getFilesystemPath();
+    std::string             getDataFolderPath();
+    
+    /* Always windowless */
     virtual bool isWindowless() { return true; }
 
     BEGIN_PLUGIN_EVENT_MAP()

@@ -67,7 +67,7 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     struct tm * tmNow;
     
     // Prepare primary record
-    memset(&descPrimary, 0, sizeof(descPrimary));
+    memset(&descPrimary, 0, sizeof(iso_primary_descriptor));
     memset(&descPrimary.volume_set_id[0], 0x20, 1205); // Reaches till .unused5
     memset(&descPrimary.file_structure_version[0], 1, 1);
     memset(&descPrimary.unused4[0], 0, 1);
@@ -100,17 +100,18 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     if (lVol > 31) lVol=31;
     memset(&descPrimary.volume_id, 0x20, 31);
     memcpy(&descPrimary.volume_id, volume_id, lVol);
+
+    // Limit the data size to the size of the 350Kb CD-ROM buffer (that's 302Kb of data)
+    int lDataSize = size;
+    if (lDataSize > (CONTEXTISO_CDROM_SIZE - CONTENTS_OFFSET))
+        lDataSize = CONTEXTISO_CDROM_SIZE - CONTENTS_OFFSET;
     
     // Calculate the volume size
-    // (For now just limit to 2048)
-    int lDataSize = size;
-    if (lDataSize>2048) lDataSize=2048;
-    //We should actually do something like:
-    //int lVolSize = 1 + ((lDataSize - 1) / 2048);
-    //isosetl(lVolSize, descPrimary.volume_space_size);
+    int lVolSize = 1 + ((lDataSize - 1) / 2048);
+    isosetl(lVolSize, (unsigned char *)descPrimary.volume_space_size);
     
     // Copy defaults to CONTEXT.SH record
-    memcpy(&descFile, &ISO9660_CONTEXT_SH_STRUCT[0x44], sizeof(descFile));
+    memcpy(&descFile, &ISO9660_CONTEXT_SH_STRUCT[0x44], sizeof(iso_directory_record));
     
     // Update CONTEXT.SH record
     isosetl(lDataSize, descFile.size);      // <-- File size
@@ -126,12 +127,12 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     // Compose the CD-ROM Disk buffer
     static char bytes[CONTEXTISO_CDROM_SIZE];
     memset(&bytes,0,CONTEXTISO_CDROM_SIZE);
-    memcpy(&bytes[PRIMARY_DESCRIPTOR_OFFSET],           &descPrimary,               sizeof(descPrimary));
-    memcpy(&bytes[0x8800],                              &ISO9660_AT_8800,           sizeof(ISO9660_AT_8800));
-    memcpy(&bytes[0x9800],                              &ISO9660_AT_9800,           sizeof(ISO9660_AT_9800));
-    memcpy(&bytes[0xA800],                              &ISO9660_AT_A800,           sizeof(ISO9660_AT_A800));
-    memcpy(&bytes[SECONDARY_DIRECTORY_RECORD_OFFSET],   &ISO9660_CONTEXT_SH_STRUCT, sizeof(ISO9660_CONTEXT_SH_STRUCT));
-    memcpy(&bytes[SECONDARY_DIRECTORY_RECORD_OFFSET+68],&descFile,                  sizeof(descFile));
+    memcpy(&bytes[PRIMARY_DESCRIPTOR_OFFSET],           &descPrimary,               sizeof(iso_primary_descriptor));
+    memcpy(&bytes[0x8800],                              &ISO9660_AT_8800,           ISO9660_AT_8800_SIZE);
+    memcpy(&bytes[0x9800],                              &ISO9660_AT_9800,           ISO9660_AT_9800_SIZE);
+    memcpy(&bytes[0xA800],                              &ISO9660_AT_A800,           ISO9660_AT_A800_SIZE);
+    memcpy(&bytes[SECONDARY_DIRECTORY_RECORD_OFFSET],   &ISO9660_CONTEXT_SH_STRUCT, ISO9660_CONTEXT_SH_STRUCT_SIZE);
+    memcpy(&bytes[SECONDARY_DIRECTORY_RECORD_OFFSET+68],&descFile,                  sizeof(iso_directory_record));
     memcpy(&bytes[CONTENTS_OFFSET],                     buffer,                     lDataSize);
     
     // Return the built buffer

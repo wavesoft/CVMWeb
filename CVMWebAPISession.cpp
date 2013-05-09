@@ -300,3 +300,7 @@ void CVMWebAPISession::onStop( void * p ) {
     CVMWebAPISession * self = (CVMWebAPISession*)p;
     self->fire_stop();
 }
+
+std::string CVMWebAPISession::toString() {
+    return "[CVMWebAPISession]";
+}

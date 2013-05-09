@@ -295,24 +295,30 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
  * Start VM with the given
  */
 int VBoxSession::start( std::string userData ) { 
+    cout << "The very first thing!\n";
     string vmContextISO, kk, kv;
     ostringstream args;
     int ans;
 
     /* Validate state */
+    cout << "0 (" << this->state << ")\n";
     if (this->state != STATE_OPEN) return HVE_INVALID_STATE;
     this->state = STATE_STARTING;
 
     /* Fetch information to validate disks */
+    cout << "1\n";
     map<string, string> machineInfo = this->getMachineInfo();
     
     /* Detach & Delete previous context ISO */
+    cout << "2\n";
     if (machineInfo.find("IDE (1, 1)") != machineInfo.end()) {
         
+        cout << "2.1\n";
         /* Get the filename of the iso */
         getKV( machineInfo["IDE (1, 1)"], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
+        cout << "2.2\n";
         cout << "Detaching " << kk << "\n";
 
         /* Detach iso */

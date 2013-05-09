@@ -207,6 +207,7 @@ the errors that can occur.
 	-9   Not found
 	-10	 Not allowed
 	-11	 Not supported
+	-12	 Not validated
 	-100 Function is not implemented
 
 # Appendix B - Events
@@ -269,7 +270,7 @@ The *sess.state* property has one of the following values:
 
 	State			Description
 	------------    -----------------
-	0	Closed		The session is closed. You must call close()
+	0	Closed		The session is closed. You must call open()
 	1	Oppening	The open() function was called, but the session is not yet ready
 	2	Open		The session is open, you can call start() to start it
 	3	Starting	The start() function was called, but the session is not yet started

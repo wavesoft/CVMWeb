@@ -60,6 +60,9 @@ public:
         registerProperty("version",         make_property(this, &CVMWebAPISession::get_version));
         registerProperty("apiURL",          make_property(this, &CVMWebAPISession::get_apiEntryPoint));
         registerProperty("executionCap",    make_property(this, &CVMWebAPISession::get_executionCap));
+
+        // Beautification
+        registerMethod("toString",          make_method(this, &CVMWebAPISession::toString));
         
         /* Import session */
         this->session = session;
@@ -134,6 +137,7 @@ public:
     std::string get_ip();
     std::string get_apiEntryPoint();
     std::string get_version();
+    std::string toString();
     
     // Callback forwards
     static void onProgress(int, int, std::string, void *);

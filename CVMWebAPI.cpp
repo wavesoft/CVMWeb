@@ -33,6 +33,7 @@
 
 #include "CVMWebAPI.h"
 #include "CVMWebAPISession.h"
+#include "CVMWebAPIDaemon.h"
 
 #include "Dialogs.h"
 
@@ -206,4 +207,21 @@ bool CVMWebAPI::confirm( std::string msg ) {
     }
     #endif
     
+}
+
+/**
+ * Get a singleton to the idle daemon
+ */
+FB::variant CVMWebAPI::getIdleDaemon( ) {
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) {
+        return CVME_UNSUPPORTED;
+    } else {
+        /* Open session */
+        return boost::make_shared<CVMWebAPIDaemon>(p, m_host);
+    }
+}
+
+std::string CVMWebAPI::toString() {
+    return "[CVMWebAPI]";
 }

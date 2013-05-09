@@ -65,6 +65,10 @@ public:
         registerProperty("hypervisorName",  make_property(this, &CVMWebAPI::get_hv_name));
         registerProperty("hypervisorVersion", make_property(this, &CVMWebAPI::get_hv_version));
         registerProperty("domain",          make_property(this, &CVMWebAPI::getDomainName));
+        registerProperty("service",         make_property(this, &CVMWebAPI::getIdleDaemon));
+        
+        // Beautification
+        registerMethod("toString",          make_method(this, &CVMWebAPI::toString));
         
         // Reset AuthType
         this->m_authType = 0;
@@ -92,7 +96,9 @@ public:
 
     // Methods
     FB::variant requestSession(const FB::variant& vm, const FB::variant& code);
+    FB::variant getIdleDaemon();
     std::string getDomainName();
+    std::string toString();
     int         authenticate( const std::string& key );
     int         installHV();
     bool        hasHypervisor();

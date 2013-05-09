@@ -39,15 +39,10 @@ else()
 	endif()
 ENDIF(OPENSSL_FOUND)
 
-# Static build
-if (WIN32)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -MTd")
-	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -MT")
-endif()
-
 # Locate the platform-specific source files
 if (WIN32)
 	file ( GLOB PLATFORM_SOURCES ${PROJECT_SOURCE_DIR}/Win/*.cpp  )
+	include ( ${PROJECT_SOURCE_DIR}/Win/platform.cmake )
 elseif(APPLE)
 	file ( GLOB PLATFORM_SOURCES ${PROJECT_SOURCE_DIR}/Mac/*.mm  )
 	include ( ${PROJECT_SOURCE_DIR}/Mac/platform.cmake )
@@ -60,26 +55,22 @@ ENDIF(WIN32)
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/daemon.cpp 
 	${PLATFORM_SOURCES}
+	${PROJECT_SOURCE_DIR}/../DaemonCtl.cpp
 	${PROJECT_SOURCE_DIR}/../Hypervisor.cpp
 	${PROJECT_SOURCE_DIR}/../Virtualbox.cpp
 	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	)
 
-# Windows libraries
+# Platform-specific link details
 if (WIN32)
-	target_link_libraries (${PROJECT_NAME} ws2_32.lib)
-	target_link_libraries (${PROJECT_NAME} wsock32.lib)
-endif()
-
-# Libraries
-target_link_libraries (${PROJECT_NAME} ${CURL_LIBRARIES})
-target_link_libraries (${PROJECT_NAME} ${OPENSSL_LIBRARIES})
-
-# Custom link details
-if (WIN32)
+	include ( ${PROJECT_SOURCE_DIR}/Win/link.cmake )
 elseif(APPLE)
 	include ( ${PROJECT_SOURCE_DIR}/Mac/link.cmake )
 elseif(UNIX)
 	include ( ${PROJECT_SOURCE_DIR}/Linux/link.cmake )
 ENDIF(WIN32)
+
+# Libraries
+target_link_libraries (${PROJECT_NAME} ${CURL_LIBRARIES})
+target_link_libraries (${PROJECT_NAME} ${OPENSSL_LIBRARIES})

@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#include <cstdlib>
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -28,6 +29,8 @@
 #include "Virtualbox.h"
 #include "ThinIPC.h"
 #include "platform.h"
+
+#include "../DaemonCtl.h"
 
 using namespace std;
 
@@ -74,31 +77,39 @@ void switchIdleStates( bool idle ) {
  */
 int main( int argc, char ** argv ) {
     
-    /* Validate cmdline */
-    if (argc < 3) {
-        cerr << "ERROR: Use syntax: daemon \"<IPC Port>\" \"<idle time>\"\n";
-        return 1;
-    }
-    
     /* Get a hypervisor control instance */
     hv = detectHypervisor();
     if (hv == NULL) {
         cerr << "ERROR: Unable to detect hypervisor!\n";
-        return 2;
+        return 3;
     }
     
     /* This is working only with VirtualBox */
     if (hv->type != HV_VIRTUALBOX) {
         cerr << "ERROR: Only VirtualBox is currently supproted!\n";
-        return 3;
+        return 4;
+    }
+    
+    /* Lock file */
+    DLOCKINFO * lockInfo;
+    std::string lockFile = getDaemonLockfile( argv[0] );
+    if (isDaemonRunning(lockFile)) {
+        /* Already locked */
+        cerr << "ERROR: Another daemon process is running!\n";
+        return 2;
+    }
+    if ( (lockInfo = daemonLock(lockFile)) == NULL ) {
+        /* Could not lock */
+        cerr << "ERROR: Could not acquire lockfile\n";
+        return 2;
     }
     
     /* Initialize ThinIPC */
     ThinIPCInitialize();
     
     /* Initialize arguments */
-    ipc = new ThinIPCEndpoint( atoi(argv[1]) );
-    idleTime = atoi( argv[2] );
+    ipc = new ThinIPCEndpoint( DAEMON_PORT );
+    idleTime = 30;
     
     /* Reset state */
     reloadTimer = time( NULL );
@@ -106,12 +117,49 @@ int main( int argc, char ** argv ) {
     /* Main loop */
     for (;;) {
         
-        /* Check if we have IPC data to read */
-        if (ipc->isPending( 500000 )) {
-            cout << "INFO: DATA!" << endl;
+        /* Check if we have IPC data to read 
+           (This also acts as our CPU throttling delay) */
+        if (ipc->isPending( 250000 )) {
+            
+            /* Read IPC data */
+            int port;
+            static ThinIPCMessage msg, ans;
+            ipc->recv( &port, &msg );
+            
+            /* Handle data */
+            ans.reset();
+            int iAction = msg.readInt();
+            cout << "INFO: Msg=" << iAction << ", From=" << port << endl;
+            
+            if (iAction == DIPC_IDLESTATE) { // Get the idle state
+                ans.writeInt(DIPC_ANS_OK);
+                ans.writeInt( isIdle ? 1 : 0 );
+                
+            } else if (iAction == DIPC_SHUTDOWN) { // Shut down the daemon
+                ans.writeInt(DIPC_ANS_OK);
+                ans.writeInt( 0 );
+                ipc->send( port, &ans );
+                break;
+                
+            } else if (iAction == DIPC_SET_IDLETIME) { // Set the idle time value
+                idleTime = msg.readInt();
+                ans.writeInt(DIPC_ANS_OK);
+                ans.writeInt(idleTime);
+                
+            } else if (iAction == DIPC_GET_IDLETIME) { // Return the current idle time settings
+                ans.writeInt(DIPC_ANS_OK);
+                ans.writeInt(idleTime);
+                
+            } else {
+                ans.writeInt(DIPC_ANS_ERROR);
+            }
+            
+            /* Send responpse */
+            ipc->send( port, &ans );
+            
         }
         
-        /* Check for reload times */
+        /* Check for state reload times */
         if ( time( NULL ) > ( reloadTimer + RELOAD_TIME ) ) {
             if (isIdle) { // Reload only on IDLE state
                 cout << "INFO: Reloading sessions" << endl;
@@ -137,7 +185,10 @@ int main( int argc, char ** argv ) {
             }
         }
         
-    } 
+    }
+    
+    /* Unlock lockfile */
+    daemonUnlock( lockInfo );
     
     /* Graceful cleanup */
     return 0;

@@ -47,6 +47,8 @@ using namespace std;
  */
 int ThinIPCInitialize() {
 
+//    std::cout << "INFO: Initialize ThinIPC" << std::endl;
+
     // Initialize Winsock on windows
     #ifdef _WIN32
     WSADATA wsaData;
@@ -54,6 +56,9 @@ int ThinIPCInitialize() {
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
     if (iResult != 0) return 1;
     #endif
+    
+    // Seed random engine
+    srandomdev();
     
     return 0;
 }
@@ -122,11 +127,12 @@ template <typename T> short ThinIPCMessage::writePtr( T * ptr ) {
 /**
  * Read integer from input stream
  */
-int ThinIPCMessage::readInt() {
-    int v;
+long int ThinIPCMessage::readInt() {
+    long int v;
     if (__ioPos+4 > size) return 0;
 
     // Read int
+    memset( &v, 0, 4 );
     memcpy( &v, &this->data[__ioPos], 4 );
     __ioPos += 4;
     
@@ -159,7 +165,7 @@ string ThinIPCMessage::readString() {
 /**
  * Write integer to output stream
  */
-short ThinIPCMessage::writeInt( int v ) {
+short ThinIPCMessage::writeInt( long int v ) {
     // Resize buffer
     size += 4;
     this->data = (char *) realloc( this->data, size );
@@ -273,7 +279,7 @@ short ThinIPCMessage::putChunk( char * buffer, short capacity ) {
         
         // Read chunk size (assuming capacity > 4)
         memcpy( &size, buffer, 2 );
-        std::cout << "INFO: Read " << size << "\n";
+//        std::cout << "INFO: Read " << size << "\n";
         
         // Reset buffer
         if (this->data != NULL) free(this->data);
@@ -282,7 +288,7 @@ short ThinIPCMessage::putChunk( char * buffer, short capacity ) {
         // Calculate the number of bytes to read
         if ( __chunkPos + readSize > size ) readSize = size - __chunkPos;
         
-        std::cout << "INFO: Read size " << readSize << " at " << __chunkPos << "\n";
+//        std::cout << "INFO: Read size " << readSize << " at " << __chunkPos << "\n";
         memcpy( &this->data[__chunkPos], &buffer[2], readSize-2 );
         __chunkPos += readSize;
         
@@ -385,6 +391,8 @@ ThinIPCEndpoint::ThinIPCEndpoint( int port ) {
     server.sin_port = htons( port );
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
     
+//    std::cout << "INFO: ThinIPC(" << port << ")" << std::endl;
+    
     // Bind on the server address
     if( bind(this->sock, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) < 0) {
         this->errorCode = SCKE_BIND;
@@ -397,6 +405,7 @@ ThinIPCEndpoint::ThinIPCEndpoint( int port ) {
  * Cleanup
  */
 ThinIPCEndpoint::~ThinIPCEndpoint() {
+//    std::cout << "INFO: ThinkIPC Cleanup" << std::endl;
 #ifdef _WIN32
     closesocket(this->sock);
 #else
@@ -422,6 +431,8 @@ int ThinIPCEndpoint::send( int port, ThinIPCMessage * msg ) {
     msg->rewind();
     while ((clen = msg->getChunk( buf, 1024 )) > 0) {
         
+//        std::cout << "INFO: Sending chunk("<< clen << ") to " << port << std::endl;
+        
         // Send frame
         socklen_t flen = sizeof(server);
         len = sendto( this->sock, buf, clen, 0, (struct sockaddr *)&server, flen );
@@ -440,7 +451,7 @@ int ThinIPCEndpoint::send( int port, ThinIPCMessage * msg ) {
 /**
  * Wait for a data frame on the socket
  */
-int ThinIPCEndpoint::recv( int port, ThinIPCMessage * msg ) {
+int ThinIPCEndpoint::recv( int * port, ThinIPCMessage * msg ) {
     char buf[1024];
     int len;
     
@@ -448,7 +459,7 @@ int ThinIPCEndpoint::recv( int port, ThinIPCMessage * msg ) {
     struct sockaddr_in server;
     memset(&server, 0, sizeof(struct sockaddr_in));
     server.sin_family = AF_INET;
-    server.sin_port = htons( port );
+    server.sin_port = 0;
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
     
     // Start receiving frame
@@ -459,6 +470,9 @@ int ThinIPCEndpoint::recv( int port, ThinIPCMessage * msg ) {
         socklen_t flen = sizeof(server);
         len = recvfrom( this->sock, buf, 1024, 0, (struct sockaddr *)&server, &flen );
         if (len <= 0) return len;
+        
+        // Update the remote port
+        *port = ntohs( server.sin_port );
         
         // Push on IPC frame
         len = msg->putChunk( buf, 1024 );
@@ -484,7 +498,7 @@ bool ThinIPCEndpoint::isPending( int timeout ) {
     FD_SET(this->sock, &rfds);
 
     /* Wait for read on socket for timeout */
-    int retval = select(1, &rfds, NULL, NULL, &tv);
+    int retval = select(this->sock+1, &rfds, NULL, NULL, &tv);
 
     /* Check for result */
     if (retval == -1)

@@ -20,10 +20,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream>
 #include <string>
 #include <sstream>
-#include <fstream>
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -56,12 +54,6 @@ static const std::string base64_chars =
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
              "abcdefghijklmnopqrstuvwxyz"
              "0123456789+/";
-
-/**
- * Check if the given file exists and is readible
- */
-inline bool file_exists( string path_to_file )
-    { return ifstream( (const char*)path_to_file.c_str()) ; }
 
 /**
  * Convert an std::string to a number

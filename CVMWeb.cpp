@@ -31,6 +31,7 @@
 
 #include "CVMWeb.h"
 #include "Hypervisor.h"
+#include "ThinIPC.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()
@@ -43,6 +44,7 @@ void CVMWeb::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
+    ThinIPCInitialize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,3 +147,47 @@ bool CVMWeb::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
     return false;
 }
 
+/**
+ * Return the path of the DLL
+ */
+std::string CVMWeb::getFilesystemPath() {
+    // Return the path where the DLL is
+    return m_filesystemPath;
+}
+
+/**
+ * Remove a trailing folder from the given path
+ */
+std::string stripComponent( std::string path ) {
+    /* Find the last trailing slash */
+    size_t iPos = path.find_last_of('/');
+    if (iPos == std::string::npos) { // Check for windows-like trailing path
+        iPos = path.find_last_of('\\');
+    }
+    
+    /* Keep only path */
+    return path.substr(0, iPos);
+}
+
+/**
+ * Get the root folder where the plugin data is located.
+ * On the XPI build that's the root folder of the extracted XPI contents
+ */
+std::string CVMWeb::getDataFolderPath() {
+
+    /* Practically dirname() */
+    std::string dPath = stripComponent( m_filesystemPath );
+    
+    /* On OSX we are inside the .plugin/Resources/MacOS/ bundle */
+    #if defined(__APPLE__) && defined(__MACH__)
+        dPath = stripComponent( dPath );
+        dPath = stripComponent( dPath );
+        dPath = stripComponent( dPath );
+    #endif
+    
+    /* One folder parent to the DLL */
+    dPath = stripComponent( dPath );
+    
+    /* Return path component */
+    return dPath;
+}

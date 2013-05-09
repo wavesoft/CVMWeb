@@ -52,6 +52,7 @@ add_executable(CVMTest
 	${PROJECT_SOURCE_DIR}/../Hypervisor.cpp
 	${PROJECT_SOURCE_DIR}/../Virtualbox.cpp
 	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
+	${PROJECT_SOURCE_DIR}/../DaemonCtl.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	)
 

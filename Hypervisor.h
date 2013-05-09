@@ -21,6 +21,8 @@
 #ifndef HVENV_H
 #define HVENV_H
 
+#include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <map>
@@ -261,5 +263,11 @@ std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vecto
 int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList );
 template <typename T> T                             hex_ston        ( const std::string &Text );
 template <typename T> T                             ston            ( const std::string &Text );
+
+/**
+ * Check if the given file exists and is readible
+ */
+inline bool file_exists( std::string path_to_file )
+    { return std::ifstream( (const char*)path_to_file.c_str()) ; }
 
 #endif /* end of include guard: HVENV_H */
