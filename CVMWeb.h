@@ -79,6 +79,10 @@ public:
     virtual bool onWindowAttached(FB::AttachedEvent *evt, FB::PluginWindow *);
     virtual bool onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *);
     /** END EVENTDEF -- DON'T CHANGE THIS LINE **/
+
+    static boost::shared_ptr<CVMWebAPIDaemon>  daemonInstance;
+    static bool                                daemonReady;
+    
 };
 
 #include "CVMWebAPIDaemon.h"
