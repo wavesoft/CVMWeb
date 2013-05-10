@@ -7,6 +7,9 @@
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <libproc.h>
+#elif #defined(__linux__)
+#include <sys/types.h>
+#include <signal.h>
 #endif
 
 using namespace std;
@@ -29,6 +32,9 @@ bool isAlive( int pid ) {
         struct proc_bsdinfo bsdInfo;
         int ret = proc_pidinfo( pid, PROC_PIDTBSDINFO, 0, &bsdInfo, sizeof(bsdInfo));
         return (ret > 0);
+    #elif #defined(__linux__)
+        int ret = kill( pid, 0 );
+        return (ret != 0);
     #endif
 
     return false;

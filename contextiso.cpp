@@ -76,10 +76,10 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     memcpy(&descPrimary, ISO9660_PRIMARY_DESCRIPTOR, ISO9660_PRIMARY_DESCRIPTOR_SIZE);
     
     // Build the current date
-    static char dateNow[17];
+    static char dateNow[18];
     time(&rawTimeNow);
     tmNow = gmtime(&rawTimeNow);
-    sprintf(dateNow, "%04u%02u%02u%02u%02u%02u000", // <-- Last 0x30 ('0') is GMT Timezone
+    sprintf(&dateNow[0], "%04u%02u%02u%02u%02u%02u000", // <-- Last 0x30 ('0') is GMT Timezone
             tmNow->tm_year + 1900,
             tmNow->tm_mon,
             tmNow->tm_mday,
