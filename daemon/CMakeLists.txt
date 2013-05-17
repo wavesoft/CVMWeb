@@ -60,6 +60,7 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../Virtualbox.cpp
 	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
+	${PROJECT_SOURCE_DIR}/../Utilities.cpp
 	)
 
 # Platform-specific link details

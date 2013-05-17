@@ -55,6 +55,9 @@ int CVMWebAPISession::pause() {
     
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
+
+    /* Stop probing timer */
+    this->probeTimer->stop();
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
     return HVE_SHEDULED;
@@ -63,6 +66,10 @@ int CVMWebAPISession::pause() {
 void CVMWebAPISession::thread_pause() {
     int ans = this->session->pause();
     if (ans == 0) {
+        if (this->isAlive) {
+            this->isAlive = false;
+            this->fire_dead();
+        }
         this->fire_pause();
     } else {
         this->fire_pauseError(hypervisorErrorStr(ans), ans);
@@ -78,6 +85,9 @@ int CVMWebAPISession::close(){
         (this->session->state != STATE_PAUSED) &&
         (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
 
+    /* Stop probing timer */
+    this->probeTimer->stop();
+
     boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
     return HVE_SHEDULED;
 }
@@ -85,6 +95,10 @@ int CVMWebAPISession::close(){
 void CVMWebAPISession::thread_close(){
     int ans = this->session->close();
     if (ans == 0) {
+        if (this->isAlive) {
+            this->isAlive = false;
+            this->fire_dead();
+        }
         this->fire_close();
     } else {
         this->fire_closeError(hypervisorErrorStr(ans), ans);
@@ -96,6 +110,9 @@ int CVMWebAPISession::resume(){
 
     /* Validate state */
     if (this->session->state != STATE_PAUSED) return HVE_INVALID_STATE;
+
+    /* Start probing timer */
+    this->probeTimer->stop();
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_resume, this ));
     return HVE_SHEDULED;
@@ -142,6 +159,10 @@ int CVMWebAPISession::stop(){
 void CVMWebAPISession::thread_stop(){
     int ans = this->session->stop();
     if (ans == 0) {
+        if (this->isAlive) {
+            this->isAlive = false;
+            this->fire_dead();
+        }
         this->fire_stop();
     } else {
         this->fire_stopError(hypervisorErrorStr(ans), ans);
@@ -154,6 +175,9 @@ int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
     /* Validate state */
     if ((this->session->state != STATE_CLOSED) && 
         (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
+
+    /* Start probing timer */
+    this->probeTimer->start();
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_open, this, o ));
     return HVE_SHEDULED;
@@ -239,7 +263,11 @@ int CVMWebAPISession::get_state() {
 }
 
 std::string CVMWebAPISession::get_ip() {
-    return this->session->ip;
+    return this->session->getIP();
+}
+
+std::string CVMWebAPISession::get_rdp() {
+    return this->session->getRDPHost();
 }
 
 std::string CVMWebAPISession::get_version() {
@@ -247,7 +275,14 @@ std::string CVMWebAPISession::get_version() {
 }
 
 std::string CVMWebAPISession::get_apiEntryPoint() {
-    return "http://" + this->session->ip + ":8080/api";
+    std::string ip = this->session->getIP();
+    if (ip.empty()) {
+        return "";
+    } else {
+        char numstr[21]; // enough to hold all numbers up to 64-bits
+        sprintf(numstr, "%d", this->session->apiPort);
+        return "http://" + ip + ":" + numstr;
+    }
 }
 
 void CVMWebAPISession::onProgress(int v, int tot, std::string msg, void * p) {
@@ -286,16 +321,6 @@ void CVMWebAPISession::onClose( void * p ) {
     self->fire_close();
 }
 
-void CVMWebAPISession::onLive( void * p ) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_live();
-}
-
-void CVMWebAPISession::onDead( void * p ) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_dead();
-}
-
 void CVMWebAPISession::onStop( void * p ) {
     CVMWebAPISession * self = (CVMWebAPISession*)p;
     self->fire_stop();
@@ -303,4 +328,24 @@ void CVMWebAPISession::onStop( void * p ) {
 
 std::string CVMWebAPISession::toString() {
     return "[CVMWebAPISession]";
+}
+
+void CVMWebAPISession::cb_timer() {
+    if (!isAlive) {
+        if (this->session->state == STATE_STARTED) {
+            if (this->session->isAPIAlive()) {
+                isAlive = true;
+                fire_live( this->get_ip(), this->get_apiEntryPoint() );
+            }
+        }
+    } else {
+        if ((this->session->state != STATE_STARTED) || (!this->session->isAPIAlive())) {
+            isAlive = false;
+            fire_dead();
+        }
+    }
+}
+
+bool CVMWebAPISession::get_live() {
+    return this->isAlive;
 }

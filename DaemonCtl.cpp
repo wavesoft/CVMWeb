@@ -1,6 +1,6 @@
 
 #include "DaemonCtl.h"
-#include "Hypervisor.h" // For the utilities
+#include "Utilities.h"
 
 #include <sstream>
 #include <stdlib.h>

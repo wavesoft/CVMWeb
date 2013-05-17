@@ -28,6 +28,8 @@
 
 #include "Hypervisor.h"
 #include "Virtualbox.h"
+#include "Utilities.h"
+
 using namespace std;
 
 /** =========================================== **\
@@ -43,7 +45,31 @@ void mapDump(map<string, string> m) {
         string v = (*it).second;
         cout << k << " => " << v << "\n";
     }
-}
+};
+
+/**
+ * Extract the mac address of the VM from the NIC line definition
+ */
+std::string extractMac( std::string nicInfo ) {
+    // A nic line is like this:
+    // MAC: 08002724ECD0, Attachment: Host-only ...
+    size_t iStart = nicInfo.find("MAC: ");
+    if (iStart != string::npos ) {
+        size_t iEnd = nicInfo.find(",", iStart+5);
+        string mac = nicInfo.substr( iStart+5, iEnd-iStart-5 );
+        
+        // Convert from AABBCCDDEEFF notation to AA:BB:CC:DD:EE:FF
+        return mac.substr(0,2) + ":" +
+               mac.substr(2,2) + ":" +
+               mac.substr(4,2) + ":" +
+               mac.substr(6,2) + ":" +
+               mac.substr(8,2) + ":" +
+               mac.substr(10,2);
+               
+    } else {
+        return "";
+    }
+};
 
 /** =========================================== **\
             VBoxSession Implementation
@@ -117,6 +143,11 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
         return HVE_CREATE_ERROR;
     }
 
+    /* Find a random free port for VRDE */
+    this->rdpPort = (rand() % 0xFBFF) + 1024;
+    while (isPortOpen( "127.0.0.1", this->rdpPort ))
+        this->rdpPort = (rand() % 0xFBFF) + 1024;
+
     /* (2) Set parameters */
     args.str("");
     args << "modifyvm "
@@ -126,6 +157,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
         << " --vram "                   << "32"
         << " --acpi "                   << "on"
         << " --ioapic "                 << "on"
+        << " --vrde "                   << "on"
+        << " --vrdeaddress "            << "127.0.0.1"
+        << " --vrdeauthtype "           << "null"
+        << " --vrdeport "               << rdpPort
         << " --boot1 "                  << "dvd" 
         << " --boot2 "                  << "none" 
         << " --boot3 "                  << "none" 
@@ -284,8 +319,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
 
     /* Last callbacks */
     if (this->onProgress!=NULL) (this->onProgress)(100, 100, "Completed", this->cbObject);
-    if (this->onOpen!=NULL) (this->onOpen)(this->cbObject);
+
+    /* Notify OPEN state change */
     this->state = STATE_OPEN;
+    if (this->onOpen!=NULL) (this->onOpen)(this->cbObject);
     
     return HVE_OK;
 
@@ -768,6 +805,16 @@ map<string, string> VBoxSession::getMachineInfo() {
     return tokenize( &lines, ':' );
 };
 
+/** 
+ * Return the RDP Connection host
+ */
+std::string VBoxSession::getRDPHost() {
+    char numstr[21]; // enough to hold all numbers up to 64-bits
+    sprintf(numstr, "%d", this->rdpPort);
+    std::string ip = "127.0.0.1:";
+    return ip + numstr;
+}
+
 /** =========================================== **\
             Virtualbox Implementation
 \** =========================================== **/
@@ -819,6 +866,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->host = this;
     sess->state = 0;
     sess->ip = "";
+    sess->apiPort = DEFAULT_API_PORT;
     sess->cpus = 1;
     sess->memory = 256;
     sess->executionCap = 100;

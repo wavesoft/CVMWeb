@@ -27,10 +27,11 @@
 #include <vector>
 #include <cmath>
 
-#include "openssl/sha.h"
 #include "Hypervisor.h"
 #include "Virtualbox.h"
 #include "contextiso.h"
+
+#include "Utilities.h"
 
 using namespace std;
 
@@ -48,485 +49,7 @@ int HVSession::start( std::string userData )                        { return HVE
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
 std::string HVSession::getProperty( std::string name )              { return ""; }
-
-/* Base64 Helper */
-static const std::string base64_chars = 
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             "abcdefghijklmnopqrstuvwxyz"
-             "0123456789+/";
-
-/**
- * Convert an std::string to a number
- */
-template <typename T> T ston( const string &Text ) {
-	stringstream ss(Text); T result;
-	return ss >> result ? result : 0;
-}
-
-template <typename T> T hex_ston( const std::string &Text ) {
-    stringstream ss; T result; ss << std::hex << Text;
-    return ss >> result ? result : 0;
-}
-
-/**
- * LINK: Expose <int> implementations for the above templates
- */
-template int hex_ston<int>( const std::string &Text );
-template long hex_ston<long>( const std::string &Text );
-template int ston<int>( const std::string &Text );
-template long ston<long>( const std::string &Text );
-
-/**
- * Split the given line into a key and value using the delimited provided
- */
-int getKV( string line, string * key, string * value, unsigned char delim, int offset ) {
-    size_t a = line.find( delim, offset );
-    if (a == string::npos) return 0;
-    *key = line.substr(offset, a-offset);
-    size_t b = a+1;
-    while ( ((line[b] == ' ') || (line[b] == '\t')) && (b<line.length())) b++;
-    *value = line.substr(b, string::npos);
-    return a;
-}
-
-/**
- * Split the given string into 
- */
-int trimSplit( std::string * line, std::vector< std::string > * parts, std::string split, std::string trim ) {
-    size_t i, pos, nextPos, ofs = 0;
-    parts->clear();
-    while (ofs < line->length()) {
-        
-        // Find the closest occurance of 'split' delimiters
-        nextPos = line->length();
-        for (i=0; i<split.length(); i++) {
-            pos = line->find( split[i], ofs+1 );
-            if ((pos != string::npos) && (pos < nextPos)) nextPos = pos;
-        }
-        
-        // Get part
-        parts->push_back( line->substr(ofs, nextPos-ofs) );
-        
-        // Cleanup and move forward
-        if (nextPos == line->length()) break;
-        bool ws = true; nextPos++; // Skip delimiter
-        while (ws && (nextPos < line->length())) {
-            ws = false;
-            if (trim.find(line->at(nextPos)) != string::npos) {
-                ws = true;
-                nextPos++;
-            }
-        }
-        ofs = nextPos;
-        
-    }
-    
-    return parts->size();
-}
-
-/**
- * Read the specified list of lines and create a map
- */
-int parseLine( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value ) {
-    string line;
-    vector<string> parts;
-    map->clear();
-    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
-        line = *i;
-        trimSplit( &line, &parts, csplit, ctrim );
-        if ((key < parts.size()) && (value < parts.size())) {
-            map->insert(std::pair<string,string>(parts[key], parts[value]));
-        }
-    }
-    return HVE_OK;
-}
-
-/**
- * Split lines from the given raw buffer
- */
-void splitLines( string rawString, vector<string> * out ) {
-    
-    /* Pass output into an input stream */
-    istringstream ss( rawString );
-
-    /* Split new lines and store them in the vector */
-    int iTrim;
-    string item;
-    out->clear();
-    while (getline(ss, item)) {
-        
-        /* Trim junk */
-        iTrim = item.find('\r');
-        if (iTrim != string::npos)
-            item = item.substr(0, iTrim);
-        iTrim = item.find('\n');
-        if (iTrim != string::npos)
-            item = item.substr(0, iTrim);
-        
-        /* Push back */
-        out->push_back(item);
-    }
-    
-}
-
-/**
- * Tokenize a key-value like output from VBoxManage into an easy-to-use hashmap
- */
-map<string, string> tokenize( vector<string> * lines, char delim ) {
-    map<string, string> ans;
-    string line, key, value;
-    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
-        line = *i;
-        if (line.find(delim) != string::npos) {
-            getKV(line, &key, &value, delim, 0);
-            if (ans.find(key) == ans.end()) {
-                ans[key] = value;
-            }
-        }
-    }
-    return ans;
-};
-
-/**
- * Tokenize a list of repeating key-value groups
- */
-vector< map<string, string> > tokenizeList( vector<string> * lines, char delim ) {
-    vector< map<string, string> > ans;
-    map<string, string> row;
-    string line, key, value;
-    for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
-        line = *i;
-        if (line.find(delim) != string::npos) {
-            getKV(line, &key, &value, delim, 0);
-            row[key] = value;
-        } else if (line.length() == 0) { // Empty line -> List delimiter
-            ans.push_back(row);
-            row.clear();
-        }
-    }
-    if (!row.empty()) ans.push_back(row);
-    return ans;
-};
-
-/**
- * Return a temporary filename
- */
-std::string getTmpFile( std::string suffix ) {
-    #ifdef _WIN32
-        DWORD wRet;
-        int lRet;
-        char tmpPath[MAX_PATH];
-        char tmpName[MAX_PATH];
-        
-        /* Get temporary folder */
-        wRet = GetTempPathA( MAX_PATH, tmpPath );
-        if (wRet == 0) return "";
-        
-        /* Get temporary file name */
-        lRet = GetTempFileNameA( tmpPath, "cvm", 0, tmpName );
-        if (lRet == 0) return "";
-        
-        /* Delete the file that windows create automatically */
-        remove( tmpName );
-        
-        /* Create string with the appropriate suffix */
-        string tmpStr( tmpName );
-        tmpStr += suffix;
-        return tmpStr;
-    
-    #else
-        char * tmp = tmpnam(NULL);
-        string tmpFile = tmp;
-        tmpFile += suffix;
-        return tmpFile;
-    #endif
-}
-
-/**
- * Cross-platform exec and return function
- */
-#ifndef _WIN32
-int sysExec( string cmdline, vector<string> * stdoutList ) {
-    
-    int ret;
-    char data[1035];
-    string item;
-    string rawStdout = "";
-    FILE *fp;
-
-    /* Open process and red contents using the POSIX pipe interface */
-    fp = popen(cmdline.c_str(), "r");
-
-    /* Check for error */
-    if (fp == NULL) return HVE_IO_ERROR;
-
-    /* Read the output a line at a time - output it. */
-    if (stdoutList != NULL) {
-        
-        /* Read to buffer */
-        while (fgets(data, sizeof(data)-1, fp) != NULL) {
-            rawStdout += data;
-        }
-        
-        /* Split lines into stdout */
-        splitLines( rawStdout, stdoutList );
-        
-    }
-
-    /* close */
-    ret = pclose(fp);
-
-    /* Return exit code */
-    return ret;
-}
-#else
-int sysExec( string cmdline, vector<string> * stdoutList ) {
-
-	HANDLE g_hChildStdOut_Rd = NULL;
-	HANDLE g_hChildStdOut_Wr = NULL;
-	DWORD ret, dwRead;
-	CHAR chBuf[4096];
-	PROCESS_INFORMATION piProcInfo;
-	STARTUPINFOA siStartInfo;
-	BOOL bSuccess = FALSE;
-	string rawStdout;
-
-	SECURITY_ATTRIBUTES sAttr;
-	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
-	sAttr.bInheritHandle = TRUE;
-	sAttr.lpSecurityDescriptor = NULL;
-
-    /* Create STDOUT pipe */
-	if (!CreatePipe(&g_hChildStdOut_Rd, &g_hChildStdOut_Wr, &sAttr, 0)) 
-		return HVE_IO_ERROR;
-	if (!SetHandleInformation(g_hChildStdOut_Rd, HANDLE_FLAG_INHERIT, 0))
-		return HVE_IO_ERROR;
-
-    /* Clean structures */
-	ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION));
-	ZeroMemory( &siStartInfo, sizeof( STARTUPINFOA ));
-
-    /* Prepare startup information */
-	siStartInfo.cb = sizeof(STARTUPINFOA);
-	siStartInfo.hStdOutput = g_hChildStdOut_Wr;
-	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-    /* Create process */
-	if (!CreateProcessA(
-		NULL,
-		(LPSTR)cmdline.c_str(),
-		NULL,
-		NULL,
-		TRUE,
-		CREATE_NO_WINDOW,
-		NULL,
-		NULL,
-		&siStartInfo,
-		&piProcInfo)) return HVE_IO_ERROR;
-
-    /* Process STDOUT */
-	CloseHandle( g_hChildStdOut_Wr );
-	if ( stdoutList != NULL ) {
-	    
-	    /* Read to buffer */
-    	for (;;) {
-    		bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
-    		if ( !bSuccess || dwRead == 0 ) break;
-    		rawStdout.append( chBuf, dwRead );
-    	}
-    	
-	    /* Split lines into stdout */
-        splitLines( rawStdout, stdoutList );
-        
-	}
-	CloseHandle( g_hChildStdOut_Rd );
-
-    /* Wait for completion */
-	WaitForSingleObject( piProcInfo.hProcess, INFINITE );
-	GetExitCodeProcess( piProcInfo.hProcess, &ret );
-
-    /* Close hanles */
-	CloseHandle( piProcInfo.hProcess );
-	CloseHandle( piProcInfo.hThread );
-
-    /* Return exit code */
-	return ret;
-}
-#endif
-
-/**
- * Sha256 from binary to hex
- */
-void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {
-    int i = 0;
-    for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
-    }
-    outputBuffer[64] = 0;
-}
-
-/**
- * OpenSSL 
- */
-int sha256_file( string path, string * checksum ) {
-    
-    FILE *file = fopen(path.c_str(), "rb");
-    if(!file) return -534;
-
-    char outputBuffer[65];
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    const int bufSize = 32768;
-    unsigned char *buffer = (unsigned char *) malloc(bufSize);
-    int bytesRead = 0;
-    if(!buffer) {
-        fclose(file);
-        return -1;
-    }
-    while((bytesRead = fread(buffer, 1, bufSize, file))) {
-        SHA256_Update(&sha256, buffer, bytesRead);
-    }
-    SHA256_Final(hash, &sha256);
-
-    __sha256_hash_string( hash, outputBuffer);
-    fclose(file);
-    free(buffer);
-    *checksum = outputBuffer;
-    
-    return 0;
-
-}
-
-/**
- * Small function to encode data to base64
- */
-std::string base64_encode(char const* bytes_to_encode, unsigned int in_len) {
-  std::string ret;
-  int i = 0;
-  int j = 0;
-  unsigned char char_array_3[3];
-  unsigned char char_array_4[4];
-
-  while (in_len--) {
-    char_array_3[i++] = *(bytes_to_encode++);
-    if (i == 3) {
-      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-      char_array_4[3] = char_array_3[2] & 0x3f;
-      for(i = 0; (i <4) ; i++)
-        ret += base64_chars[char_array_4[i]];
-      i = 0;
-    }
-  }
-
-  if (i) {
-    for(j = i; j < 3; j++)
-      char_array_3[j] = '\0';
-    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-    char_array_4[3] = char_array_3[2] & 0x3f;
-    for (j = 0; (j < i + 1); j++)
-      ret += base64_chars[char_array_4[j]];
-    while((i++ < 3))
-      ret += '=';
-  }
-  
-  return ret;
-}
-
-/**
- * Helper function for writing data
- */
-size_t __curl_write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
-size_t __curl_write_string(void *contents, size_t size, size_t nmemb, void *userp) {
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
-    return size * nmemb;
-}
-
-/**
- * Helper function for delegating progress
- */
-int __curl_progress_proxy(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-    HVPROGRESS_FEEDBACK * fb = (HVPROGRESS_FEEDBACK *) clientp;
-    int ipos = fb->min;
-    if (dltotal != 0) {
-        double pos = (fb->max - fb->min) * dlnow / dltotal;
-        ipos += (int)pos;
-    }
-    cout << "INFO: dltotal=" << dltotal << ", dlnow=" << dlnow << ", ultotal=" << ultotal << ", ulnow=" << ulnow << ", ipos=" << ipos << "\n";
-    fb->callback( ipos, fb->total, fb->message, fb->data );
-    return 0;
-};
-
-/**
- * Generic purpose download to file function
- */
-int downloadFile( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb ) {
-    CURL *curl;
-    FILE *fp;
-    CURLcode res;
-    curl = curl_easy_init();
-    if (curl) {
-        fp = fopen(target.c_str(),"wb");
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_write_file);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-        if ((fb != NULL) && (fb->callback != NULL)) {
-            cout << "INFO: Using feedbac callback\n";
-            curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
-            curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, __curl_progress_proxy );
-            curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, fb);
-        }
-        res = curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-        fclose(fp);
-        if (res != 0) {
-            remove( target.c_str() );
-            return HVE_IO_ERROR;
-        } else {
-            return HVE_OK;
-        }
-    } else {
-        return HVE_QUERY_ERROR;
-    }
-};
-
-/**
- * General purpose download to buffer
- */
-int downloadText( std::string url, std::string * buffer ) {
-    CURL *curl;
-    CURLcode res;
-    curl = curl_easy_init();
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_write_string);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-        res = curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-        if (res != 0) {
-            return HVE_IO_ERROR;
-        } else {
-            return HVE_OK;
-        }
-    } else {
-        return HVE_QUERY_ERROR;
-    }
-};
+std::string HVSession::getRDPHost()                                 { return ""; }
 
 /** 
  * Return the string representation of the given error code
@@ -550,6 +73,33 @@ std::string hypervisorErrorStr( int error ) {
     if (error == -100) return "Not implemented";
     return "Unknown error";
 };
+
+/**
+ * Return the IP Address of the session
+ */
+std::string HVSession::getIP() {
+    if (this->ip.empty()) {
+        std::string guessIP = this->getProperty("/VirtualBox/GuestInfo/Net/1/V4/IP");
+        if (!guessIP.empty()) {
+            this->ip = guessIP;
+            return guessIP;
+        } else {
+            return "";
+        }
+    } else {
+        return this->ip;
+    }
+}
+
+/**
+ * Try to connect to the API port and check if it succeeded
+ */
+
+bool HVSession::isAPIAlive() {
+    std::string ip = this->getIP();
+    if (ip.empty()) return false;
+    return isPortOpen( ip.c_str(), this->apiPort );
+}
 
 /**
  * Measure the resources from the sessions

@@ -26,12 +26,15 @@
 #include <sstream>
 #include <boost/weak_ptr.hpp>
 #include "JSAPIAuto.h"
+#include "Timer.h"
 #include "BrowserHost.h"
 #include "CVMWeb.h"
 #include "Hypervisor.h"
 
 #ifndef H_CVMWebAPISession
 #define H_CVMWebAPISession
+
+#define TIMER_PROBE_INTERVAL    5000
 
 class CVMWebAPISession : public FB::JSAPIAuto
 {
@@ -58,8 +61,10 @@ public:
         registerProperty("ram",             make_property(this, &CVMWebAPISession::get_memory));
         registerProperty("disk",            make_property(this, &CVMWebAPISession::get_disk));
         registerProperty("version",         make_property(this, &CVMWebAPISession::get_version));
-        registerProperty("apiURL",          make_property(this, &CVMWebAPISession::get_apiEntryPoint));
+        registerProperty("live",            make_property(this, &CVMWebAPISession::get_live));
         registerProperty("executionCap",    make_property(this, &CVMWebAPISession::get_executionCap));
+        registerProperty("apiURL",          make_property(this, &CVMWebAPISession::get_apiEntryPoint));
+        registerProperty("rdpURL",          make_property(this, &CVMWebAPISession::get_rdp));
 
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPISession::toString));
@@ -67,9 +72,15 @@ public:
         /* Import session */
         this->session = session;
         this->sessionID = session->internalID;
+
+        /* Setup timer */
+        this->probeTimer = FB::Timer::getTimer( TIMER_PROBE_INTERVAL, true, boost::bind(&CVMWebAPISession::cb_timer, this ) );
+        this->probeTimer->start();
         
-        /* Callback bindings */
+        /* Setup session connections */
         if (this->session != NULL) {
+
+            /* Callback bindings */
             this->session->cbObject = (void *) this;
             this->session->onProgress = &CVMWebAPISession::onProgress;
             this->session->onDebug = &CVMWebAPISession::onDebug;
@@ -77,8 +88,7 @@ public:
             this->session->onOpen = &CVMWebAPISession::onOpen;
             this->session->onStart = &CVMWebAPISession::onStart;
             this->session->onClose = &CVMWebAPISession::onClose;
-            this->session->onLive = &CVMWebAPISession::onLive;
-            this->session->onDead = &CVMWebAPISession::onDead;
+            
         }
         
     }
@@ -103,7 +113,7 @@ public:
     FB_JSAPI_EVENT(stop,        0, ());
     FB_JSAPI_EVENT(stopError,   2, ( const std::string&, int ));
     FB_JSAPI_EVENT(error,       3, ( const std::string&, int, const std::string& ));
-    FB_JSAPI_EVENT(live,        0, ());
+    FB_JSAPI_EVENT(live,        2, ( const std::string&, const std::string&));
     FB_JSAPI_EVENT(dead,        0, ());
     FB_JSAPI_EVENT(debug,       1, ( const std::string& ));
     
@@ -134,7 +144,9 @@ public:
     int get_memory();
     int get_disk();
     int get_state();
+    bool get_live();
     std::string get_ip();
+    std::string get_rdp();
     std::string get_apiEntryPoint();
     std::string get_version();
     std::string toString();
@@ -146,10 +158,14 @@ public:
     static void onOpen( void * );
     static void onStart( void * );
     static void onClose( void * );
-    static void onLive( void * );
-    static void onDead( void * );
     static void onStop( void * );
     
+    // Timer implementation
+    FB::TimerPtr    probeTimer;
+    void            cb_timer();
+
+    // Local logic
+    bool            isAlive;
     
 private:
     CVMWebWeakPtr           m_plugin;

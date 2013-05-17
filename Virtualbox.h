@@ -34,6 +34,7 @@ class VBoxSession : public HVSession {
 public:
     
     Virtualbox *            host;
+    int                     rdpPort;
     
     virtual int             pause();
     virtual int             close();
@@ -45,6 +46,7 @@ public:
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
+    virtual std::string     getRDPHost();
     
     /* VirtualBox-specific functions */
     int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList );

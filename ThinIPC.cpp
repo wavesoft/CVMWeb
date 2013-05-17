@@ -21,25 +21,6 @@
 #include <string.h>
 #include "ThinIPC.h"
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <stdio.h>
-#endif
-
-#if ( defined(__APPLE__) && defined(__MACH__) ) || defined(__linux__)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#endif
-
-#ifndef _WIN32
-#include <sys/time.h>
-#endif
-
 using namespace std;
 
 /* ***************************************************************************** */

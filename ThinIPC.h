@@ -21,20 +21,7 @@
 #ifndef THINIPC_H_MPQIX21W
 #define THINIPC_H_MPQIX21W
 
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <vector>
-
-#ifndef _WIN32
-
-#define SOCKET          int
-#include <fcntl.h>
-
-#else
-#include <Winsock2.h>
-#include <Ws2tcpip.h>
-#endif
+#include "Utilities.h"  // It also contains the common global headers
 
 #define MAX_MSG_SIZE    1024
 

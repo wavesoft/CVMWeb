@@ -21,32 +21,7 @@
 #ifndef HVENV_H
 #define HVENV_H
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <map>
-#include <curl/curl.h>
-#include <curl/easy.h>
-
-#ifdef __linux__
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
-#endif
-
-#if defined(__APPLE__) && defined(__MACH__)
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
-#endif
-
-#ifdef _WIN32
-#include <Windows.h>
-#include <direct.h>
-#endif
+#include "Utilities.h"
 
 /* Hypervisor types */
 #define HV_NONE                 0
@@ -80,6 +55,7 @@
 
 /* Default CernVM Version */
 #define DEFAULT_CERNVM_VERSION  "1.3.1"
+#define DEFAULT_API_PORT        80
 
 /**
  * A hypervisor session is actually a VM instance.
@@ -94,8 +70,6 @@ public:
         this->onStart = NULL;
         this->onClose = NULL;
         this->onError = NULL;
-        this->onLive = NULL;
-        this->onDead = NULL;
         this->onStop = NULL;
         this->onDebug = NULL;
         
@@ -119,6 +93,7 @@ public:
     int                     disk;
     int                     executionCap;
     int                     state;
+    int                     apiPort;
     std::string             version;
 
     int                     internalID;
@@ -133,6 +108,9 @@ public:
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
+    virtual std::string     getIP();
+    virtual std::string     getRDPHost();
+    virtual bool            isAPIAlive();
 
     void *                  cbObject;
     void (*onProgress)      (int, int, std::string, void *);
@@ -142,8 +120,6 @@ public:
     void (*onStart)         (void *);
     void (*onStop)          (void *);
     void (*onClose )        (void *);
-    void (*onLive )         (void *);
-    void (*onDead )         (void *);
     
 };
 
@@ -191,20 +167,6 @@ typedef struct {
     bool                isReady;    // Current configuration allows VMs to start without problems
     
 } HVINFO_CAPS;
-
-/**
- * Progress feedback structure
- */
-typedef struct {
-    
-    int                 min;
-    int                 max;
-    int                 total;
-    void *              data;
-    std::string         message;
-    void (*callback)    (int, int, std::string, void *);
-    
-} HVPROGRESS_FEEDBACK;
 
 /**
  * Overloadable base hypervisor class
@@ -260,23 +222,5 @@ void                            freeHypervisor      ( Hypervisor * );
 int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData );
 std::string                     hypervisorErrorStr  ( int error );
 
-/**
- * Tool functions
- */
-int                                                 trimSplit       ( std::string * src, std::vector< std::string > * parts, std::string split, std::string trim );
-int                                                 parseLine       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value );
-std::string                                         getTmpFile      ( std::string suffix );
-int                                                 getKV           ( std::string line, std::string * key, std::string * value, unsigned char delim, int offset );
-std::map<std::string, std::string>                  tokenize        ( std::vector<std::string> * lines, char delim );
-std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vector<std::string> * lines, char delim );
-int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList );
-template <typename T> T                             hex_ston        ( const std::string &Text );
-template <typename T> T                             ston            ( const std::string &Text );
-
-/**
- * Check if the given file exists and is readible
- */
-inline bool file_exists( std::string path_to_file )
-    { return std::ifstream( (const char*)path_to_file.c_str()) ; }
 
 #endif /* end of include guard: HVENV_H */
