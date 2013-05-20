@@ -31,28 +31,11 @@
 #include <vector>
 #include <map>
 
+#include <stdlib.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#ifdef __linux__
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
-#endif
-
-#if defined(__APPLE__) && defined(__MACH__)
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#endif
-
+// Only for WIN32
 #ifdef _WIN32
 #include <Windows.h>
 #include <direct.h>
@@ -61,12 +44,30 @@
 #include <stdio.h>
 #endif
 
+// Common on *NIX platforms
 #ifndef _WIN32
 #define SOCKET          int
 #include <fcntl.h>
 #include <sys/time.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#include <stdio.h>
 #endif
 
+// only for linux
+#ifdef __linux__
+#endif
+
+// Only for apple
+#if defined(__APPLE__) && defined(__MACH__)
+#endif
 
 /**
  * Progress feedback structure
