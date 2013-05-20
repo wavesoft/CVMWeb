@@ -32,6 +32,7 @@
 #include <map>
 
 #include <stdlib.h>
+#include <string.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 
@@ -79,6 +80,7 @@ typedef struct {
     int                 total;
     void *              data;
     std::string         message;
+    long int            lastEventTime;
     void (*callback)    (int, int, std::string, void *);
     
 } HVPROGRESS_FEEDBACK;
@@ -165,5 +167,21 @@ int                                                 getKV           ( std::strin
  */
 inline bool file_exists( std::string path_to_file )
  { return std::ifstream( (const char*)path_to_file.c_str()) ; }
+
+/**
+ * Returns the current time in milliseconds
+ * Used for calibration / delays
+ * (WARNING! This is not always the real time in ms! On windows it's the time since
+ *  the system booted.)
+ */
+inline long getMillis() {
+    #ifndef _WIN32
+    struct timeval  tv;
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
+    #else
+    return GetTickCount() / 1000;
+    #endif
+}
 
 #endif /* end of include guard: UTILITIES_H_JA64LPSF */

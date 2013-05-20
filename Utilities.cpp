@@ -439,11 +439,20 @@ size_t __curl_write_string(void *contents, size_t size, size_t nmemb, void *user
  */
 int __curl_progress_proxy(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
     HVPROGRESS_FEEDBACK * fb = (HVPROGRESS_FEEDBACK *) clientp;
+    
+    // Throttle events on 2 per second
+    if ((dlnow != dltotal) && ((getMillis() - fb->lastEventTime) < 500))
+        return 0;
+    fb->lastEventTime = getMillis();
+
+    // Calculate percentage
     int ipos = fb->min;
     if (dltotal != 0) {
         double pos = (fb->max - fb->min) * dlnow / dltotal;
         ipos += (int)pos;
     }
+    
+    // Callback
     cout << "INFO: dltotal=" << dltotal << ", dlnow=" << dlnow << ", ultotal=" << ultotal << ", ulnow=" << ulnow << ", ipos=" << ipos << "\n";
     fb->callback( ipos, fb->total, fb->message, fb->data );
     return 0;
@@ -467,6 +476,7 @@ int downloadFile( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb 
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
         if ((fb != NULL) && (fb->callback != NULL)) {
             cout << "INFO: Using feedbac callback\n";
+            fb->lastEventTime = getMillis();
             curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
             curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, __curl_progress_proxy );
             curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, fb);
