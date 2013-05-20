@@ -146,6 +146,11 @@ int                                                 parseLine       ( std::vecto
 bool                                                isPortOpen      ( const char * host, int port );
 
 /**
+ * Visualize the dump of a string:string hash map
+ */
+void                                                mapDump         ( std::map< std::string, std::string> m );
+
+/**
  * OLD TOKENIZATION FUNCTIONS THAT SHOULD BE REMOVED
  */
 std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vector<std::string> * lines, char delim );

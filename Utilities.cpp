@@ -539,3 +539,14 @@ bool isPortOpen( const char * host, int port ) {
         return true;
     }
 }
+
+/**
+ * Dump a map structure
+ */
+void mapDump(map<string, string> m) {
+    for (std::map<string, string>::iterator it=m.begin(); it!=m.end(); ++it) {
+        string k = (*it).first;
+        string v = (*it).second;
+        cout << k << " => " << v << "\n";
+    }
+};

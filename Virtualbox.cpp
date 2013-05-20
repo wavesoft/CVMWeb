@@ -32,20 +32,36 @@
 
 using namespace std;
 
+// Where to mount the bootable CD-ROM
+#define BOOT_CONTROLLER     "IDE"
+#define BOOT_PORT           "0"
+#define BOOT_DEVICE         "0"
+
+// Where to mount the scratch disk
+#define SCRATCH_CONTROLLER  "SATA"
+#define SCRATCH_PORT        "0"
+#define SCRATCH_DEVICE      "0"
+
+// Where to mount the contextualization CD-ROM
+#define CONTEXT_CONTROLLER  "SATA"
+#define CONTEXT_PORT        "1"
+#define CONTEXT_DEVICE      "0"
+
+// Where (if to) mount the guest additions CD-ROM
+#define GUESTADD_USE        1
+#define GUESTADD_CONTROLLER "SATA"
+#define GUESTADD_PORT       "2"
+#define GUESTADD_DEVICE     "0"
+
 /** =========================================== **\
                    Tool Functions
 \** =========================================== **/
 
-/**
- * Dump a map
- */
-void mapDump(map<string, string> m) {
-    for (std::map<string, string>::iterator it=m.begin(); it!=m.end(); ++it) {
-        string k = (*it).first;
-        string v = (*it).second;
-        cout << k << " => " << v << "\n";
-    }
-};
+// Create some condensed strings using the above parameters
+#define BOOT_DSK            BOOT_CONTROLLER " (" BOOT_PORT ", " BOOT_DEVICE ")"
+#define SCRATCH_DSK         SCRATCH_CONTROLLER " (" SCRATCH_PORT ", " SCRATCH_DEVICE ")"
+#define CONTEXT_DSK         CONTEXT_CONTROLLER " (" CONTEXT_PORT ", " CONTEXT_DEVICE ")"
+#define GUESTADD_DSK        GUESTADD_CONTROLLER " (" GUESTADD_PORT ", " GUESTADD_DEVICE ")"
 
 /**
  * Extract the mac address of the VM from the NIC line definition
@@ -182,7 +198,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     map<string, string> machineInfo = this->getMachineInfo();
 
     /* Check for scratch disk */
-    if (machineInfo.find("SATA (0, 0)") == machineInfo.end()) {
+    if (machineInfo.find( SCRATCH_DSK ) == machineInfo.end()) {
         
         /* Create a hard disk for this VM */
         string vmDisk = getTmpFile(".vdi");
@@ -219,9 +235,9 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
         args.str("");
         args << "storageattach "
             << uuid
-            << " --storagectl " << "SATA"
-            << " --port "       << "0"
-            << " --device "     << "0"
+            << " --storagectl " << SCRATCH_CONTROLLER
+            << " --port "       << SCRATCH_PORT
+            << " --device "     << SCRATCH_DEVICE
             << " --type "       << "hdd"
             << " --setuuid "    << "\"\"" 
             << " --medium "     << "\"" << vmDisk << "\"";
@@ -238,10 +254,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     
     /* Check if the CernVM Version the machine is using is the one we need */
     needsUpdate = true;
-    if (machineInfo.find("IDE (1, 0)") != machineInfo.end()) {
+    if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
         
         /* Get the filename of the iso */
-        getKV( machineInfo["IDE (1, 0)"], &kk, &kv, '(', 0 );
+        getKV( machineInfo[ BOOT_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
         
         /* Get the filename of the given version */
@@ -258,9 +274,9 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             args.str("");
             args << "storageattach "
                 << uuid
-                << " --storagectl " << "IDE"
-                << " --port "       << "1"
-                << " --device "     << "0"
+                << " --storagectl " << BOOT_CONTROLLER
+                << " --port "       << BOOT_PORT
+                << " --device "     << BOOT_DEVICE
                 << " --medium "     << "none";
 
             if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Detachining previous CernVM ISO", this->cbObject);
@@ -295,13 +311,13 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
             return HVE_IO_ERROR;
         }
 
-        /* (6) Attach CD-ROM to the IDE controller */
+        /* (6) Attach boot CD-ROM to the controller */
         args.str("");
         args << "storageattach "
             << uuid
-            << " --storagectl " << "IDE"
-            << " --port "       << "1"
-            << " --device "     << "0"
+            << " --storagectl " << BOOT_CONTROLLER
+            << " --port "       << BOOT_PORT
+            << " --device "     << BOOT_DEVICE
             << " --type "       << "dvddrive"
             << " --medium "     << "\"" << vmIso << "\"";
     
@@ -315,7 +331,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     }
     
     /* Store web-secret on the guest properties */
-    this->setProperty("web-secret", this->key);
+    this->setProperty("/CVMWeb/secret", this->key);
 
     /* Last callbacks */
     if (this->onProgress!=NULL) (this->onProgress)(100, 100, "Completed", this->cbObject);
@@ -348,11 +364,11 @@ int VBoxSession::start( std::string userData ) {
     
     /* Detach & Delete previous context ISO */
     cout << "2\n";
-    if (machineInfo.find("IDE (1, 1)") != machineInfo.end()) {
+    if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
         
         cout << "2.1\n";
         /* Get the filename of the iso */
-        getKV( machineInfo["IDE (1, 1)"], &kk, &kv, '(', 0 );
+        getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
         cout << "2.2\n";
@@ -362,9 +378,9 @@ int VBoxSession::start( std::string userData ) {
         args.str("");
         args << "storageattach "
             << uuid
-            << " --storagectl " << "IDE"
-            << " --port "       << "1"
-            << " --device "     << "1"
+            << " --storagectl " << CONTEXT_CONTROLLER
+            << " --port "       << CONTEXT_PORT
+            << " --device "     << CONTEXT_DEVICE
             << " --medium "     << "none";
 
         if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
@@ -399,13 +415,13 @@ int VBoxSession::start( std::string userData ) {
     if (this->host->buildContextISO( userData, &vmContextISO ) != 0) 
         return HVE_CREATE_ERROR;
 
-    /* Attach CD-ROM to the IDE controller */
+    /* Attach context CD-ROM to the IDE controller */
     args.str("");
     args << "storageattach "
         << uuid
-        << " --storagectl " << "IDE"
-        << " --port "       << "1"
-        << " --device "     << "1"
+        << " --storagectl " << CONTEXT_CONTROLLER
+        << " --port "       << CONTEXT_PORT
+        << " --device "     << CONTEXT_DEVICE
         << " --type "       << "dvddrive"
         << " --medium "     << "\"" << vmContextISO << "\"";
 
@@ -455,10 +471,10 @@ int VBoxSession::close() {
     map<string, string> machineInfo = this->getMachineInfo();
     
     /* Detach & Delete context ISO */
-    if (machineInfo.find("IDE (1, 1)") != machineInfo.end()) {
+    if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
         
         /* Get the filename of the iso */
-        getKV( machineInfo["IDE (1, 1)"], &kk, &kv, '(', 0 );
+        getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
         cout << "Detaching " << kk << "\n";
@@ -467,9 +483,9 @@ int VBoxSession::close() {
         args.str("");
         args << "storageattach "
             << uuid
-            << " --storagectl " << "IDE"
-            << " --port "       << "1"
-            << " --device "     << "1"
+            << " --storagectl " << CONTEXT_CONTROLLER
+            << " --port "       << CONTEXT_PORT
+            << " --device "     << CONTEXT_DEVICE
             << " --medium "     << "none";
 
         if (this->onProgress!=NULL) (this->onProgress)(2, 9, "Detaching contextualization CD-ROM", this->cbObject);
@@ -494,10 +510,10 @@ int VBoxSession::close() {
     }
     
     /* Detach & Delete Disk */
-    if (machineInfo.find("SATA (0, 0)") != machineInfo.end()) {
+    if (machineInfo.find( SCRATCH_DSK ) != machineInfo.end()) {
         
         /* Get the filename of the iso */
-        getKV( machineInfo["SATA (0, 0)"], &kk, &kv, '(', 0 );
+        getKV( machineInfo[ SCRATCH_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
         cout << "Detaching " << kk << "\n";
@@ -506,9 +522,9 @@ int VBoxSession::close() {
         args.str("");
         args << "storageattach "
             << uuid
-            << " --storagectl " << "SATA"
-            << " --port "       << "0"
-            << " --device "     << "0"
+            << " --storagectl " << SCRATCH_CONTROLLER
+            << " --port "       << SCRATCH_PORT
+            << " --device "     << SCRATCH_DEVICE
             << " --medium "     << "none";
 
         if (this->onProgress!=NULL) (this->onProgress)(5, 9, "Detaching data disk", this->cbObject);
@@ -867,6 +883,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->state = 0;
     sess->ip = "";
     sess->apiPort = DEFAULT_API_PORT;
+    sess->rdpPort = 0;
     sess->cpus = 1;
     sess->memory = 256;
     sess->executionCap = 100;
@@ -980,7 +997,7 @@ int Virtualbox::loadSessions() {
         uuid = uuid.substr(0, uuid.length()-1);
         
         /* Check if this VM has a secret web key. If yes, it's managed by the WebAPI */
-        secret = this->getProperty( uuid, "web-secret" );
+        secret = this->getProperty( uuid, "/CVMWeb/secret" );
         if (!secret.empty()) {
             
             /* Create a populate session object */
@@ -999,6 +1016,17 @@ int Virtualbox::loadSessions() {
             }
             session->cpus = ston<int>( info["Number of CPUs"] );
             
+            /* Parse RDP info */
+            if (info.find("VRDE") != info.end()) {
+                string rdpInfo = info["VRDE"];
+                string rdpPort = info["VRDE port"];
+                if (rdpInfo.find("enabled") != string::npos) {
+                    ((VBoxSession *)session)->rdpPort = ston<int>(rdpPort);
+                } else {
+                    ((VBoxSession *)session)->rdpPort = 0;
+                }
+            }
+            
             /* Parse memory */
             string mem = info["Memory size"];
             mem = mem.substr(0, mem.length()-2);
@@ -1006,10 +1034,10 @@ int Virtualbox::loadSessions() {
             
             /* Parse CernVM Version from the ISO */
             session->version = DEFAULT_CERNVM_VERSION;
-            if (info.find("IDE (1, 0)") != info.end()) {
+            if (info.find( BOOT_DSK ) != info.end()) {
 
                 /* Get the filename of the iso */
-                getKV( info["IDE (1, 0)"], &kk, &kv, '(', 0 );
+                getKV( info[ BOOT_DSK ], &kk, &kv, '(', 0 );
                 kk = kk.substr(0, kk.length()-1);
                 
                 /* Extract CernVM Version from file */
@@ -1020,10 +1048,10 @@ int Virtualbox::loadSessions() {
             
             /* Parse disk size */
             session->disk = 1024;
-            if (info.find("SATA (0, 0)") != info.end()) {
+            if (info.find( SCRATCH_DSK ) != info.end()) {
 
                 /* Get the filename of the iso */
-                getKV( info["SATA (0, 0)"], &kk, &kv, '(', 0 );
+                getKV( info[ SCRATCH_DSK ], &kk, &kv, '(', 0 );
                 kk = kk.substr(0, kk.length()-1);
                 
                 /* Collect disk info */

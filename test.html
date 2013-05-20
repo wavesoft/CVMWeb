@@ -189,6 +189,12 @@
 			session.addEventListener('debug', function( msg ) { // Debug messages
 				window.console.log('[debug] ' + msg);
 			});
+			session.addEventListener('apiAvailable', function(msg, id) { // Reset Error
+				_txt( "flags", "<strong>(live)</strong>" );
+			});
+			session.addEventListener('apiUnavailable', function(msg, id) { // Reset Error
+				_txt( "flags", "" );
+			});
 			
 		};
 
@@ -315,7 +321,7 @@
 			<tr>
 				<td colspan="3">
 					<div id="hv">Could not initiate plugin</div>
-					<div id="state">Enter a session name and a secret key. If the session is already open you must provide the same key.</div>
+					<div><span id="state">Enter a session name and a secret key. If the session is already open you must provide the same key.</span> <span id="flags">&nbsp;</span></div>
 				</td>
 			</tr>
 			<tr>
