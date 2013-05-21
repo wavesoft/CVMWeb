@@ -154,6 +154,11 @@ bool                                                isPortOpen      ( const char
 void                                                mapDump         ( std::map< std::string, std::string> m );
 
 /**
+ * Allow only the given characters on the string specified
+ */
+bool                                                isSanitized     ( std::string * check, std::string chars );
+
+/**
  * OLD TOKENIZATION FUNCTIONS THAT SHOULD BE REMOVED
  */
 std::vector< std::map<std::string, std::string> >   tokenizeList    ( std::vector<std::string> * lines, char delim );

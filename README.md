@@ -184,31 +184,71 @@ Take for example the following handler:
 		window.console.log( "Performing: " + msg + ", " + current + " out of " + total + " tasks completed" );
 	});
 
+
 # Assisting daemon process
 
 Since the running VM needs to be calibrated at real-time, depending on the CPU load or other factors, a tiny daemon process
-is started along with every VM.
+is started along with every VM. 
+
+You can learn more about the daemon if you check the README.md in the daemon/ folder.
+
+*(The following chapters refer to in-development functionality and might be changed in the future)*
+
+## Controlling the daemon from javascript
+
+There is a singleton daemon API object (CVMWebAPIDaemon) per plugin instance. You can access it via the core plugin's *daemon* property:
+
+	var o = document.getElementById('cvmweb'),
+		daemon = o.daemon;
+
+Most of the times, you will only need to start the daemon. To do so, use the **start()** function:
+
+	// Start the daemon (if it's already running this function does nothing)
+	daemon.start();
+	
+You can check the status of the daemon via the **.status** property.
+
+# Security considerations
+
+It is very important to note that this is an NPAPI plugin, and therefore not protected by any browser sandbox! It can directly access your entire system!
+
+Extra care was taken to minimize the parameters that the user can specify and that can reach a system exec() command. 
+Only the **openSession()** function is currently passing (sanitized) integer arguments to the VBoxManage command. 
+
+In addition and in order to protect the user from unauthorized VM initiations a system-modal dialog will be appeared every time a website calls the **openSession()** function.
+If the user rejects the session initiation twice within 5 seconds, no further dialogs will be displayed and all the requests will be rejected.
+
+There is no other (known) vulnerabilities that an attacker can exploit, but be aware!
+**Accept VM initiations only from domains that you trust and only after they told you that they are going to do so!**
+
+---------------------------------------
 
 # Appendix A - Error codes
 
 Most of the functions return a number. If the value is less than zero, an error has occurred. Here is a short list of 
 the errors that can occur.
 
-	 1   Successfuly scheduled (status not known yet)
-	 0   No error
-	-1   Creation Error
-	-2	 Modification Error
-	-3   Control Error
-	-4   Deletion Error
-	-5   Query Error
-	-6   I/O Error
-	-7   External library / server error
-	-8   Not a valid operation for the current state
-	-9   Not found
-	-10	 Not allowed
-	-11	 Not supported
-	-12	 Not validated
-	-100 Function is not implemented
+<table>
+  <tr>
+  	<th>Return Value</th>
+	<th>Description</th>
+  </tr>
+  <tr><td>1</td><td>Successfuly scheduled (status not known yet)</td></tr>
+  <tr><td>0</td><td>No error</td></tr>
+  <tr><td>-1</td><td>Creation Error</td></tr>
+  <tr><td>-2</td><td>Modification Error</td></tr>
+  <tr><td>-3</td><td>Control Error</td></tr>
+  <tr><td>-4</td><td>Deletion Error</td></tr>
+  <tr><td>-5</td><td>Query Error</td></tr>
+  <tr><td>-6</td><td>I/O Error</td></tr>
+  <tr><td>-7</td><td>External library / server error</td></tr>
+  <tr><td>-8</td><td>Not a valid operation for the current state</td></tr>
+  <tr><td>-9</td><td>Not found</td></tr>
+  <tr><td>-10</td><td>Not allowed</td></tr>
+  <tr><td>-11</td><td>Not supported</td></tr>
+  <tr><td>-12</td><td>Not validated</td></tr>
+  <tr><td>-100</td><td>Function is not implemented</td></tr>
+</table>
 
 # Appendix B - Events
 
@@ -231,6 +271,8 @@ The following list of events is fired by the session object. You can listen for 
 	stopError			( errorMessage, errorCode )
 	progress			( tasksCompleted, tasksPending, statusMessage )
 	errror				( errorMessage, errorCode, errorCategory )
+	apiAvailable		( machineIP, apiURL )
+	apiUnavailable		( )
     debug				( debugMessage )
 
 # Appendix C - Functions
@@ -277,6 +319,8 @@ The *sess.state* property has one of the following values:
 	4	Started		The VM is running, you can now call pause(), resume(), reset() or stop()
 	5	Error		There was an error starting the VM
 	6	Paused		The session is open but the VM is paused
+
+---------------------------------------
 
 # License
 
