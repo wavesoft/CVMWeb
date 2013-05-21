@@ -441,8 +441,7 @@ int __curl_progress_proxy(void *clientp, double dltotal, double dlnow, double ul
     HVPROGRESS_FEEDBACK * fb = (HVPROGRESS_FEEDBACK *) clientp;
     
     // Throttle events on 2 per second
-    if ((dlnow != dltotal) && ((getMillis() - fb->lastEventTime) < 500))
-        return 0;
+    if ((dlnow != dltotal) && ((getMillis() - fb->lastEventTime) < 500)) return 0;
     fb->lastEventTime = getMillis();
 
     // Calculate percentage
