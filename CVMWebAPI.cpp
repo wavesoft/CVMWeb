@@ -119,6 +119,12 @@ std::string CVMWebAPI::getDomainName() {
  * Create and return a session object. 
  */
 FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& secret) {
+    
+    /* Block requests when reached throttled state */
+    if (this->throttleBlock)
+        return CVME_ACCESS_DENIED;
+    
+    /* Handle request */
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
         return CVME_UNSUPPORTED;
@@ -134,8 +140,27 @@ FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& 
         /* Notify user that a new session will open */
         if (ans == 0) {
             std::string msg = "The website " + this->getDomainName() + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine. Do you want to allow it?";
-            if (!this->confirm(msg)) return CVME_ACCESS_DENIED;
-        
+            if (!this->confirm(msg)) {
+                
+                /* Manage throttling */
+                if ((getMillis() - this->throttleTimestamp) <= THROTTLE_TIMESPAN) {
+                    if (++this->throttleDenies >= THROTTLE_TRIES)
+                        this->throttleBlock = true;
+                } else {
+                    this->throttleDenies = 1;
+                    this->throttleTimestamp = getMillis();
+                }
+                
+                return CVME_ACCESS_DENIED;
+                
+            } else {
+                
+                /* Reset throttle */
+                this->throttleDenies = 0;
+                this->throttleTimestamp = 0;
+                
+            }
+            
         /* Notify invalid passwords */
         } else if (ans == 2) {
             return CVME_PASSWORD_DENIED;

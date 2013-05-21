@@ -39,6 +39,9 @@
 #define CVME_UNSUPPORTED        -11 /* Same to HVE_NOT_SUPPORTED */
 #define CVME_PASSWORD_DENIED    -20
 
+#define THROTTLE_TIMESPAN       5000 /* Delay between twon concecutive user denies */
+#define THROTTLE_TRIES          2    /* After how many denies the plugin will be blocked */
+
 class CVMWebAPI : public FB::JSAPIAuto
 {
 public:
@@ -72,6 +75,9 @@ public:
         
         // Reset AuthType
         this->m_authType = 0;
+        this->throttleTimestamp = 0;
+        this->throttleDenies = 0;
+        this->throttleBlock = false;
         
     }
 
@@ -115,6 +121,12 @@ private:
     CVMWebWeakPtr       m_plugin;
     FB::BrowserHostPtr  m_host;
     int                 m_authType;
+
+    // Throttling protection
+    long                throttleTimestamp;
+    int                 throttleDenies;
+    bool                throttleBlock;
+    
 };
 
 #endif // H_CVMWebAPI
