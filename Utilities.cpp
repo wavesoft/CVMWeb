@@ -564,7 +564,7 @@ void mapDump(map<string, string> m) {
  * Check if the given string contains only the specified chars
  */
 bool isSanitized( std::string * check, std::string chars ) {
-    for (int i=0; i<check->length()) {
+    for (int i=0; i<check->length(); i++) {
         if (chars.find( check->at(i) ) == string::npos) {
             return false;
         }

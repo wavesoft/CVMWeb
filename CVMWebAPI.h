@@ -59,16 +59,16 @@ public:
     CVMWebAPI(const CVMWebPtr& plugin, const FB::BrowserHostPtr& host) :
         m_plugin(plugin), m_host(host)
     {
-        registerMethod("requestSession",    make_method(this, &CVMWebAPI::requestSession));
-        registerMethod("authenticate",      make_method(this, &CVMWebAPI::authenticate));
-        registerMethod("installHypervisor", make_method(this, &CVMWebAPI::installHV));
+        registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
+        registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::getIdleDaemon));
+        registerMethod("authenticate",        make_method(this, &CVMWebAPI::authenticate));
+        registerMethod("installHypervisor",   make_method(this, &CVMWebAPI::installHV));
 
         // Read-only property
-        registerProperty("version",         make_property(this, &CVMWebAPI::get_version));
-        registerProperty("hypervisorName",  make_property(this, &CVMWebAPI::get_hv_name));
+        registerProperty("version",           make_property(this, &CVMWebAPI::get_version));
+        registerProperty("hypervisorName",    make_property(this, &CVMWebAPI::get_hv_name));
         registerProperty("hypervisorVersion", make_property(this, &CVMWebAPI::get_hv_version));
-        registerProperty("domain",          make_property(this, &CVMWebAPI::getDomainName));
-        registerProperty("daemon",          make_property(this, &CVMWebAPI::getIdleDaemon));
+        registerProperty("domain",            make_property(this, &CVMWebAPI::getDomainName));
         
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPI::toString));

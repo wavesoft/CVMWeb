@@ -29,7 +29,6 @@ std::string getDaemonLockfile ( std::string exePath ) {
  */
 bool isAlive( int pid ) {
     
-    // TODO: There **IS** a better way to do this
     #if defined(__APPLE__) && defined(__MACH__)
         struct proc_bsdinfo bsdInfo;
         int ret = proc_pidinfo( pid, PROC_PIDTBSDINFO, 0, &bsdInfo, sizeof(bsdInfo));
@@ -38,6 +37,11 @@ bool isAlive( int pid ) {
     #ifdef __linux__
         int ret = kill( pid, 0 );
         return (ret != 0);
+    #endif
+    #ifdef _WIN32
+        LPDWORD lpExitCode;
+        GetExitCodeProcess( pid, &lpExitCode );
+        return (lpExitCode == STILL_ACTIVE);
     #endif
 
     return false;

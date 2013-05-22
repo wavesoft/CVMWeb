@@ -127,8 +127,8 @@ setup the environment for your instance:
 The function will return 1 if the action was scheduled successfully, or an error code if an error occurred. 	
 Upon a successful completion, the *onStart* event will be fired. If an error occurs the *onStartError* event will be fired. 
 
-The plugin will probe the CernVM communication channel periodically. When the channel is established the *onLive* event will
-be fired. When a live connection is interrupted, the *onDead* event will be fired.
+The plugin will probe the CernVM communication channel periodically. When the channel is established the *onApiAvailable* event will
+be fired. When a live connection is interrupted, the *onApiUnavailable* event will be fired.
 
 # Controlling a running instance
 
@@ -196,17 +196,20 @@ You can learn more about the daemon if you check the README.md in the daemon/ fo
 
 ## Controlling the daemon from javascript
 
-There is a singleton daemon API object (CVMWebAPIDaemon) per plugin instance. You can access it via the core plugin's *daemon* property:
+If you need to start the daemon for your plugin you must first request access to the daemon-controlling object. 
+To do so, use the **requestDaemonAccess()** function:
 
 	var o = document.getElementById('cvmweb'),
-		daemon = o.daemon;
+		daemon = o.requestDaemonAccess();
+
+The function will either return a *CVMWebAPIDaemon* instance or an numeric error code if something went wrong.
 
 Most of the times, you will only need to start the daemon. To do so, use the **start()** function:
 
 	// Start the daemon (if it's already running this function does nothing)
 	daemon.start();
 	
-You can check the status of the daemon via the **.status** property.
+You can also check the status of the daemon via the **.status** property.
 
 # Security considerations
 

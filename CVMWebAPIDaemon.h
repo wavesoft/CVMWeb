@@ -43,7 +43,7 @@ public:
         
         // Properties
         registerProperty("path",            make_property(this, &CVMWebAPIDaemon::getDaemonBin));
-        registerProperty("status",          make_property(this, &CVMWebAPIDaemon::getStatus));
+        registerProperty("running",         make_property(this, &CVMWebAPIDaemon::getIsRunning));
         
         // Methods
         registerMethod("start",             make_method(this, &CVMWebAPIDaemon::start));
@@ -68,7 +68,7 @@ public:
     // Read-only properties
     std::string             getDaemonBin();
     std::string             toString();
-    int                     getStatus();
+    bool                    getIsRunning();
     bool                    getIdleStatus();
 
     // Read-Write properties    

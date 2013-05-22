@@ -84,15 +84,11 @@ std::string CVMWebAPIDaemon::getDaemonBin() {
 /**
  * Return the daemon status
  */
-int CVMWebAPIDaemon::getStatus() {
+bool CVMWebAPIDaemon::getIsRunning() {
     
     /* Check if the daemon is running */
     std::string dLockfile = getDaemonLockfile( this->getDaemonBin() );
-    if (isDaemonRunning( dLockfile )) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return isDaemonRunning( dLockfile );
     
 }
 
@@ -118,7 +114,7 @@ int startDaemon( char * path_to_bin ) {
 int CVMWebAPIDaemon::start() {
     
     /* Check if it's running */
-    if (getStatus() == 1) return HVE_OK;
+    if (getIsRunning()) return HVE_OK;
     
     /* Get the daemon path */
     char buf[1024];

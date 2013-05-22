@@ -58,7 +58,6 @@ public:
     virtual FB::JSAPIPtr                createJSAPI();
     std::string                         getFilesystemPath();
     std::string                         getDataFolderPath();
-    boost::shared_ptr<CVMWebAPIDaemon>  getDaemonInstance( );
     
     
     /* Always windowless */
@@ -79,9 +78,6 @@ public:
     virtual bool onWindowAttached(FB::AttachedEvent *evt, FB::PluginWindow *);
     virtual bool onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *);
     /** END EVENTDEF -- DON'T CHANGE THIS LINE **/
-
-    static boost::shared_ptr<CVMWebAPIDaemon>  daemonInstance;
-    static bool                                daemonReady;
     
 };
 

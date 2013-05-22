@@ -33,10 +33,6 @@
 #include "Hypervisor.h"
 #include "ThinIPC.h"
 
-// Static variables
-bool                               CVMWeb::daemonReady = false;
-boost::shared_ptr<CVMWebAPIDaemon> CVMWeb::daemonInstance;
-
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()
 ///
@@ -119,12 +115,6 @@ void CVMWeb::shutdown()
 FB::JSAPIPtr CVMWeb::createJSAPI()
 {
 
-    // Define daemon instance
-    if (!CVMWeb::daemonReady) {
-        CVMWeb::daemonInstance = boost::make_shared<CVMWebAPIDaemon>(FB::ptr_cast<CVMWeb>(shared_from_this()), m_host);
-        CVMWeb::daemonReady = true;
-    }
-
     // m_host is the BrowserHost
     return boost::make_shared<CVMWebAPI>(FB::ptr_cast<CVMWeb>(shared_from_this()), m_host);
 }
@@ -203,6 +193,3 @@ std::string CVMWeb::getDataFolderPath() {
     return dPath;
 }
 
-boost::shared_ptr<CVMWebAPIDaemon> CVMWeb::getDaemonInstance( ) {
-    return CVMWeb::daemonInstance;
-}
