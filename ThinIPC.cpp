@@ -62,6 +62,7 @@ ThinIPCMessage::ThinIPCMessage( ) {
     this->data = NULL;
     __chunkPos = 0;
     __ioPos = 0;
+
 };
 
 /**
@@ -73,6 +74,7 @@ ThinIPCMessage::ThinIPCMessage( char* payload, short size ) {
     this->size = size;
     __chunkPos = 0;
     __ioPos = 0;
+
 };
 
 /**
@@ -92,6 +94,7 @@ template <typename T> short ThinIPCMessage::readPtr( T * ptr ) {
     // Read int
     memcpy( ptr, &this->data[__ioPos], len );
     __ioPos += len;
+
     return (short) len;
 };
 
@@ -105,6 +108,7 @@ template <typename T> short ThinIPCMessage::writePtr( T * ptr ) {
     // Read int
     memcpy( &this->data[__ioPos], ptr, len );
     __ioPos += len;
+
     return (short) len;
 };
 
@@ -119,7 +123,23 @@ long int ThinIPCMessage::readInt() {
     memset( &v, 0, 4 );
     memcpy( &v, &this->data[__ioPos], 4 );
     __ioPos += 4;
+
+    return v;
+};
+
+/**
+ * Read integer from input stream
+ */
+short int ThinIPCMessage::readShort() {
+    short int v;
     
+    if (__ioPos+2 > size) return 0;
+
+    // Read int
+    memset( &v, 0, 2 );
+    memcpy( &v, &this->data[__ioPos], 2 );
+    __ioPos += 2;
+
     return v;
 };
 
@@ -143,6 +163,7 @@ string ThinIPCMessage::readString() {
     // Create response
     string v(buf, len);
     free( buf );
+
     return v;
 };
 
@@ -150,6 +171,7 @@ string ThinIPCMessage::readString() {
  * Write integer to output stream
  */
 short ThinIPCMessage::writeInt( long int v ) {
+
     // Resize buffer
     size += 4;
     this->data = (char *) realloc( this->data, size );
@@ -157,15 +179,33 @@ short ThinIPCMessage::writeInt( long int v ) {
     // Write int
     memcpy( &this->data[__ioPos], &v, 4 );
     __ioPos += 4;
-    
+
     // Return bytes written
     return 4;
+};
+
+/**
+ * Write short integer to output stream
+ */
+short ThinIPCMessage::writeShort( short int v ) {
+
+    // Resize buffer
+    size += 2;
+    this->data = (char *) realloc( this->data, size );
+    
+    // Write int
+    memcpy( &this->data[__ioPos], &v, 2 );
+    __ioPos += 2;
+
+    // Return bytes written
+    return 2;
 };
 
 /**
  * Write string to output stream
  */
 short ThinIPCMessage::writeString( string v ) {
+
     // Resize buffer
     size += 2 + v.length();
     this->data = (char *) realloc( this->data, size );
@@ -178,7 +218,7 @@ short ThinIPCMessage::writeString( string v ) {
     // Write string
     memcpy( &this->data[__ioPos], (char *)v.c_str(), len );
     __ioPos += len;
-    
+
     // Return bytes written
     return len;
 };
@@ -261,36 +301,43 @@ short ThinIPCMessage::putChunk( char * buffer, short capacity ) {
     // First chunk contains the message size
     if (__chunkPos == 0) {
         
-        // Read chunk size (assuming capacity > 4)
+        // Read chunk size (assuming capacity > 2)
         memcpy( &size, buffer, 2 );
-//        std::cout << "INFO: Read " << size << "\n";
         
         // Reset buffer
         if (this->data != NULL) free(this->data);
         this->data = (char *)malloc( size );
     
-        // Calculate the number of bytes to read
-        if ( __chunkPos + readSize > size ) readSize = size - __chunkPos;
-        
-//        std::cout << "INFO: Read size " << readSize << " at " << __chunkPos << "\n";
-        memcpy( &this->data[__chunkPos], &buffer[2], readSize-2 );
-        __chunkPos += readSize;
+        // Check if the entire buffer fits in the chunk
+        if ( size <= capacity) {
+            memcpy( this->data, &buffer[2], size );
+            return size;
+        }
+    
+        // Otherwise write only current chunk
+        __chunkPos = capacity-2;
+        memcpy( this->data, &buffer[2], __chunkPos );
         
     } else {
         
-        // Calculate the number of bytes to read
-        if ( __chunkPos + readSize > size ) readSize = size - __chunkPos;
-        memcpy( &this->data[__chunkPos], buffer, readSize );
-        __chunkPos += readSize;
+        // Calculate data remaining
+        readSize = size - __chunkPos;
+        
+        // Check if that's the last chunk
+        if ( readSize <= capacity ) {
+            memcpy( &this->data[__chunkPos], buffer, readSize );
+            return size;
+        }
+        
+        // Otherwise read only that chunk
+        memcpy( &this->data[__chunkPos], buffer, capacity );
+        __chunkPos += capacity;
         
     }
     
-    // Return the number of the frame size when completed
-    if ( __chunkPos >= size ) {
-        return size;
-    } else {
-        return 0;
-    }
+    // Still data left
+    return 0;
+    
 }
 
 /**

@@ -51,6 +51,9 @@ public:
         registerMethod("getIdleTime",       make_method(this, &CVMWebAPIDaemon::getIdleTime));
         registerMethod("setIdleTime",       make_method(this, &CVMWebAPIDaemon::setIdleTime));
         registerMethod("getIdleStatus",     make_method(this, &CVMWebAPIDaemon::getIdleStatus));
+
+        registerMethod("get",               make_method(this, &CVMWebAPIDaemon::get));
+        registerMethod("set",               make_method(this, &CVMWebAPIDaemon::set));
         
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPIDaemon::toString));
@@ -70,10 +73,13 @@ public:
     std::string             toString();
     bool                    getIsRunning();
     bool                    getIdleStatus();
+    
+    short int               set( short int var, short int value );
+    short int               get( short int var );
 
     // Read-Write properties    
     FB::variant             getIdleTime();
-    void                    setIdleTime( long int idleTime );
+    void                    setIdleTime( short int idleTime );
     
 private:
     CVMWebWeakPtr           m_plugin;

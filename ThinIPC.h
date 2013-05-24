@@ -53,9 +53,11 @@ public:
     
     /* Object I/O */
     long int                    readInt();
+    short int                   readShort();
     std::string                 readString();
     template <typename T> short readPtr( T * ptr );
     short                       writeInt( long int v );
+    short                       writeShort( short int v );
     short                       writeString( std::string v );
     template <typename T> short writePtr( T * ptr );
     

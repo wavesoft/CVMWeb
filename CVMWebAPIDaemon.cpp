@@ -74,7 +74,11 @@ std::string CVMWebAPIDaemon::getDaemonBin() {
     dPath += "/daemon/CVMWADaemonOSX";
     #endif
     #ifdef __linux__
-    dPath += "/daemon/CVMWADaemonLinux";
+        #if defined(__LP64__) || defined(_LP64)
+            dPath += "/daemon/CVMWADaemonLinux64";
+        #else
+            dPath += "/daemon/CVMWADaemonLinux";
+        #endif
     #endif
     
     /* Return it */
@@ -139,14 +143,14 @@ int CVMWebAPIDaemon::stop() {
  * Query daemon to get the current idle time settings
  */
 FB::variant CVMWebAPIDaemon::getIdleTime() {
-    long int idleTime = daemonGet( DIPC_GET_IDLETIME );
+    short int idleTime = daemonGet( DIPC_GET_IDLETIME );
     return idleTime;
 }
 
 /**
  * Query daemon to set the current idle time settings
  */
-void CVMWebAPIDaemon::setIdleTime( long int idleTime ) {
+void CVMWebAPIDaemon::setIdleTime( short int idleTime ) {
     daemonSet( DIPC_SET_IDLETIME, idleTime );
 }
 
@@ -154,6 +158,14 @@ void CVMWebAPIDaemon::setIdleTime( long int idleTime ) {
  * Query daemon to get the current idle status
  */
 bool CVMWebAPIDaemon::getIdleStatus( ) {
-    long int idleStatus = daemonGet( DIPC_IDLESTATE );
+    short int idleStatus = daemonGet( DIPC_IDLESTATE );
     return ( idleStatus == 1 );
+}
+
+short int CVMWebAPIDaemon::set( short int var, short int value ) {
+    return daemonSet( var, value );
+}
+
+short int CVMWebAPIDaemon::get( short int var ) {
+    return daemonGet( var );
 }

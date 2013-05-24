@@ -154,6 +154,11 @@ bool                                                isPortOpen      ( const char
 void                                                mapDump         ( std::map< std::string, std::string> m );
 
 /**
+ * Display a hexdump of the given buffer
+ */
+void                                                hexDump         (const char *desc, void *addr, int len);
+
+/**
  * Allow only the given characters on the string specified
  */
 bool                                                isSanitized     ( std::string * check, std::string chars );

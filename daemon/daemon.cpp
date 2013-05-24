@@ -128,30 +128,30 @@ int main( int argc, char ** argv ) {
             
             /* Handle data */
             ans.reset();
-            int iAction = msg.readInt();
+            int iAction = msg.readShort();
             cout << "INFO: Msg=" << iAction << ", From=" << port << endl;
             
             if (iAction == DIPC_IDLESTATE) { // Get the idle state
-                ans.writeInt(DIPC_ANS_OK);
-                ans.writeInt( isIdle ? 1 : 0 );
+                ans.writeShort(DIPC_ANS_OK);
+                ans.writeShort( isIdle ? 1 : 0 );
                 
             } else if (iAction == DIPC_SHUTDOWN) { // Shut down the daemon
-                ans.writeInt(DIPC_ANS_OK);
-                ans.writeInt( 0 );
+                ans.writeShort(DIPC_ANS_OK);
+                ans.writeShort( 0 );
                 ipc->send( port, &ans );
                 break;
                 
             } else if (iAction == DIPC_SET_IDLETIME) { // Set the idle time value
-                idleTime = msg.readInt();
-                ans.writeInt(DIPC_ANS_OK);
-                ans.writeInt(idleTime);
+                idleTime = msg.readShort();
+                ans.writeShort(DIPC_ANS_OK);
+                ans.writeShort(idleTime);
                 
             } else if (iAction == DIPC_GET_IDLETIME) { // Return the current idle time settings
-                ans.writeInt(DIPC_ANS_OK);
-                ans.writeInt(idleTime);
+                ans.writeShort(DIPC_ANS_OK);
+                ans.writeShort(idleTime);
                 
             } else {
-                ans.writeInt(DIPC_ANS_ERROR);
+                ans.writeShort(DIPC_ANS_ERROR);
             }
             
             /* Send responpse */

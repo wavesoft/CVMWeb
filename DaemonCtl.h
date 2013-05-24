@@ -11,14 +11,14 @@ typedef struct {
 } DLOCKINFO;
 
 /* Daemon IPC Actions */
-#define DIPC_IDLESTATE      0x00000001
-#define DIPC_SHUTDOWN       0x00000002
-#define DIPC_SET_IDLETIME   0x00000003
-#define DIPC_GET_IDLETIME   0x00000004
+#define DIPC_IDLESTATE      0x0001
+#define DIPC_SHUTDOWN       0x0002
+#define DIPC_SET_IDLETIME   0x0003
+#define DIPC_GET_IDLETIME   0x0004
 
 /* Daemon IPC Responses */
-#define DIPC_ANS_OK         0x00000001
-#define DIPC_ANS_ERROR      0xFFFFFFFF
+#define DIPC_ANS_OK         0x0001
+#define DIPC_ANS_ERROR      0xFFFF
 
 /* Config constants */
 #define DAEMON_PORT         58740
@@ -26,9 +26,9 @@ typedef struct {
 /* Daemon controlling functions */
 std::string             getDaemonLockfile   ( std::string path );
 bool                    isDaemonRunning     ( std::string lockfile );
-int                     daemonIPC           ( ThinIPCMessage * send, ThinIPCMessage * recv );
-long int                daemonGet           ( long int action );
-long int                daemonSet           ( long int action, long int value );
+short int               daemonIPC           ( ThinIPCMessage * send, ThinIPCMessage * recv );
+short int               daemonGet           ( short int action );
+short int               daemonSet           ( short int action, short int value );
 
 /* Used by the daemon process */
 DLOCKINFO *             daemonLock          ( std::string lockfile );

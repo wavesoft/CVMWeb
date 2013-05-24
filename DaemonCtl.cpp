@@ -113,7 +113,7 @@ void daemonUnlock( DLOCKINFO * dlInfo ) {
  * Contact daemon
  * WARNING! ThinIPCInitialize() *MUST* be called in advance!
  */
-int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
+short int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
     
     /* Pick a random port */
     static int rPort = (random() % ( 0xFFFE - DAEMON_PORT )) + DAEMON_PORT + 1;
@@ -134,7 +134,7 @@ int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
         return -3;
     
     /* Check if we had error */
-    int errNo = recv->readInt();
+    int errNo = recv->readShort();
     if (errNo != DIPC_ANS_OK)
         return -abs(errNo);
     
@@ -147,26 +147,26 @@ int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
  * Contact daemon requesting integer response
  * (Shorthand for calling daemonIPC with ThinIPCMessage structures)
  */
-long int daemonGet( long int action ) {
+short int daemonGet( short int action ) {
     static ThinIPCMessage send, recv;
     send.reset(); recv.reset();
-    send.writeInt( action );
-    int res = daemonIPC( &send, &recv );
+    send.writeShort( action );
+    short int res = daemonIPC( &send, &recv );
     if (res != 0) return res;
-    return recv.readInt();
+    return recv.readShort();
 }
 
 /**
  * Contact daemon setting integer data
  * (Shorthand for calling daemonIPC with ThinIPCMessage structures)
  */
-long int daemonSet( long int action, long int value ) {
+short int daemonSet( short int action, short int value ) {
     static ThinIPCMessage send, recv;
     send.reset();
     recv.reset();
-    send.writeInt( action );
-    send.writeInt( value );
+    send.writeShort( action );
+    send.writeShort( value );
     int res = daemonIPC( &send, &recv );
     if (res != 0) return res;
-    return recv.readInt();
+    return recv.readShort();
 }
