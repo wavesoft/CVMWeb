@@ -36,7 +36,7 @@ bool isAlive( int pid ) {
     #endif
     #ifdef __linux__
         int ret = kill( pid, 0 );
-        return (ret != 0);
+        return (ret == 0);
     #endif
     #ifdef _WIN32
         LPDWORD lpExitCode;

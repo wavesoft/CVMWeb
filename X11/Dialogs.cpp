@@ -32,7 +32,7 @@ static gboolean display_dialog( gpointer user_data ) {
     GtkWidget *dialog;
     
     /* Fetch window */
-    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);;
+    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
     /* Create dialog */
     dialog = gtk_message_dialog_new(
@@ -43,10 +43,11 @@ static gboolean display_dialog( gpointer user_data ) {
         dialog_data->text);
 
     /* Set caption */
+    gtk_window_set_keep_above(GTK_WINDOW(dialog), true);
     gtk_window_set_title(GTK_WINDOW(dialog), "CernVM Web API");
     dialog_data->result = gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(GTK_WIDGET(dialog));
     gtk_main_quit();  // Quits the main loop run in MessageBox()
-    gtk_widget_destroy(dialog);
 
     return FALSE;
 }
