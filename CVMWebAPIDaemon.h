@@ -42,21 +42,21 @@ public:
     {
         
         // Properties
-        registerProperty("path",            make_property(this, &CVMWebAPIDaemon::getDaemonBin));
-        registerProperty("running",         make_property(this, &CVMWebAPIDaemon::getIsRunning));
+        registerProperty("isRunning",       make_property(this, &CVMWebAPIDaemon::getIsRunning));
+        registerProperty("isSystemIdle",    make_property(this, &CVMWebAPIDaemon::getIsIdle));
+        registerProperty("idleTime",        make_property(this, &CVMWebAPIDaemon::getIdleTime, &CVMWebAPIDaemon::setIdleTime));
         
         // Methods
         registerMethod("start",             make_method(this, &CVMWebAPIDaemon::start));
         registerMethod("stop",              make_method(this, &CVMWebAPIDaemon::stop));
-        registerMethod("getIdleTime",       make_method(this, &CVMWebAPIDaemon::getIdleTime));
-        registerMethod("setIdleTime",       make_method(this, &CVMWebAPIDaemon::setIdleTime));
-        registerMethod("getIdleStatus",     make_method(this, &CVMWebAPIDaemon::getIdleStatus));
 
-        registerMethod("get",               make_method(this, &CVMWebAPIDaemon::get));
-        registerMethod("set",               make_method(this, &CVMWebAPIDaemon::set));
-        
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPIDaemon::toString));
+
+        // DEBUG STUFF
+        registerProperty("path",            make_property(this, &CVMWebAPIDaemon::getDaemonBin));
+        registerMethod("get",               make_method(this, &CVMWebAPIDaemon::get));
+        registerMethod("set",               make_method(this, &CVMWebAPIDaemon::set));
         
     }
 
@@ -72,7 +72,7 @@ public:
     std::string             getDaemonBin();
     std::string             toString();
     bool                    getIsRunning();
-    bool                    getIdleStatus();
+    bool                    getIsIdle();
     
     short int               set( short int var, short int value );
     short int               get( short int var );

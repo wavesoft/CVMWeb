@@ -28,6 +28,15 @@ The daemon is not started automatically. It must be started using the javascript
 	// to the plugin element)
 	
 	// Get a reference to the daemon object
-	var daemon = core.daemon;
+	var daemon = core.requestDaemonAccess;
 	
-	// 
+	// You can check if the daemon is running
+	// using the running property:
+	if (!daemon.running) {
+		
+		// You can start the daemon using the start() function.
+		daemon.start();
+		
+	}
+	
+	

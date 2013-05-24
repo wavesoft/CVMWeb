@@ -157,7 +157,7 @@ void CVMWebAPIDaemon::setIdleTime( short int idleTime ) {
 /**
  * Query daemon to get the current idle status
  */
-bool CVMWebAPIDaemon::getIdleStatus( ) {
+bool CVMWebAPIDaemon::getIsIdle( ) {
     short int idleStatus = daemonGet( DIPC_IDLESTATE );
     return ( idleStatus == 1 );
 }

@@ -209,7 +209,8 @@ Most of the times, you will only need to start the daemon. To do so, use the **s
 	// Start the daemon (if it's already running this function does nothing)
 	daemon.start();
 	
-You can also check the status of the daemon via the **.status** property.
+If the daemon was successfully started, a non-negative value will be returned. You can always check the status of the daemon
+via the **.isRunning** property.
 
 # Security considerations
 
