@@ -3,7 +3,7 @@
 #include "Utilities.h"
 
 #include <sstream>
-#include <stdlib.h>
+#include <cstdlib>
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <libproc.h>
@@ -39,8 +39,17 @@ bool isAlive( int pid ) {
         return (ret == 0);
     #endif
     #ifdef _WIN32
-        LPDWORD lpExitCode;
-        GetExitCodeProcess( pid, &lpExitCode );
+        DWORD lpExitCode;
+        
+        // Open handle
+        HANDLE hProc = OpenProcess( PROCESS_QUERY_INFORMATION, false, pid);
+        if (hProc == NULL) return false;
+        
+        // Query exit code (returns STILL_ALIVE if it's still alive)
+        GetExitCodeProcess( hProc, &lpExitCode );
+        CloseHandle( hProc );
+
+        // Check status
         return (lpExitCode == STILL_ACTIVE);
     #endif
 
@@ -89,7 +98,12 @@ DLOCKINFO * daemonLock( std::string lockfile ) {
     if (!lfStream.fail()) {
         
         /* Write pid */
-        int pid = getpid();
+        int pid;
+        #ifdef _WIN32
+        pid = getpid();
+        #else
+        pid = GetCurrentProcessId();
+        #endif
         lfStream << pid << endl;
         lfStream.close();
         
@@ -116,7 +130,7 @@ void daemonUnlock( DLOCKINFO * dlInfo ) {
 short int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
     
     /* Pick a random port */
-    static int rPort = (random() % ( 0xFFFE - DAEMON_PORT )) + DAEMON_PORT + 1;
+    static int rPort = (rand() % ( 0xFFFE - DAEMON_PORT )) + DAEMON_PORT + 1;
     static ThinIPCEndpoint ipc( rPort );
     
     /* Send message */

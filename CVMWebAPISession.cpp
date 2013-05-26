@@ -66,7 +66,7 @@ int CVMWebAPISession::pause() {
     }
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_pause() {
@@ -97,7 +97,7 @@ int CVMWebAPISession::close(){
     }
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_close(){
@@ -119,7 +119,7 @@ int CVMWebAPISession::resume(){
     this->probeTimer->start();
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_resume, this ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_resume(){
@@ -145,7 +145,7 @@ int CVMWebAPISession::reset(){
     
     // Start the reset thread
     boost::thread t(boost::bind(&CVMWebAPISession::thread_reset, this ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_reset(){
@@ -170,7 +170,7 @@ int CVMWebAPISession::stop(){
     }
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_stop(){
@@ -193,7 +193,7 @@ int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
     this->probeTimer->start();
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_open, this, o ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
@@ -226,7 +226,7 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
     this->probeTimer->start();
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_start, this, cfg ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
 }
 
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {

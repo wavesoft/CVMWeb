@@ -197,7 +197,7 @@ int CVMWebAPI::installHV( ) {
     
     /* Start installation thread */
     boost::thread t(boost::bind(&CVMWebAPI::thread_install, this ));
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
     
 };
 

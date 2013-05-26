@@ -617,3 +617,53 @@ bool isSanitized( std::string * check, std::string chars ) {
     }
     return true;
 }
+
+#ifdef __linux__
+
+/**
+ * Identify the linux environment and return it's id
+ * (Used by the hypervisor installation system in order to pick the appropriate binary)
+ */
+void getLinuxInfo ( LINUX_INFO * info ) {
+    std::vector< std::string > vLines;
+    
+    // Check if we have gksudo
+    info->hasGKSudo = file_exists("/usr/bin/gksudo");
+    
+    // Identify pakage manager
+    info->osPackageManager = ARCHIVE_NONE;
+    if (file_exists("/usr/bin/dpkg")) {
+        info->osPackageManager = ARCHIVE_APT;
+    } else if (file_exists("/usr/bin/yum")) {
+        info->osPackageManager = ARCHIVE_YUM;
+    }
+    
+    // Use lsb_release to identify the linux version
+    info->osDistID = "generic";
+    if (file_exists("/usr/bin/lsb_release")) {
+        
+        // First, get release
+        std::string cmdline = "/usr/sbin/lsb_release -i -s";
+        if (sysExec( cmdline, &vLines ) == 0) {
+            if (vLines[0].compare("n/a") != 0) {
+                info->osDistID = vLines[0];
+            }
+        }
+        
+        // Then get codename
+        std::string cmdline = "/usr/sbin/lsb_release -c -s";
+        if (sysExec( cmdline, &vLines ) == 0) {
+            if (vLines[0].compare("n/a") != 0) {
+                // Put separator and get version
+                sLinux += "-";
+                sLinux += vLines[0];
+            }
+        }
+        
+        // To lower case
+        std::transform(sLinux.begin(), sLinux.end(), sLinux.begin(), ::tolower);
+        
+    }
+}
+
+#endif

@@ -96,18 +96,32 @@ bool CVMWebAPIDaemon::getIsRunning() {
     
 }
 
+/**
+ * Start the daemon in the background
+ */
 int startDaemon( char * path_to_bin ) {
     #ifdef _WIN32
-    
+        HINSTANCE hApp = ShellExecuteA(
+            NULL,
+            NULL,
+            path_to_bin,
+            NULL,
+            NULL,
+            SW_HIDE);
+        if ( (int)hApp > 32 ) {
+            return HVE_SCHEDULED;
+        } else {
+            return HVE_IO_ERROR;
+        }
     #else
-    int pid = fork();
-    if (pid==0) {
-        setsid();
-        execl( path_to_bin, path_to_bin, (char*) 0 );
-        return 0;
-    } else {
-        return HVE_SHEDULED;
-    }
+        int pid = fork();
+        if (pid==0) {
+            setsid();
+            execl( path_to_bin, path_to_bin, (char*) 0 );
+            return 0;
+        } else {
+            return HVE_SCHEDULED;
+        }
     #endif
     
 };
@@ -128,7 +142,7 @@ int CVMWebAPIDaemon::start() {
     
     /* Start daemon thread */
     startDaemon( buf );
-    return HVE_SHEDULED;
+    return HVE_SCHEDULED;
     
 }
 

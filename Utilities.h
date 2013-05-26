@@ -163,6 +163,34 @@ void                                                hexDump         (const char 
  */
 bool                                                isSanitized     ( std::string * check, std::string chars );
 
+#ifdef __linux__
+
+/**
+ * Constants for the osPackageManager
+ */
+#define ARCHIVE_NONE    0
+#define ARCHIVE_YUM     1
+#define ARCHIVE_APT     2
+
+/**
+* Linux platform identification information
+*/
+typedef struct {
+
+    unsigned char       osPackageManager;       // Package manager found on the system
+    std::string         osDistID;               // Platform identification
+    bool                hasGKSudo;              // If we have graphical SUDO display
+
+} LINUX_INFO;
+
+/**
+ * Identify the linux environment and return it's id
+ * (Used by the hypervisor installation system in order to pick the appropriate binary)
+ */
+void                                                getLinuxInfo    ( LINUX_INFO * info );
+    
+#endif
+
 /**
  * OLD TOKENIZATION FUNCTIONS THAT SHOULD BE REMOVED
  */
@@ -171,6 +199,9 @@ std::map<std::string, std::string>                  tokenize        ( std::vecto
 void                                                splitLines      ( std::string rawString, std::vector<std::string> * out );
 int                                                 getKV           ( std::string line, std::string * key, std::string * value, unsigned char delim, int offset );
 
+/* ======================================================== */
+/*                    INLINE FUNCTIONS                      */
+/* ======================================================== */
 
 /**
  * Returns true if the given file exists and is readable

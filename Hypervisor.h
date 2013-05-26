@@ -28,7 +28,7 @@
 #define HV_VIRTUALBOX           1
 
 /* Error messages */
-#define HVE_SHEDULED            1
+#define HVE_SCHEDULED           1
 #define HVE_OK                  0
 #define HVE_CREATE_ERROR        -1
 #define HVE_MODIFY_ERROR        -2
