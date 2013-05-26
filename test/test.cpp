@@ -24,7 +24,7 @@ int main( int argc, char ** argv ) {
     LINUX_INFO info;
     getLinuxInfo( &info );
     
-    std::cout << "Package Manager = " << info.osPackageManager << std::endl;
+    std::cout << "Package Manager = " << (int) info.osPackageManager << std::endl;
     std::cout << "Has GKSudo = " << info.hasGKSudo << std::endl;
     std::cout << "Platform ID = " << info.osDistID << std::endl;
     

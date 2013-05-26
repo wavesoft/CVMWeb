@@ -643,7 +643,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
     if (file_exists("/usr/bin/lsb_release")) {
         
         // First, get release
-        std::string cmdline = "/usr/sbin/lsb_release -i -s";
+        std::string cmdline = "/usr/bin/lsb_release -i -s";
         if (sysExec( cmdline, &vLines ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 info->osDistID = vLines[0];
