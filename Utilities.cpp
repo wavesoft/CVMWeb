@@ -651,17 +651,21 @@ void getLinuxInfo ( LINUX_INFO * info ) {
         }
         
         // Then get codename
-        std::string cmdline = "/usr/sbin/lsb_release -c -s";
+        cmdline = "/usr/sbin/lsb_release -c -s";
         if (sysExec( cmdline, &vLines ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 // Put separator and get version
-                sLinux += "-";
-                sLinux += vLines[0];
+                info->osDistID += "-";
+                info->osDistID += vLines[0];
             }
         }
         
         // To lower case
-        std::transform(sLinux.begin(), sLinux.end(), sLinux.begin(), ::tolower);
+        std::transform(
+            info->osDistID.begin(), 
+            info->osDistID.end(), 
+            info->osDistID.begin(), 
+            ::tolower);
         
     }
 }
