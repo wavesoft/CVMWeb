@@ -99,7 +99,7 @@ DLOCKINFO * daemonLock( std::string lockfile ) {
         
         /* Write pid */
         int pid;
-        #ifdef _WIN32
+        #ifndef _WIN32
         pid = getpid();
         #else
         pid = GetCurrentProcessId();

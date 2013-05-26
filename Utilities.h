@@ -163,6 +163,10 @@ void                                                hexDump         (const char 
  */
 bool                                                isSanitized     ( std::string * check, std::string chars );
 
+/* ======================================================== */
+/*                  PLATFORM-SPECIFIC CODE                  */
+/* ======================================================== */
+
 #ifdef __linux__
 
 /**

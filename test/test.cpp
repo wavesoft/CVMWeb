@@ -20,6 +20,18 @@ void logDebug( std::string line, void * o ) {
 };
 
 int main( int argc, char ** argv ) {
+
+    LINUX_INFO info;
+    getLinuxInfo( &info );
+    
+    std::cout << "Package Manager = " << info.osPackageManager << std::endl;
+    std::cout << "Has GKSudo = " << info.hasGKSudo << std::endl;
+    std::cout << "Platform ID = " << info.osDistID << std::endl;
+    
+    return 0;
+}
+
+int no_main( int argc, char ** argv ) {
     
     // Initialize IPC
     ThinIPCInitialize(); 
