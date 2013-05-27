@@ -569,10 +569,10 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 	string kFileExt = ".run";
     if (data[kInstallerName].compare("dpkg") == 0) {
         installerType = PMAN_DPKG; /* Using debian installer */
-    	string kFileExt = ".deb";
+    	kFileExt = ".deb";
     } else if (data[kInstallerName].compare("yum") == 0) {
         installerType = PMAN_YUM; /* Using 'yum localinstall <package> -y' */
-    	string kFileExt = ".rpm";
+    	kFileExt = ".rpm";
     }
     #endif
     
