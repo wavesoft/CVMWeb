@@ -18,9 +18,8 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "Utilities.h"
-#include "Crypto.h"
-#include "Hypervisor.h"
+#include "CVMWebCrypto.h"
+
 using namespace std;
  
 /**

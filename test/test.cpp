@@ -9,7 +9,7 @@
 #include "Hypervisor.h"
 #include "ThinIPC.h"
 #include "DaemonCtl.h"
-#include "Crypto.h"
+#include "CVMWebCrypto.h"
 
 void logUpdates(int curr, int tot, std::string msg, void * o) {
     std::cout << "(" << curr << "/" << tot << " %) " << msg << std::endl;

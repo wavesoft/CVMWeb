@@ -55,7 +55,7 @@ add_executable(CVMTest
 	${PROJECT_SOURCE_DIR}/../DaemonCtl.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Utilities.cpp
-	${PROJECT_SOURCE_DIR}/../Crypto.cpp
+	${PROJECT_SOURCE_DIR}/../CVMWebCrypto.cpp
 	)
 
 # Windows libraries

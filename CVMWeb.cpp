@@ -27,12 +27,12 @@
 
 \**********************************************************/
 
-#include "CVMWebAPI.h"
-
 #include "CVMWeb.h"
+#include "CVMWebAPI.h"
+#include "CVMWebCrypto.h"
+
 #include "Hypervisor.h"
 #include "ThinIPC.h"
-#include "Crypto.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()

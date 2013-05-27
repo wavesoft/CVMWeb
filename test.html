@@ -97,6 +97,14 @@
 				_txt( "state", "Hypervisor not detected" );
 				return;
 
+			} else if (session == -12) {
+				_txt( "state", "Unable to validate system integrity" );
+				return;
+
+			} else if (session == -13) {
+				_txt( "state", "Domain name is not validated" );
+				return;
+
 			} else {
 				_vis('tbl-open', true);
 				_dis("session-name", true);

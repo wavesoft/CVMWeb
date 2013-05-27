@@ -21,6 +21,9 @@
 #ifndef CRYPTO_H_41EFXAZS
 #define CRYPTO_H_41EFXAZS
 
+#include "Utilities.h"
+#include "Hypervisor.h"
+
 #include <openssl/pem.h>
 #include <openssl/sha.h>
 #include <openssl/err.h>

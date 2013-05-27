@@ -118,29 +118,6 @@ std::string CVMWebAPI::getDomainName() {
 /**
  * Create and return a session object. 
  */
-FB::variant CVMWebAPI::requestSessionSecure(const FB::variant& definition) {
-    
-    /* Block requests when reached throttled state */
-    if (this->throttleBlock)
-        return CVME_ACCESS_DENIED;
-        
-    /* Get plugin reference */
-    CVMWebPtr p = this->getPlugin();
-    if (p->hv == NULL)
-        return CVME_UNSUPPORTED;
-    
-    /* Validate input */
-    if (!definition.is_of_type<std::string>)
-        return HVE_USAGE_ERROR;
-
-    /* Try to decrypt using domain's public key */
-    std::string vmDefinitionBin = base64_decode( definition.cast<std::string>() );
-
-}
-
-/**
- * Create and return a session object. 
- */
 FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& secret) {
     
     /* Fetch domain infom */

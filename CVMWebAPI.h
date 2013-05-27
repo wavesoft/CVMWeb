@@ -29,7 +29,9 @@
 #include <boost/weak_ptr.hpp>
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
+
 #include "CVMWeb.h"
+#include "CVMWebCrypto.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI
@@ -125,7 +127,7 @@ private:
     int                 m_authType;
 
     // Cryptography class
-    Crypto              crypto;
+    CVMWebCrypto        crypto;
 
     // Throttling protection
     long                throttleTimestamp;
