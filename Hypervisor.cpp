@@ -525,9 +525,21 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 	const string kFileExt = ".dmg";
     #endif
     #ifdef __linux__
-    const string kDownloadUrl = "linux";
-    const string kChecksum = "linux-sha256";
-    const string kInstallerName = "linux-installer";
+    
+    // Do some more in-depth analysis of the linux platform
+    LINUX_INFO linuxInfo;
+    getLinuxInfo( &linuxInfo );
+
+    // Detect
+    #if defined(__LP64__) || defined(_LP64)
+    string kDownloadUrl = "linux32-" + linuxInfo->osDistID;
+    #else
+    string kDownloadUrl = "linux64-" + linuxInfo->osDistID;
+    #endif
+    
+    // Calculate keys for other installers
+    string kChecksum = kDownloadUrl + "-sha256";
+    string kInstallerName = kDownloadUrl + "-installer";
 	const string kFileExt = ".run";
     #endif
     
@@ -644,16 +656,62 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 
 	#elif defined(__linux__)
 
-		/* Install using GKSudo */
-		string cmdline = "gksudo sh \"" + tmpHypervisorInstall + "\"";
-		res = system( cmdline.c_str() );
-		if (res < 0) {
-
-			cout << "ERROR: Could not start. Return code: " << res << endl;
+        /* Check if environment is correct */
+        int installerType = PMAN_NONE;
+        if (data[kInstallerName].compare("dpkg") == 0) {
+            installerType = PMAN_DPKG; /* Using debian installer */
+        } else if (data[kInstallerName].compare("yum") == 0) {
+            installerType = PMAN_YUM; /* Using 'yum localinstall <package> -y' */
+        }
+        
+        /* Check if our environment has what the installer wants */
+		if (cbProgress!=NULL) (cbProgress)(92, 100, "Validating OS environment", cbData);
+        if ((installerType != PMAN_NONE) && (installerType != linuxInfo->osPackageManager )) {
+            cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
 			remove( tmpHypervisorInstall.c_str() );
-			return HVE_EXTERNAL_ERROR;
-		}
+            return HVE_NOT_FOUND;
+        }
 
+        /* If we have xdg-open, use it to prompt the user using the system's default GUI */
+		if (cbProgress!=NULL) (cbProgress)(94, 100, "Prompting user for the installation process", cbData);
+        if (linuxInfo->hasXDGOpen) {
+            string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
+            res = system( cmdline.c_str() );
+    		if (res < 0) {
+    			cout << "ERROR: Could not start. Return code: " << res << endl;
+    			remove( tmpHypervisorInstall.c_str() );
+    			return HVE_EXTERNAL_ERROR;
+    		}
+        
+            /* TODO: Currently we don't do it, but we must wait until the package is installed
+             *       and then do hypervisor probing again. */
+            return HVE_SCHEDULED;
+        
+        /* If we have GKSudo, do directly dpkg/yum install */
+        } else if (linuxInfo->hasGKSudo) {
+            string cmdline = "/bin/sh '" + tmpHypervisorInstall + "'";
+            if ( installerType == PMAN_YUM ) {
+                cmdline = "/usr/bin/yum localinstall '" + tmpHypervisorInstall + "' -y";
+            } else if ( installerType == PMAN_YUM ) {
+                cmdline = "/usr/bin/dpkg -i '" + tmpHypervisorInstall + "' -y";
+            }
+            
+            /* Use GKSudo to invoke the cmdline */
+    		string cmdline = "/usr/bin/gksudo sh \"" + tmpHypervisorInstall + "\"";
+    		res = system( cmdline.c_str() );
+    		if (res < 0) {
+    			cout << "ERROR: Could not start. Return code: " << res << endl;
+    			remove( tmpHypervisorInstall.c_str() );
+    			return HVE_EXTERNAL_ERROR;
+    		}
+            
+        } else {
+            
+            /* TODO: I can't do much here :( */
+            return HVE_NOT_IMPLEMENTED;
+            
+        }
+        
     #endif
     
     /**

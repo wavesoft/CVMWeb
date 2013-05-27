@@ -172,9 +172,9 @@ bool                                                isSanitized     ( std::strin
 /**
  * Constants for the osPackageManager
  */
-#define ARCHIVE_NONE    0
-#define ARCHIVE_YUM     1
-#define ARCHIVE_APT     2
+#define  PMAN_NONE      0
+#define  PMAN_YUM       1
+#define  PMAN_DPKG      2
 
 /**
 * Linux platform identification information
@@ -184,6 +184,7 @@ typedef struct {
     unsigned char       osPackageManager;       // Package manager found on the system
     std::string         osDistID;               // Platform identification
     bool                hasGKSudo;              // If we have graphical SUDO display
+    bool                hasXDGOpen;
 
 } LINUX_INFO;
 

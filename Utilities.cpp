@@ -629,13 +629,14 @@ void getLinuxInfo ( LINUX_INFO * info ) {
     
     // Check if we have gksudo
     info->hasGKSudo = file_exists("/usr/bin/gksudo");
+    info->hasXDGOpen = file_exists("/usr/bin/xdg-open");
     
     // Identify pakage manager
-    info->osPackageManager = ARCHIVE_NONE;
+    info->osPackageManager = PMAN_NONE;
     if (file_exists("/usr/bin/dpkg")) {
-        info->osPackageManager = ARCHIVE_APT;
+        info->osPackageManager = PMAN_DPKG;
     } else if (file_exists("/usr/bin/yum")) {
-        info->osPackageManager = ARCHIVE_YUM;
+        info->osPackageManager = PMAN_YUM;
     }
     
     // Use lsb_release to identify the linux version
@@ -651,7 +652,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
         }
         
         // Then get codename
-        cmdline = "/usr/sbin/lsb_release -c -s";
+        cmdline = "/usr/bin/lsb_release -c -s";
         if (sysExec( cmdline, &vLines ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 // Put separator and get version
