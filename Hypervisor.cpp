@@ -532,9 +532,9 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 
     // Detect
     #if defined(__LP64__) || defined(_LP64)
-    string kDownloadUrl = "linux32-" + linuxInfo->osDistID;
+    string kDownloadUrl = "linux32-" + linuxInfo.osDistID;
     #else
-    string kDownloadUrl = "linux64-" + linuxInfo->osDistID;
+    string kDownloadUrl = "linux64-" + linuxInfo.osDistID;
     #endif
     
     // Calculate keys for other installers
@@ -666,7 +666,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         
         /* Check if our environment has what the installer wants */
 		if (cbProgress!=NULL) (cbProgress)(92, 100, "Validating OS environment", cbData);
-        if ((installerType != PMAN_NONE) && (installerType != linuxInfo->osPackageManager )) {
+        if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
             cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
 			remove( tmpHypervisorInstall.c_str() );
             return HVE_NOT_FOUND;
@@ -674,7 +674,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 
         /* If we have xdg-open, use it to prompt the user using the system's default GUI */
 		if (cbProgress!=NULL) (cbProgress)(94, 100, "Prompting user for the installation process", cbData);
-        if (linuxInfo->hasXDGOpen) {
+        if (linuxInfo.hasXDGOpen) {
             string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
             res = system( cmdline.c_str() );
     		if (res < 0) {
@@ -688,7 +688,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
             return HVE_SCHEDULED;
         
         /* If we have GKSudo, do directly dpkg/yum install */
-        } else if (linuxInfo->hasGKSudo) {
+        } else if (linuxInfo.hasGKSudo) {
             string cmdline = "/bin/sh '" + tmpHypervisorInstall + "'";
             if ( installerType == PMAN_YUM ) {
                 cmdline = "/usr/bin/yum localinstall '" + tmpHypervisorInstall + "' -y";
