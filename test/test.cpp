@@ -4,8 +4,6 @@
 #include <sstream>
 #include <iostream>
 
-#include <libproc.h>
-
 #include "Virtualbox.h"
 #include "Hypervisor.h"
 #include "ThinIPC.h"
@@ -32,69 +30,4 @@ int main( int argc, char ** argv ) {
     installHypervisor( "1.0.8", &logUpdates, NULL );
     
     return 0;
-}
-
-int no_main( int argc, char ** argv ) {
-    
-    // Initialize IPC
-    ThinIPCInitialize(); 
-    
-    // Query idle time
-    int idleTime = daemonGet( DIPC_GET_IDLETIME );
-    if (idleTime < 0) {
-        std::cout << "ERROR: Could not query daemon (" << idleTime << ")" << std::endl;
-    }
-    
-    std::cout << "idleTime=" << idleTime << std::endl;
-    
-    // Update idle time
-    int res = daemonSet( DIPC_SET_IDLETIME, idleTime + 10 );
-    if (res < 0) {
-        std::cout << "ERROR: Could not update daemon (" << idleTime << ")" << std::endl;
-    }
-
-    // Query idle time
-    idleTime = daemonGet( DIPC_GET_IDLETIME );
-    if (idleTime < 0) {
-        std::cout << "ERROR: Could not query daemon (" << idleTime << ")" << std::endl;
-    }
-    
-    std::cout << "idleTime=" << idleTime << std::endl;
-    
-    // Update idle time
-    res = daemonSet( DIPC_SET_IDLETIME, idleTime - 10 );
-    if (res < 0) {
-        std::cout << "ERROR: Could not update daemon (" << idleTime << ")" << std::endl;
-    }
-
-    // Query idle time
-    idleTime = daemonGet( DIPC_GET_IDLETIME );
-    if (idleTime < 0) {
-        std::cout << "ERROR: Could not query daemon (" << idleTime << ")" << std::endl;
-    }
-    
-    std::cout << "idleTime=" << idleTime << std::endl;
-    
-    // Update idle time
-    res = daemonSet( DIPC_SET_IDLETIME, idleTime + 10 );
-    if (res < 0) {
-        std::cout << "ERROR: Could not update daemon (" << idleTime << ")" << std::endl;
-    }
-
-    // Query idle time
-    idleTime = daemonGet( DIPC_GET_IDLETIME );
-    if (idleTime < 0) {
-        std::cout << "ERROR: Could not query daemon (" << idleTime << ")" << std::endl;
-    }
-    
-    std::cout << "idleTime=" << idleTime << std::endl;
-    
-    // Update idle time
-    res = daemonSet( DIPC_SET_IDLETIME, idleTime - 10 );
-    if (res < 0) {
-        std::cout << "ERROR: Could not update daemon (" << idleTime << ")" << std::endl;
-    }
-            
-    return 0;
-
 }
