@@ -21,12 +21,15 @@ void logDebug( std::string line, void * o ) {
 
 int main( int argc, char ** argv ) {
 
+    /* Debug platform detection */
     LINUX_INFO info;
     getLinuxInfo( &info );
-    
     std::cout << "Package Manager = " << (int) info.osPackageManager << std::endl;
     std::cout << "Has GKSudo = " << info.hasGKSudo << std::endl;
     std::cout << "Platform ID = " << info.osDistID << std::endl;
+
+    /* Debug installer */
+    installHypervisor( "1.0.8", &logUpdates, NULL );
     
     return 0;
 }
