@@ -532,9 +532,9 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 
     // Detect
     #if defined(__LP64__) || defined(_LP64)
-    string kDownloadUrl = "linux32-" + linuxInfo.osDistID;
-    #else
     string kDownloadUrl = "linux64-" + linuxInfo.osDistID;
+    #else
+    string kDownloadUrl = "linux32-" + linuxInfo.osDistID;
     #endif
     
     // Calculate keys for other installers
