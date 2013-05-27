@@ -697,7 +697,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
             }
             
             /* Use GKSudo to invoke the cmdline */
-    		string cmdline = "/usr/bin/gksudo sh \"" + tmpHypervisorInstall + "\"";
+    		cmdline = "/usr/bin/gksudo sh \"" + tmpHypervisorInstall + "\"";
     		res = system( cmdline.c_str() );
     		if (res < 0) {
     			cout << "ERROR: Could not start. Return code: " << res << endl;
