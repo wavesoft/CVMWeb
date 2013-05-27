@@ -42,6 +42,7 @@
 #define HVE_NOT_ALLOWED         -10
 #define HVE_NOT_SUPPORTED       -11
 #define HVE_NOT_VALIDATED       -12
+#define HVE_USAGE_ERROR         -99
 #define HVE_NOT_IMPLEMENTED     -100
 
 /* Session states */

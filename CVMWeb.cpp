@@ -32,6 +32,7 @@
 #include "CVMWeb.h"
 #include "Hypervisor.h"
 #include "ThinIPC.h"
+#include "Crypto.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()
@@ -44,7 +45,8 @@ void CVMWeb::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
-    ThinIPCInitialize();
+    thinIPCInitialize();
+    //cryptoInitialize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

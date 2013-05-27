@@ -30,9 +30,7 @@ using namespace std;
 /**
  * Global socket initialization for use with Thin IPC
  */
-int ThinIPCInitialize() {
-
-//    std::cout << "INFO: Initialize ThinIPC" << std::endl;
+int thinIPCInitialize() {
 
     // Initialize Winsock on windows
     #ifdef _WIN32

@@ -96,15 +96,31 @@ int                                                 downloadText    ( std::strin
 int                                                 downloadFile    ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb );
 
 /**
- * Get the base64 representation of the given char buffer
+ * Get the base64 representation of the given string buffer
  */
-std::string                                         base64_encode   (char const* bytes_to_encode, unsigned int in_len);
+std::string                                         base64_encode   ( const ::std::string &bindata );
+
+/**
+ * Get the binary contents of the base64-encoded string
+ */
+std::string                                         base64_decode   ( const ::std::string &ascdata );
 
 /**
  * Get the sha256 signature of the given path and store it on the
  * string in the checksum pointer
  */
 int                                                 sha256_file     ( std::string path, std::string * checksum );
+
+/**
+ * Get the sha256 signature of the given buffer and store it on the
+ * string in the checksum pointer
+ */
+int                                                 sha256_buffer   ( std::string path, std::string * checksum );
+
+/**
+ * Get the sha256 signature of the given buffer and store it on the checksum char pointer
+ */
+int                                                 sha256_bin   ( std::string path, unsigned char * checksum );
 
 /**
  * Platform-independant function to execute the given command-line and return the
@@ -141,7 +157,7 @@ int                                                 trimSplit       ( std::strin
  * Apply the trimSplit() function for every line in *lines. Then create a map using the splitted
  * element at position <key> as key and the element at position <value> as value.
  */
-int                                                 parseLine       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value );
+int                                                 parseLines       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value );
 
 /**
  * Check if the specified port is accepting connections

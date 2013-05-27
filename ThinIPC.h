@@ -93,6 +93,6 @@ protected:
     
 };
 
-int                             ThinIPCInitialize();
+int                             thinIPCInitialize();
 
 #endif /* end of include guard: THINIPC_H_MPQIX21W */

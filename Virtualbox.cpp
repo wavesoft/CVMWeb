@@ -962,7 +962,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     caps->max.disk = 2048;
     
     /* Tokenize into the data map */
-    parseLine( &lines, &data, ":", " \t", 0, 1 );
+    parseLines( &lines, &data, ":", " \t", 0, 1 );
     if (data.find("Maximum guest RAM size") != data.end()) 
         caps->max.memory = ston<int>(data["Maximum guest RAM size"]);
     if (data.find("Virtual disk limit (info)") != data.end()) 

@@ -125,8 +125,7 @@ int Hypervisor::buildContextISO ( std::string userData, std::string * filename )
     ofstream isoFile;
     string iso = getTmpFile(".iso");
     
-    const char * cData = userData.c_str();
-    string ctxFileContents = base64_encode( cData, userData.length() );
+    string ctxFileContents = base64_encode( userData );
     ctxFileContents = "EC2_USER_DATA=\"" +ctxFileContents + "\"\nONE_CONTEXT_PATH=\"/var/lib/amiconfig\"\n";
     const char * fData = ctxFileContents.c_str();
     
@@ -701,12 +700,12 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
             string cmdline = "/bin/sh '" + tmpHypervisorInstall + "'";
             if ( installerType == PMAN_YUM ) {
                 cmdline = "/usr/bin/yum localinstall '" + tmpHypervisorInstall + "' -y";
-            } else if ( installerType == PMAN_YUM ) {
-                cmdline = "/usr/bin/dpkg -i '" + tmpHypervisorInstall + "' -y";
+            } else if ( installerType == PMAN_DPKG ) {
+                cmdline = "/usr/bin/dpkg -i '" + tmpHypervisorInstall + "'";
             }
             
             /* Use GKSudo to invoke the cmdline */
-    		cmdline = "/usr/bin/gksudo sh \"" + tmpHypervisorInstall + "\"";
+    		cmdline = "/usr/bin/gksudo \"" + cmdline + "\"";
     		res = system( cmdline.c_str() );
     		if (res < 0) {
     			cout << "ERROR: Could not start. Return code: " << res << endl;
