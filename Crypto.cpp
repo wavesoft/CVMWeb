@@ -48,35 +48,37 @@ const unsigned char * CVMWAPI_PUBKEY_DER = (const unsigned char *)
     "\x91\x02\x03\x01\x00\x01";
 
 /**
- * The global static RSA object used for list validation 
- */
-EVP_PKEY * cvmPublicKey = NULL;
-
-/**
- * Domain-keydata mapping
- */
-map< string, string > domainKeys;
-
-/**
  * Initialize the cryptographic subsystem
  */
-int cryptoInitialize () {
+CVMWebCrypto::CVMWebCrypto () {
         
     // Load key into memory
     cvmPublicKey = d2i_PUBKEY( NULL, &CVMWAPI_PUBKEY_DER, CVMWAPI_PUBKEY_DER_SIZE );
     if (cvmPublicKey == NULL) {
         std::cout << "[Crypto] Unable to load public key!" << std::endl;
-        return 1;
+        valid = false;
+        return;
     }
     
-    // Success
-    return 0;
+    // Load the authorized keystore
+    this->updateAuthorizedKeystore();
+    
 }
+
+/**
+ * Cleanup
+ */
+CVMWebCrypto::~CVMWebCrypto () {
+    // Free the public key
+    EVP_PKEY_free( cvmPublicKey );
+}
+
 
 /**
  * Download the updated version of the authorized keystore
  */
-int cryptoUpdateAuthorizedKeystore() {
+int CVMWebCrypto::updateAuthorizedKeystore() {
+    valid = false;
 
     // Load the contents of the authorized keystore
     string keys;
@@ -90,7 +92,7 @@ int cryptoUpdateAuthorizedKeystore() {
     
     // Verify signature
     EVP_MD_CTX ctx;
-    EVP_VerifyInit( &ctx, EVP_sha256());
+    EVP_VerifyInit( &ctx, EVP_sha512());
     EVP_VerifyUpdate( &ctx, keys.c_str(), keys.length() );
     int ans = EVP_VerifyFinal( &ctx, (unsigned char *) sigData.c_str(), sigData.length(), cvmPublicKey );
     if (ans != 1) return HVE_NOT_VALIDATED;
@@ -102,6 +104,48 @@ int cryptoUpdateAuthorizedKeystore() {
     mapDump(domainKeys);
     
     // We are ready!
+    valid = true;
     return 0;
     
 }
+
+/**
+ * Use the domain's key to decrypt the given data
+ */
+int CVMWebCrypto::validateDomainData ( std::string domain, std::string data, std::string signature ) {
+
+    // Check if domain does not exist
+    if (!isDomainValid(domain)) return HVE_NOT_FOUND;
+
+    // Load public key of the domain
+    std::string domainData = base64_decode( domainKeys[domain] );
+    const unsigned char * pData = ( const unsigned char * ) domainData.c_str();
+    EVP_PKEY * domainKey = d2i_PUBKEY( NULL, &pData, domainData.length() );
+    if (domainKey == NULL) {
+        std::cout << "[Crypto] Unable to load domain public key!" << std::endl;
+        return HVE_EXTERNAL_ERROR;
+    }
+    
+    // Decode the base64 signature
+    std::string sigData = base64_decode( signature );
+
+    // Validate signature
+    EVP_MD_CTX ctx;
+    EVP_VerifyInit( &ctx, EVP_sha512());
+    EVP_VerifyUpdate( &ctx, data.c_str(), data.length() );
+    int ans = EVP_VerifyFinal( &ctx, (unsigned char *) sigData.c_str(), sigData.length(), domainKey );
+    if (ans != 1) return HVE_NOT_VALIDATED;
+    
+    // Free the key
+    EVP_PKEY_free( domainKey );
+    return HVE_OK;
+    
+}
+
+/**
+ * Check if the domain is validated
+ */
+bool CVMWebCrypto::isDomainValid ( std::string domain ) {
+    return (domainKeys.find(domain) != domainKeys.end());
+}
+

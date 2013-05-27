@@ -21,10 +21,6 @@
 #ifndef CRYPTO_H_41EFXAZS
 #define CRYPTO_H_41EFXAZS
 
-/**
- * Cryptographic and validation routines for CernVM Web API
- */
-
 #include <openssl/pem.h>
 #include <openssl/sha.h>
 #include <openssl/err.h>
@@ -32,18 +28,54 @@
 #include <openssl/evp.h>
 
 /**
- * Load public key in memory and initialize the cryptographic subsystem
+ * Cryptographic and validation routines for CernVM Web API
  */
-int     cryptoInitialize                ( );
+class CVMWebCrypto 
+{
+public:
+    
+    /**
+     * Constructor: Load public key in memory and initialize the cryptographic subsystem
+     */
+    CVMWebCrypto                        ();
+    
+    /**
+     * Destructor: Cleanup public key
+     */
+    virtual ~CVMWebCrypto               ();
 
-/**
- * Update the authorized domain keystore from out webserers.
- */
-int     cryptoUpdateAuthorizedKeystore  ( );
+    /**
+     * Update the authorized domain keystore from out webserers.
+     */
+    int     updateAuthorizedKeystore    ();
 
-/**
- * Verify the authenticity of the contextualization information received form the given domain
- */
-bool    cryptoValidateSignature         ( std::string domain, std::string signature );
+    /**
+     * Verify the authenticity of the contextualization information received form the given domain
+     */
+    int     validateDomainData          ( std::string domain, std::string data, std::string signature );
+
+    /**
+     * Check if the given domain name is listed in the authorized domain keys
+     */ 
+    bool    isDomainValid               ( std::string domain );
+
+    /**
+     * Denotes that the class is valid and ready for use
+     */
+    bool    valid;
+
+private:
+    
+    /**
+     * The global static RSA object used for list validation 
+     */
+    EVP_PKEY * cvmPublicKey;
+
+    /**
+     * Domain-keydata mapping
+     */
+    std::map< std::string, std::string > domainKeys;
+
+};
 
 #endif /* end of include guard: CRYPTO_H_41EFXAZS */

@@ -143,6 +143,18 @@ FB::variant CVMWebAPI::requestSessionSecure(const FB::variant& definition) {
  */
 FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& secret) {
     
+    /* Fetch domain infom */
+    std::string domain = this->getDomainName();
+    bool localDomain = domain.empty();
+    
+    /* Ensure cryptographic integrity */
+    if (!localDomain && !this->crypto.valid)
+        return CVME_NOT_VALIDATED;
+        
+    /* Block requests from untrusted domains */
+    if (!localDomain && !this->crypto.isDomainValid(domain))
+        return CVME_NOT_TRUSTED;
+    
     /* Block requests when reached throttled state */
     if (this->throttleBlock)
         return CVME_ACCESS_DENIED;
@@ -162,7 +174,7 @@ FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& 
         
         /* Notify user that a new session will open */
         if (ans == 0) {
-            std::string msg = "The website " + this->getDomainName() + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine. Do you want to allow it?";
+            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine. Do you want to allow it?";
             if (!this->confirm(msg)) {
                 
                 /* Manage throttling */

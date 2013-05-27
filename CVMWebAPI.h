@@ -37,6 +37,8 @@
 #define CVME_OK                 0
 #define CVME_ACCESS_DENIED      -10 /* Same to HVE_NOT_ALLOWED */
 #define CVME_UNSUPPORTED        -11 /* Same to HVE_NOT_SUPPORTED */
+#define CVME_NOT_VALIDATED      -12 /* Same to HVE_NOT_VALIDATED */
+#define CVME_NOT_TRUSTED        -13 /* Same to HVE_NOT_TRUSTED */
 #define CVME_PASSWORD_DENIED    -20
 
 #define THROTTLE_TIMESPAN       5000 /* Delay between twon concecutive user denies */
@@ -121,6 +123,9 @@ private:
     CVMWebWeakPtr       m_plugin;
     FB::BrowserHostPtr  m_host;
     int                 m_authType;
+
+    // Cryptography class
+    Crypto              crypto;
 
     // Throttling protection
     long                throttleTimestamp;

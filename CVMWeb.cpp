@@ -46,7 +46,6 @@ void CVMWeb::StaticInitialize()
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
     thinIPCInitialize();
-    //cryptoInitialize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

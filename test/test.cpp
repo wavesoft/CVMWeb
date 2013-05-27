@@ -22,9 +22,8 @@ void logDebug( std::string line, void * o ) {
 int main( int argc, char ** argv ) {
     
     /* Crypto API test */
-    std::cout << "CryptoInitialize=" << cryptoInitialize() << std::endl;
-        
-    std::cout << "CryptoUpdateAuthorizedKeystore=" << cryptoUpdateAuthorizedKeystore() << std::endl;
+    CVMWebCrypto crypto;
+    std::cout << "CryptoValid = " << crypto.valid << std::endl;
     
     return 0;
 }
