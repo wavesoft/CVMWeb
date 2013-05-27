@@ -105,7 +105,7 @@ int main( int argc, char ** argv ) {
     }
     
     /* Initialize ThinIPC */
-    ThinIPCInitialize();
+    thinIPCInitialize();
     
     /* Initialize arguments */
     ipc = new ThinIPCEndpoint( DAEMON_PORT );
