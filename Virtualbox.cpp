@@ -471,11 +471,26 @@ int VBoxSession::close() {
         (this->state != STATE_ERROR)) return HVE_INVALID_STATE;
 
     /* Stop the VM if it's running (we don't care about the warnings) */
-    if (this->onProgress!=NULL) (this->onProgress)(1, 9, "Shutting down the VM", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(1, 10, "Shutting down the VM", this->cbObject);
     this->controlVM( "poweroff");
     
     /* Unmount, release and delete media */
     map<string, string> machineInfo = this->getMachineInfo();
+    
+    /* Check if vm is in saved state */
+    if (machineInfo.find( "State" ) != machineInfo.end()) {
+        if (machineInfo["State"].find("saved") != string::npos) {
+            
+            if (this->onProgress!=NULL) (this->onProgress)(2, 10, "Discarding saved VM state", this->cbObject);
+            ans = this->wrapExec("discardstate " + this->uuid, NULL);
+            cout << "Discarded VM state=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_ERROR;
+                return HVE_CONTROL_ERROR;
+            }
+            
+        }
+    }
     
     /* Detach & Delete context ISO */
     if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
@@ -495,7 +510,7 @@ int VBoxSession::close() {
             << " --device "     << CONTEXT_DEVICE
             << " --medium "     << "none";
 
-        if (this->onProgress!=NULL) (this->onProgress)(2, 9, "Detaching contextualization CD-ROM", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(3, 10, "Detaching contextualization CD-ROM", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (context)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
@@ -505,13 +520,13 @@ int VBoxSession::close() {
         args << "closemedium dvd "
             << "\"" << kk << "\"";
 
-        if (this->onProgress!=NULL) (this->onProgress)(3, 9, "Closing contextualization CD-ROM", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(4, 10, "Closing contextualization CD-ROM", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Closemedium (context)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
         
         /* Delete actual file */
-        if (this->onProgress!=NULL) (this->onProgress)(4, 9, "Deleting contextualization CD-ROM", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(5, 10, "Deleting contextualization CD-ROM", this->cbObject);
         remove( kk.c_str() );
         
     }
@@ -534,7 +549,7 @@ int VBoxSession::close() {
             << " --device "     << SCRATCH_DEVICE
             << " --medium "     << "none";
 
-        if (this->onProgress!=NULL) (this->onProgress)(5, 9, "Detaching data disk", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(6, 10, "Detaching data disk", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Storage Attach (context)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
@@ -544,19 +559,19 @@ int VBoxSession::close() {
         args << "closemedium disk "
             << "\"" << kk << "\"";
 
-        if (this->onProgress!=NULL) (this->onProgress)(6, 9, "Closing data disk medium", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(7, 10, "Closing data disk medium", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
         cout << "Closemedium (disk)=" << ans << "\n";
         if (ans != 0) return HVE_MODIFY_ERROR;
         
         /* Delete actual file */
-        if (this->onProgress!=NULL) (this->onProgress)(7, 9, "Removing data disk", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(8, 10, "Removing data disk", this->cbObject);
         remove( kk.c_str() );
         
     }    
     
     /* Unregister and delete VM */
-    if (this->onProgress!=NULL) (this->onProgress)(8, 9, "Deleting VM", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(9, 10, "Deleting VM", this->cbObject);
     ans = this->wrapExec("unregistervm " + this->uuid + " --delete", NULL);
     cout << "Unregister VM=" << ans << "\n";
     if (ans != 0) {
@@ -565,7 +580,7 @@ int VBoxSession::close() {
     }
     
     /* OK */
-    if (this->onProgress!=NULL) (this->onProgress)(9, 9, "Completed", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(10, 10, "Completed", this->cbObject);
     this->state = STATE_CLOSED;
     return HVE_OK;
 }
