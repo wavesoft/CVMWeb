@@ -700,6 +700,25 @@ int VBoxSession::stop() {
 }
 
 /**
+ * Stop VM
+ */
+int VBoxSession::hibernate() {
+    int ans;
+    
+    /* Validate state */
+    if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
+    
+    /* Stop VM */
+    ans = this->controlVM( "savestate" );
+    this->state = STATE_OPEN;
+    
+    /* Check for daemon need */
+    this->host->checkDaemonNeed();
+    return ans;
+    
+}
+
+/**
  * Set execution cap
  */
 int VBoxSession::setExecutionCap(int cap) {

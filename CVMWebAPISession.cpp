@@ -183,6 +183,31 @@ void CVMWebAPISession::thread_stop(){
     }
 }
 
+int CVMWebAPISession::hibernate(){
+    
+    /* Validate state */
+    if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
+
+    /* Make it unavailable */
+    if (this->isAlive) {
+        this->isAlive = false;
+        this->fire_apiUnavailable();
+    }
+
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
+    return HVE_SCHEDULED;
+}
+
+void CVMWebAPISession::thread_hibernate(){
+    int ans = this->session->hibernate();
+    if (ans == 0) {
+        this->fire_hibernate();
+    } else {
+        this->fire_hibernateError(hypervisorErrorStr(ans), ans);
+        this->fire_error(hypervisorErrorStr(ans), ans, "hibernate");
+    }
+}
+
 int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
 
     /* Validate state */

@@ -43,6 +43,7 @@ int HVSession::pause()                                              { return HVE
 int HVSession::close()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
 int HVSession::resume()                                             { return HVE_NOT_IMPLEMENTED; }
+int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
 int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
@@ -200,8 +201,8 @@ Hypervisor::Hypervisor() {
     this->sessionID = 1;
     
     /* Pick a system folder to store persistent information  */
-    this->dirDataCache = getAppDataPath();
-    this->dirData = this->dirDataCache + "/cache";
+    this->dirData = getAppDataPath();
+    this->dirDataCache = this->dirData + "/cache";
     
 };
 

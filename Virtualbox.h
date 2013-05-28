@@ -41,6 +41,7 @@ public:
     virtual int             resume();
     virtual int             reset();
     virtual int             stop();
+    virtual int             hibernate();
     virtual int             open( int cpus, int memory, int disk, std::string cvmVersion );
     virtual int             start( std::string userData );
     virtual int             setExecutionCap(int cap);

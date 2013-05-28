@@ -51,6 +51,7 @@ public:
         registerMethod("reset",                 make_method(this, &CVMWebAPISession::reset));
         registerMethod("close",                 make_method(this, &CVMWebAPISession::close));
         registerMethod("stop",                  make_method(this, &CVMWebAPISession::stop));
+        registerMethod("hibernate",             make_method(this, &CVMWebAPISession::hibernate));
         registerMethod("setProperty",           make_method(this, &CVMWebAPISession::setProperty));
         registerMethod("getProperty",           make_method(this, &CVMWebAPISession::getProperty));
         registerMethod("setExecutionCap",       make_method(this, &CVMWebAPISession::setExecutionCap));
@@ -119,6 +120,8 @@ public:
     FB_JSAPI_EVENT(resetError,  2, ( const std::string&, int ));
     FB_JSAPI_EVENT(stop,        0, ());
     FB_JSAPI_EVENT(stopError,   2, ( const std::string&, int ));
+    FB_JSAPI_EVENT(hibernate,   0, ());
+    FB_JSAPI_EVENT(hibernateError,2, ( const std::string&, int ));
     FB_JSAPI_EVENT(error,       3, ( const std::string&, int, const std::string& ));
     FB_JSAPI_EVENT(apiAvailable,2, ( const std::string&, const std::string&));
     FB_JSAPI_EVENT(apiUnavailable,0, ());
@@ -130,6 +133,7 @@ public:
     void thread_resume( );
     void thread_stop( );
     void thread_reset( );
+    void thread_hibernate( );
     void thread_open( const FB::JSObjectPtr &o );
     void thread_start( const FB::variant& cfg );
     
@@ -139,6 +143,7 @@ public:
     int resume();
     int reset();
     int stop();
+    int hibernate();
     int open( const FB::JSObjectPtr &o );
     int start( const FB::variant& cfg );
     int setExecutionCap(int cap);

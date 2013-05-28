@@ -175,6 +175,12 @@
 					session.addEventListener('resetError', function(msg, id) { // Reset Error
 						_txt( "state", "Error while reseting (" + msg + ")" );
 					});
+					session.addEventListener('hibernate', function() { // Stopped
+						_txt( "state", "Session hibernated (stopped)" );
+					});
+					session.addEventListener('hibernateError', function(msg, id) { // Stop Error
+						_txt( "state", "Error while hibernating (" + msg + ")" );
+					});
 					session.addEventListener('progress', function( step, total, msg) { // Progress updates
 						var perc = Math.round( 100 * step / total );
 						_txt( "state", msg + " ("+perc+"%)" );
@@ -273,6 +279,12 @@
 		function stopVM() {
 			if (session.stop() != 1) {
 				alert('Unable to stop the VM');
+			}
+		}
+		
+		function hibernateVM() {
+			if (session.hibernate() != 1) {
+				alert('Unable to hibernate the VM');
 			}
 		}
 		
@@ -383,6 +395,7 @@ users=user:users:s3cret
 								<input type="button" value="Stop VM" id="session-start" onclick="stopVM();" />
 								<input type="button" value="Restart VM" id="session-start" onclick="restartVM();" />
 								<input type="button" value="Pause VM" id="session-start" onclick="pauseVM();" />
+								<input type="button" value="Hibernate VM" id="session-start" onclick="hibernateVM();" />
 								<input type="button" value="Resume VM" id="session-start" onclick="resumeVM();" />
 							</td>
 						</tr>
