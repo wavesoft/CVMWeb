@@ -1057,7 +1057,7 @@ int Virtualbox::updateSession( HVSession * session ) {
         // Example line: 'enabled (Address 127.0.0.1, Ports 39211, MultiConn: off, ReuseSingleConn: off, Authentication type: null)'
         if (rdpInfo.find("enabled") != string::npos) {
             size_t pStart = rdpInfo.find("Ports ");
-            if (pStart == stding::npos) {
+            if (pStart == string::npos) {
                 ((VBoxSession *)session)->rdpPort = 0;
             } else {
                 pStart += 6;
