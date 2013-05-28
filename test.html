@@ -137,7 +137,10 @@
 						document.getElementById('daemon-suspend').checked = ((session.daemonFlags & 1) != 0);
 						document.getElementById('daemon-autostart').checked = ((session.daemonFlags & 2) != 0);
 						
-						if (session.live) _txt( "flags", "<strong>(live)</strong>" );
+						if (session.live) {
+							_txt( "flags", "<strong>(live)</strong>" );
+							_txt( "session-api", session.apiURL );
+						}
 						
 					} else {
 						_txt( "state", "Set your requirements and press 'Open Session'" );
@@ -151,6 +154,10 @@
 					session.addEventListener('open', function() { // Session Opened
 						_vis('tbl-run', true);
 						_txt( "state", "Session open" );
+					
+						// Get the allocated RDP URL
+						_txt('session-rdp', session.rdpURL);
+
 					});
 					session.addEventListener('openError', function(msg, id) { // Open Error
 						_txt( "state", "Error while opening (" + msg + ")" );
@@ -219,11 +226,13 @@
 					session.addEventListener('debug', function( msg ) { // Debug messages
 						window.console.log('[debug] ' + msg);
 					});
-					session.addEventListener('apiAvailable', function(msg, id) { // Reset Error
+					session.addEventListener('apiAvailable', function(ip, url) { // Reset Error
 						_txt( "flags", "<strong>(live)</strong>" );
+						_txt( "session-api", url );
 					});
 					session.addEventListener('apiUnavailable', function(msg, id) { // Reset Error
 						_txt( "flags", "" );
+						_txt( "session-api", "---" );
 					});
 
 					
@@ -483,6 +492,10 @@ services=httpd
 						<tr>
 							<td align="right">RDP URL:</td>
 							<td><span id="session-rdp">--</span></td>
+						</tr>
+						<tr>
+							<td align="right">API URL:</td>
+							<td><span id="session-api">--</span></td>
 						</tr>
 						<tr>
 							<td colspan="2" align="center">
