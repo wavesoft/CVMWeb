@@ -276,6 +276,9 @@ HVSession * Hypervisor::allocateSession ( std::string name, std::string key ) {
     HVSession * sess = new HVSession();
     sess->name = name;
     sess->key = key;
+    sess->daemonControlled = false;
+    sess->daemonMinCap = 0;
+    sess->daemonMaxCap = 100;
     return sess;
 }
 

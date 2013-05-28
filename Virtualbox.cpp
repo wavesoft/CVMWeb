@@ -332,6 +332,9 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     
     /* Store web-secret on the guest properties */
     this->setProperty("/CVMWeb/secret", this->key);
+    this->setProperty("/CVMWeb/daemon/controlled", (this->daemonControlled ? "1" : "0"));
+    this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(this->daemonMinCap));
+    this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(this->daemonMaxCap));
 
     /* Last callbacks */
     if (this->onProgress!=NULL) (this->onProgress)(100, 100, "Completed", this->cbObject);
@@ -889,6 +892,9 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->executionCap = 100;
     sess->disk = 1024;
     sess->version = DEFAULT_CERNVM_VERSION;
+    sess->daemonControlled = false;
+    sess->daemonMinCap = 0;
+    sess->daemonMaxCap = 100;
     return sess;
 }
 
@@ -1068,6 +1074,15 @@ int Virtualbox::loadSessions() {
                     
                 }
             }
+            
+            /* Parse daemon information */
+            string strProp;
+            strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
+            session->daemonControlled = (strProp.compare("1") == 0);
+            strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
+            session->daemonMinCap = ston<int>(strProp);
+            strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
+            session->daemonMaxCap = ston<int>(strProp);
 
             /* Register this session */
             cout << "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state << "\n";

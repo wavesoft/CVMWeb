@@ -97,6 +97,10 @@ public:
     int                     state;
     int                     apiPort;
     std::string             version;
+    
+    bool                    daemonControlled;
+    int                     daemonMinCap;
+    int                     daemonMaxCap;
 
     int                     internalID;
         

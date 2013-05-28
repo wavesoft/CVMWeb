@@ -27,6 +27,8 @@
 #include "JSObject.h"
 #include "variant_list.h"
 #include "DOM/Document.h"
+#include "DOM/Window.h"
+#include "URI.h"
 #include "global/config.h"
 
 #include "DaemonCtl.h"
@@ -53,6 +55,28 @@ CVMWebPtr CVMWebAPIDaemon::getPlugin()
     return plugin;
 }
 
+/**
+ * Return the current domain name
+ */
+std::string CVMWebAPIDaemon::getDomainName() {
+    FB::URI loc = FB::URI::fromString(m_host->getDOMWindow()->getLocation());
+    return loc.domain;
+};
+
+/**
+ * Check if the current domain is priviledged
+ */
+bool CVMWebAPIDaemon::isDomainPriviledged() {
+    std::string domain = this->getDomainName();
+    
+    /* Domain is empty only when we see the plugin from a file:// URL
+     * (And yes, even localhost is not considered priviledged) */
+    return domain.empty();
+}
+
+/**
+ * Scripting beautification
+ */
 std::string CVMWebAPIDaemon::toString() {
     return "[CVMWebAPIDaemon]";
 }
@@ -61,6 +85,8 @@ std::string CVMWebAPIDaemon::toString() {
  * Get the path of the daemon process
  */
 std::string CVMWebAPIDaemon::getDaemonBin() {
+    if (!isDomainPriviledged()) return "";
+    
     CVMWebPtr p = this->getPlugin();
     
     /* Get the data folder location */
@@ -130,6 +156,9 @@ int startDaemon( char * path_to_bin ) {
  * Start daemon if it's not already running
  */
 int CVMWebAPIDaemon::start() {
+
+    /* Ensure the website is allowed to do so */
+    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
     
     /* Check if it's running */
     if (getIsRunning()) return HVE_OK;
@@ -150,6 +179,10 @@ int CVMWebAPIDaemon::start() {
  * Stop daemon using the appropriate IPC message
  */
 int CVMWebAPIDaemon::stop() {
+
+    /* Ensure the website is allowed to do so */
+    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+
     return daemonGet( DIPC_SHUTDOWN );
 }
 
@@ -165,6 +198,10 @@ FB::variant CVMWebAPIDaemon::getIdleTime() {
  * Query daemon to set the current idle time settings
  */
 void CVMWebAPIDaemon::setIdleTime( short int idleTime ) {
+
+    /* Ensure the website is allowed to do so */
+    if (!isDomainPriviledged()) return;
+
     daemonSet( DIPC_SET_IDLETIME, idleTime );
 }
 
@@ -177,9 +214,17 @@ bool CVMWebAPIDaemon::getIsIdle( ) {
 }
 
 short int CVMWebAPIDaemon::set( short int var, short int value ) {
+
+    /* Ensure the website is allowed to do so */
+    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+
     return daemonSet( var, value );
 }
 
 short int CVMWebAPIDaemon::get( short int var ) {
+
+    /* Ensure the website is allowed to do so */
+    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+
     return daemonGet( var );
 }

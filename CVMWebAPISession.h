@@ -44,30 +44,37 @@ public:
         m_plugin(plugin), m_host(host)
     {
 
-        registerMethod("start",             make_method(this, &CVMWebAPISession::start));
-        registerMethod("open",              make_method(this, &CVMWebAPISession::open));
-        registerMethod("pause",             make_method(this, &CVMWebAPISession::pause));
-        registerMethod("resume",            make_method(this, &CVMWebAPISession::resume));
-        registerMethod("reset",             make_method(this, &CVMWebAPISession::reset));
-        registerMethod("close",             make_method(this, &CVMWebAPISession::close));
-        registerMethod("stop",              make_method(this, &CVMWebAPISession::stop));
-        registerMethod("setProperty",       make_method(this, &CVMWebAPISession::setProperty));
-        registerMethod("getProperty",       make_method(this, &CVMWebAPISession::getProperty));
-        registerMethod("setExecutionCap",   make_method(this, &CVMWebAPISession::setExecutionCap));
+        registerMethod("start",                 make_method(this, &CVMWebAPISession::start));
+        registerMethod("open",                  make_method(this, &CVMWebAPISession::open));
+        registerMethod("pause",                 make_method(this, &CVMWebAPISession::pause));
+        registerMethod("resume",                make_method(this, &CVMWebAPISession::resume));
+        registerMethod("reset",                 make_method(this, &CVMWebAPISession::reset));
+        registerMethod("close",                 make_method(this, &CVMWebAPISession::close));
+        registerMethod("stop",                  make_method(this, &CVMWebAPISession::stop));
+        registerMethod("setProperty",           make_method(this, &CVMWebAPISession::setProperty));
+        registerMethod("getProperty",           make_method(this, &CVMWebAPISession::getProperty));
+        registerMethod("setExecutionCap",       make_method(this, &CVMWebAPISession::setExecutionCap));
         
-        registerProperty("ip",              make_property(this, &CVMWebAPISession::get_ip));
-        registerProperty("cpus",            make_property(this, &CVMWebAPISession::get_cpus));
-        registerProperty("state",           make_property(this, &CVMWebAPISession::get_state));
-        registerProperty("ram",             make_property(this, &CVMWebAPISession::get_memory));
-        registerProperty("disk",            make_property(this, &CVMWebAPISession::get_disk));
-        registerProperty("version",         make_property(this, &CVMWebAPISession::get_version));
-        registerProperty("live",            make_property(this, &CVMWebAPISession::get_live));
-        registerProperty("executionCap",    make_property(this, &CVMWebAPISession::get_executionCap));
-        registerProperty("apiURL",          make_property(this, &CVMWebAPISession::get_apiEntryPoint));
-        registerProperty("rdpURL",          make_property(this, &CVMWebAPISession::get_rdp));
+        registerProperty("ip",                  make_property(this, &CVMWebAPISession::get_ip));
+        registerProperty("cpus",                make_property(this, &CVMWebAPISession::get_cpus));
+        registerProperty("state",               make_property(this, &CVMWebAPISession::get_state));
+        registerProperty("ram",                 make_property(this, &CVMWebAPISession::get_memory));
+        registerProperty("disk",                make_property(this, &CVMWebAPISession::get_disk));
+        registerProperty("version",             make_property(this, &CVMWebAPISession::get_version));
+        registerProperty("live",                make_property(this, &CVMWebAPISession::get_live));
+        registerProperty("executionCap",        make_property(this, &CVMWebAPISession::get_executionCap));
+        registerProperty("apiURL",              make_property(this, &CVMWebAPISession::get_apiEntryPoint));
+        registerProperty("rdpURL",              make_property(this, &CVMWebAPISession::get_rdp));
+
+        registerProperty("daemonControlled",    make_property(this, &CVMWebAPISession::get_daemonControlled,
+                                                                    &CVMWebAPISession::set_daemonControlled));
+        registerProperty("daemonMinCap",        make_property(this, &CVMWebAPISession::get_daemonMinCap,
+                                                                    &CVMWebAPISession::set_daemonMinCap));
+        registerProperty("daemonMaxCap",        make_property(this, &CVMWebAPISession::get_daemonMaxCap,
+                                                                    &CVMWebAPISession::set_daemonMaxCap));
 
         // Beautification
-        registerMethod("toString",          make_method(this, &CVMWebAPISession::toString));
+        registerMethod("toString",              make_method(this, &CVMWebAPISession::toString));
         
         /* Import session */
         this->session = session;
@@ -138,18 +145,26 @@ public:
     int setProperty( const std::string& name, const std::string& value );
     std::string getProperty( const std::string& name );
     
-    // Read-only parameters
+    // Property getters
     int get_executionCap();
     int get_cpus();
     int get_memory();
     int get_disk();
     int get_state();
+    int get_daemonMinCap();
+    int get_daemonMaxCap();
+    bool get_daemonControlled();
     bool get_live();
     std::string get_ip();
     std::string get_rdp();
     std::string get_apiEntryPoint();
     std::string get_version();
     std::string toString();
+    
+    // Property setters
+    void set_daemonMinCap( int Cap );
+    void set_daemonMaxCap( int Cap );
+    void set_daemonControlled( bool controled );
     
     // Callback forwards
     static void onProgress(int, int, std::string, void *);

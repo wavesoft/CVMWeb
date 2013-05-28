@@ -52,9 +52,15 @@ void switchIdleStates( bool idle ) {
         
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
-            if (sess->state == STATE_STARTED ) {
-                cout << "INFO: Pausing VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                sess->pause();
+            if (sess->daemonControlled) {
+                cout << "INFO: Switching to idle VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                if ((sess->daemonMinCap == 0) && (sess->state == STATE_STARTED)) {
+                    cout << "INFO: Pausing VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                    sess->pause();
+                } else {
+                    cout << "INFO: Setting cap to " << sess->daemonMinCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                    sess->setExecutionCap( sess->daemonMinCap );
+                }
             }
         }
         
@@ -62,9 +68,14 @@ void switchIdleStates( bool idle ) {
         
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
-            if (sess->state == STATE_PAUSED ) {
-                cout << "INFO: Resuming VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                sess->resume();
+            if (sess->daemonControlled) {
+                if ((sess->daemonMinCap == 0) && (sess->state == STATE_PAUSED)) {
+                    cout << "INFO: Resuming VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                    sess->resume();
+                } else {
+                    cout << "INFO: Setting cap to " << sess->daemonMaxCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                    sess->setExecutionCap( sess->daemonMaxCap );
+                }
             }
         }
         

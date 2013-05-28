@@ -50,17 +50,16 @@ const unsigned char * CVMWAPI_PUBKEY_DER = (const unsigned char *)
  * Initialize the cryptographic subsystem
  */
 CVMWebCrypto::CVMWebCrypto () {
+
+    // Defaults to invalid
+    valid = false;
         
     // Load key into memory
     cvmPublicKey = d2i_PUBKEY( NULL, &CVMWAPI_PUBKEY_DER, CVMWAPI_PUBKEY_DER_SIZE );
     if (cvmPublicKey == NULL) {
         std::cout << "[Crypto] Unable to load public key!" << std::endl;
-        valid = false;
         return;
     }
-    
-    // Load the authorized keystore
-    this->updateAuthorizedKeystore();
     
 }
 
@@ -80,12 +79,12 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
     valid = false;
 
     // Load the contents of the authorized keystore
-    string keys;
+    string keys = "";
     int res = downloadText( "http://labs.wavesoft.gr/lhcah/domainkeys.lst", &keys );
     if ( res != HVE_OK ) return res;
 
     // Load the keystore signature
-    string sigData;
+    string sigData = "";
     res = downloadText( "http://labs.wavesoft.gr/lhcah/domainkeys.sig", &sigData );
     if ( res != HVE_OK ) return res;
     

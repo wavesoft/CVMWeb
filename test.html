@@ -49,11 +49,6 @@
 			} else {
 				_txt("hv", "Using " + core.hypervisorName + " v"+ core.hypervisorVersion +" (WebAPI v" + core.version + ")");
 				
-				//////////////////////////////////////////////////////
-				// 1.b) Authenticate in order to activate the plugin
-				//////////////////////////////////////////////////////
-				core.authenticate("PRIVATE KEY HERE");
-				
 			}
 		};
 		
@@ -63,7 +58,6 @@
 		///////////////////////////////////////////////////
 		function installHypervisor() {
 			core.addEventListener('install', function() { // Installation completed
-				alert('Ready!');
 				document.location.reload(true);
 			});
 			core.addEventListener('installError', function(err, id) { // Installation failed
@@ -84,125 +78,126 @@
 		///////////////////////////////////////////////////
 
 		function requestSession( name, key ) {
-			session = core.requestSession( name, key );
-			if (session == -20) {
-				alert('Your session key is invalid!');
-				return;
-				
-			} else if (session == -10) {
-				_txt( "state", "Access denied" );
-				return;
-
-			} else if (session == -11) {
-				_txt( "state", "Hypervisor not detected" );
-				return;
-
-			} else if (session == -12) {
-				_txt( "state", "Unable to validate system integrity" );
-				return;
-
-			} else if (session == -13) {
-				_txt( "state", "Domain name is not validated" );
-				return;
-
-			} else {
-				_vis('tbl-open', true);
-				_dis("session-name", true);
-				_dis("session-key", true);
-				_dis("session-request", true);
-				
-				// Note: If we are resuming an already running session it might be open!
-				if (session.state != 0) {
-					_txt( "state", stateName(session.state) );
-					_vis('tbl-run', true);
-					_dis("session-cpus", true);
-					_dis("session-ram", true);
-					_dis("session-disk", true);
-					_dis("session-ver", true);
-					_dis("session-open", true);					
-					_sval("session-cpus", session.cpus);
-					_sval("session-ram", session.ram);
-					_sval("session-disk", session.disk);
-					_sval("session-ver", session.version);
-				} else {
-					_txt( "state", "Set your requirements and press 'Open Session'" );
-					
+			
+			var handleError = function(code) {
+				if (res == -20) {
+					alert('Your session key is invalid!');
+				} else if (res == -10) {
+					_txt( "state", "Access denied" );
+				} else if (res == -11) {
+					_txt( "state", "Hypervisor not detected" );
+				} else if (res == -12) {
+					_txt( "state", "Unable to validate system integrity" );
+				} else if (res == -13) {
+					_txt( "state", "Domain name is not validated" );
 				}
-				
 			}
 			
-			// Bind event listeners 
-			session.addEventListener('open', function() { // Session Opened
-				_vis('tbl-run', true);
-				_txt( "state", "Session open" );
-			});
-			session.addEventListener('openError', function(msg, id) { // Open Error
-				_txt( "state", "Error while opening (" + msg + ")" );
-				_dis("session-cpus", false);
-				_dis("session-ram", false);
-				_dis("session-disk", false);
-				_dis("session-ver", false);
-				_dis("session-open", false);
-			});
-			session.addEventListener('close', function() { // Session Closed
-				_vis('tbl-run', false);
-				_dis("session-cpus", false);
-				_dis("session-ram", false);
-				_dis("session-disk", false);
-				_dis("session-ver", false);
-				_dis("session-open", false);
-				_txt( "state", "Session closed" );
-			});
-			session.addEventListener('closeError', function(msg, id) { // Close Error
-				_txt( "state", "Error while closing (" + msg + ")" );
-			});
-			session.addEventListener('start', function() { // Started
-				_txt( "state", "Session started" );
-			});
-			session.addEventListener('startError', function(msg, id) { // Start Error
-				_txt( "state", "Error while starting (" + msg + ")" );
-			});
-			session.addEventListener('stop', function() { // Stopped
-				_txt( "state", "Session stopped" );
-			});
-			session.addEventListener('stopError', function(msg, id) { // Stop Error
-				_txt( "state", "Error while stopping (" + msg + ")" );
-			});
-			session.addEventListener('pause', function() { // Paused
-				_txt( "state", "Session paused" );
-			});
-			session.addEventListener('pauseError', function(msg, id) { // Pause Error
-				_txt( "state", "Error while pausing (" + msg + ")" );
-			});
-			session.addEventListener('resume', function() { // Resumed
-				_txt( "state", "Session resumed" );
-			});
-			session.addEventListener('resumeError', function(msg, id) { // Resume Error
-				_txt( "state", "Error while resuming (" + msg + ")" );
-			});
-			session.addEventListener('reset', function() { // Reset
-				_txt( "state", "Session restarted" );
-			});
-			session.addEventListener('resetError', function(msg, id) { // Reset Error
-				_txt( "state", "Error while reseting (" + msg + ")" );
-			});
-			session.addEventListener('progress', function( step, total, msg) { // Progress updates
-				var perc = Math.round( 100 * step / total );
-				_txt( "state", msg + " ("+perc+"%)" );
-				window.console.log( "[progress] "+perc+"% : "+ msg);
-			});
-			session.addEventListener('error', function( msg, code, category ) { // Generic error
-				window.console.error("[error] #" + code+" [" + category + "]: " + msg);
-			});
-			session.addEventListener('debug', function( msg ) { // Debug messages
-				window.console.log('[debug] ' + msg);
-			});
-			session.addEventListener('apiAvailable', function(msg, id) { // Reset Error
-				_txt( "flags", "<strong>(live)</strong>" );
-			});
-			session.addEventListener('apiUnavailable', function(msg, id) { // Reset Error
-				_txt( "flags", "" );
-			});
+			var res = core.requestSession( name, key, 
+				function( vSession ) {
+					session = vSession;
+
+					_vis('tbl-open', true);
+					_dis("session-name", true);
+					_dis("session-key", true);
+					_dis("session-request", true);
+
+					// Note: If we are resuming an already running session it might be open!
+					if (session.state != 0) {
+						_txt( "state", stateName(session.state) );
+						_vis('tbl-run', true);
+						_dis("session-cpus", true);
+						_dis("session-ram", true);
+						_dis("session-disk", true);
+						_dis("session-ver", true);
+						_dis("session-open", true);					
+						_sval("session-cpus", session.cpus);
+						_sval("session-ram", session.ram);
+						_sval("session-disk", session.disk);
+						_sval("session-ver", session.version);
+					} else {
+						_txt( "state", "Set your requirements and press 'Open Session'" );
+
+					}
+
+					// Bind event listeners 
+					session.addEventListener('open', function() { // Session Opened
+						_vis('tbl-run', true);
+						_txt( "state", "Session open" );
+					});
+					session.addEventListener('openError', function(msg, id) { // Open Error
+						_txt( "state", "Error while opening (" + msg + ")" );
+						_dis("session-cpus", false);
+						_dis("session-ram", false);
+						_dis("session-disk", false);
+						_dis("session-ver", false);
+						_dis("session-open", false);
+					});
+					session.addEventListener('close', function() { // Session Closed
+						_vis('tbl-run', false);
+						_dis("session-cpus", false);
+						_dis("session-ram", false);
+						_dis("session-disk", false);
+						_dis("session-ver", false);
+						_dis("session-open", false);
+						_txt( "state", "Session closed" );
+					});
+					session.addEventListener('closeError', function(msg, id) { // Close Error
+						_txt( "state", "Error while closing (" + msg + ")" );
+					});
+					session.addEventListener('start', function() { // Started
+						_txt( "state", "Session started" );
+					});
+					session.addEventListener('startError', function(msg, id) { // Start Error
+						_txt( "state", "Error while starting (" + msg + ")" );
+					});
+					session.addEventListener('stop', function() { // Stopped
+						_txt( "state", "Session stopped" );
+					});
+					session.addEventListener('stopError', function(msg, id) { // Stop Error
+						_txt( "state", "Error while stopping (" + msg + ")" );
+					});
+					session.addEventListener('pause', function() { // Paused
+						_txt( "state", "Session paused" );
+					});
+					session.addEventListener('pauseError', function(msg, id) { // Pause Error
+						_txt( "state", "Error while pausing (" + msg + ")" );
+					});
+					session.addEventListener('resume', function() { // Resumed
+						_txt( "state", "Session resumed" );
+					});
+					session.addEventListener('resumeError', function(msg, id) { // Resume Error
+						_txt( "state", "Error while resuming (" + msg + ")" );
+					});
+					session.addEventListener('reset', function() { // Reset
+						_txt( "state", "Session restarted" );
+					});
+					session.addEventListener('resetError', function(msg, id) { // Reset Error
+						_txt( "state", "Error while reseting (" + msg + ")" );
+					});
+					session.addEventListener('progress', function( step, total, msg) { // Progress updates
+						var perc = Math.round( 100 * step / total );
+						_txt( "state", msg + " ("+perc+"%)" );
+						window.console.log( "[progress] "+perc+"% : "+ msg);
+					});
+					session.addEventListener('error', function( msg, code, category ) { // Generic error
+						window.console.error("[error] #" + code+" [" + category + "]: " + msg);
+					});
+					session.addEventListener('debug', function( msg ) { // Debug messages
+						window.console.log('[debug] ' + msg);
+					});
+					session.addEventListener('apiAvailable', function(msg, id) { // Reset Error
+						_txt( "flags", "<strong>(live)</strong>" );
+					});
+					session.addEventListener('apiUnavailable', function(msg, id) { // Reset Error
+						_txt( "flags", "" );
+					});
+
+					
+				}, handleError);
+			
+			/* Handle open errors */
+			if (res != 1) handleError(res);
 			
 		};
 
@@ -367,7 +362,7 @@
 						</tr>
 						<tr>
 							<td align="right">&mu;CernVM:</td>
-							<td><input id="session-ver" value="1.3.1" type="text" /></td>
+							<td><input id="session-ver" value="1.4" type="text" /></td>
 						</tr>
 						<tr>
 							<td colspan="2" align="center"><input type="button" value="Open Session" id="session-open" onclick="openSession(_val('session-cpus'), _val('session-ram'), _val('session-disk'), _val('session-ver'));" /></td>

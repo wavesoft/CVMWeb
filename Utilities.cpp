@@ -64,6 +64,11 @@ template <typename T> T hex_ston( const std::string &Text ) {
     return ss >> result ? result : 0;
 }
 
+template <typename T> std::string ntos( T &value ) {
+    std::stringstream out; out << value;
+    return out.str();
+}
+
 /**
  * LINK: Expose <int> implementations for the above templates
  */
@@ -71,6 +76,8 @@ template int hex_ston<int>( const std::string &Text );
 template long hex_ston<long>( const std::string &Text );
 template int ston<int>( const std::string &Text );
 template long ston<long>( const std::string &Text );
+template std::string ntos<int>( int &value );
+template std::string ntos<long>( long &value );
 
 /**
  * Split the given line into a key and value using the delimited provided

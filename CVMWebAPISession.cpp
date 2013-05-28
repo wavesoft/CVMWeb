@@ -365,3 +365,30 @@ void CVMWebAPISession::cb_timer() {
 bool CVMWebAPISession::get_live() {
     return this->isAlive;
 }
+
+int CVMWebAPISession::get_daemonMinCap() {
+    return this->session->daemonMinCap;
+}
+
+int CVMWebAPISession::get_daemonMaxCap() {
+    return this->session->daemonMaxCap;
+}
+
+bool CVMWebAPISession::get_daemonControlled() {
+    return this->session->daemonControlled;
+}
+
+void CVMWebAPISession::set_daemonMinCap( int cap ) {
+    this->session->daemonMinCap = cap;
+    this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(cap));
+}
+
+void CVMWebAPISession::set_daemonMaxCap( int cap ) {
+    this->session->daemonMaxCap = cap;
+    this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(cap));
+}
+
+void CVMWebAPISession::set_daemonControlled( bool controled ) {
+    this->session->daemonControlled = controled;
+    this->setProperty("/CVMWeb/daemon/controlled", (controled ? "1" : "0"));
+}

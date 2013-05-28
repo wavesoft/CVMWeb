@@ -31,7 +31,7 @@
 #include "BrowserHost.h"
 
 #include "CVMWeb.h"
-#include "CVMWebCrypto.h"
+//#include "CVMWebCrypto.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI
@@ -83,6 +83,9 @@ public:
         this->throttleDenies = 0;
         this->throttleBlock = false;
         
+        // Create crypto instance
+        //crypto = new CVMWebCrypto();
+        
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -92,7 +95,9 @@ public:
     ///         the browser is done with it; this will almost definitely be after
     ///         the plugin is released.
     ///////////////////////////////////////////////////////////////////////////////
-    virtual ~CVMWebAPI() {};
+    virtual ~CVMWebAPI() {
+        //delete crypto;
+    };
 
     CVMWebPtr getPlugin();
 
@@ -103,9 +108,10 @@ public:
 
     // Threads
     void thread_install( );
+    void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
 
     // Methods
-    FB::variant requestSession(const FB::variant& vm, const FB::variant& code);
+    FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     FB::variant getIdleDaemon();
     std::string getDomainName();
     std::string toString();
@@ -127,7 +133,7 @@ private:
     int                 m_authType;
 
     // Cryptography class
-    CVMWebCrypto        crypto;
+//    CVMWebCrypto        * crypto;
 
     // Throttling protection
     long                throttleTimestamp;

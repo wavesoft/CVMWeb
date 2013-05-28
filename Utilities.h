@@ -147,6 +147,11 @@ template <typename T> T                             hex_ston        ( const std:
  */
 template <typename T> T                             ston            ( const std::string &Text );
 
+ /**
+  * Convert a numeric value to it's string representation
+  */
+template <typename T> std::string                   ntos            ( T &value );
+
 /**
  * Split the given *line into *parts, using the characters found in the split string as delimiters
  * while removing the trailing characters found in the trim string.

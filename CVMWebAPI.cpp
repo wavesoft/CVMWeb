@@ -118,28 +118,59 @@ std::string CVMWebAPI::getDomainName() {
 /**
  * Create and return a session object. 
  */
-FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& secret) {
-    
-    /* Fetch domain infom */
+FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant& secret, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+
+    /* Fetch domain info */
     std::string domain = this->getDomainName();
-    bool localDomain = domain.empty();
-    
-    /* Ensure cryptographic integrity */
-    if (!localDomain && !this->crypto.valid)
-        return CVME_NOT_VALIDATED;
-        
-    /* Block requests from untrusted domains */
-    if (!localDomain && !this->crypto.isDomainValid(domain))
-        return CVME_NOT_TRUSTED;
     
     /* Block requests when reached throttled state */
-    if (this->throttleBlock)
-        return CVME_ACCESS_DENIED;
+    if (this->throttleBlock) return CVME_ACCESS_DENIED;
+
+    /* Check for invalid plugin */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return CVME_UNSUPPORTED;
     
+    /* Schedule thread exec */
+    boost::thread t(boost::bind(&CVMWebAPI::requestSession_thread,
+         this, vm, secret, successCb, failureCb));
+
+    /* Scheduled for creation */
+    return HVE_SCHEDULED;
+}
+
+void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant& secret, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+    
+    /* Fetch domain info once again */
+    std::string domain = this->getDomainName();
+    bool localDomain = domain.empty();
+
+    /*
+    // Try to update authorized keystore if it's in an invalid state
+    if (!localDomain) {
+        // Trigger update
+        if (!this->crypto->valid)
+            this->crypto->updateAuthorizedKeystore();
+
+        // Still invalid? Something's wrong
+        if (!this->crypto->valid) {
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
+            return;
+        }
+
+        // Block requests from untrusted domains
+        if (!this->crypto->isDomainValid(domain)) {
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
+            return;
+        }
+    }
+    */
+        
     /* Handle request */
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
-        return CVME_UNSUPPORTED;
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        return;
+
     } else {
 
         /* Fetch info */
@@ -163,7 +194,8 @@ FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& 
                     this->throttleTimestamp = getMillis();
                 }
                 
-                return CVME_ACCESS_DENIED;
+                if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+                return;
                 
             } else {
                 
@@ -175,14 +207,24 @@ FB::variant CVMWebAPI::requestSession(const FB::variant& vm, const FB::variant& 
             
         /* Notify invalid passwords */
         } else if (ans == 2) {
-            return CVME_PASSWORD_DENIED;
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+            return;
         }
         
         /* Open session */
         HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
-        if (session == NULL) return CVME_PASSWORD_DENIED;
-        return boost::make_shared<CVMWebAPISession>(p, m_host, session);
+        if (session == NULL) {
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+            return;
+        }
+        
+        /* Call success callback */
+        if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of(
+                boost::make_shared<CVMWebAPISession>(p, m_host, session)
+            ));
+        
     }
+    
 }
 
 /**

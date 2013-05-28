@@ -84,6 +84,9 @@ public:
 private:
     CVMWebWeakPtr           m_plugin;
     FB::BrowserHostPtr      m_host;
+    
+    std::string             getDomainName();
+    bool                    isDomainPriviledged();
 
 };
 

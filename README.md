@@ -85,14 +85,26 @@ You can then get a reference to the object and access it's properties:
 Every computation session is a CernVM instance and is accessed individually. You can request a session that fits your needs
 using the requestSession function:
 
-	var sess = o.requestSession( "session name", "secret key" );
+	var res = o.requestSession( "session name", "secret key", success_callback, failure_callback );
 
 The secret key prohibits unauthorized users to access your session. The first user that requests a session is automatically
 the owner and only his secret key can be used to request access to the same session again.
 
-This function will return either a CVMWebAPISession object or *false* if an error occurred.
+This function will return 1 (HVE_SCHEDULED) if succeeded or an error code if failed. When the session is ready, the function
+provided by the *success_callback* parameter will be called. The callback signature is the following:
 
-Upon receiving the session object you can bind your event listeners using the *addEventListener(event, callback)* function.
+	// Called when session is ready
+	success_callback( core, session ) {
+		
+	}
+	
+	// Called if an error occured
+	failure_callback( error_code ) {
+		
+	}
+
+Upon receiving the session object you can bind your event listeners using the *addEventListener(event, callback)* function. 
+Check appendix B for the events that you can handle.
 
 ## Opening session
 
