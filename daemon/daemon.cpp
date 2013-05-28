@@ -231,7 +231,7 @@ int main( int argc, char ** argv ) {
     reloadTimer = time( NULL );
     
     /* Start server thread */
-    boost::thread t(&serverThread);
+    boost::thread tServer(&serverThread);
     
     /* Main loop */
     std::cout << "[Main] Processing events" << std::endl;
@@ -262,8 +262,6 @@ int main( int argc, char ** argv ) {
                 switchIdleStates( true );
             }
         }
-        
-        std::cout << "CHECK!" << std::endl;
         
         /* Do not create CPU load on the loop */
         #ifdef _WIN32

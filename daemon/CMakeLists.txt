@@ -4,7 +4,8 @@ include_directories( .. )
 
 # Find FireBreath libs dir
 set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
-set( FB_BOOST_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
+set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
+set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
 
 # Check if we can use libCURL
 FIND_PACKAGE(CURL)
@@ -40,9 +41,14 @@ else()
 	endif()
 ENDIF(OPENSSL_FOUND)
 
-# Use FireBreath boost
-FIND_PACKAGE( Boost 1.40 COMPONENTS thread REQUIRED )
-INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+# Use FireBreath (already built) boost libraries
+INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
+file ( GLOB BOOST_LIBRARIES 
+	${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
+	${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
+	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
+ENDIF()
 
 # Locate the platform-specific source files
 if (WIN32)
@@ -80,4 +86,4 @@ ENDIF(WIN32)
 # Libraries
 target_link_libraries (${PROJECT_NAME} ${CURL_LIBRARIES})
 target_link_libraries (${PROJECT_NAME} ${OPENSSL_LIBRARIES})
-target_link_libraries (${PROJECT_NAME} ${Boost_LIBRARIES} )
+target_link_libraries (${PROJECT_NAME} ${BOOST_LIBRARIES} )
