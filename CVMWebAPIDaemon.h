@@ -49,14 +49,15 @@ public:
         // Methods
         registerMethod("start",             make_method(this, &CVMWebAPIDaemon::start));
         registerMethod("stop",              make_method(this, &CVMWebAPIDaemon::stop));
+        registerMethod("check",             make_method(this, &CVMWebAPIDaemon::check));
 
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPIDaemon::toString));
 
         // DEBUG STUFF
-        registerProperty("path",            make_property(this, &CVMWebAPIDaemon::getDaemonBin));
         registerMethod("get",               make_method(this, &CVMWebAPIDaemon::get));
         registerMethod("set",               make_method(this, &CVMWebAPIDaemon::set));
+        registerProperty("path",            make_property(this, &CVMWebAPIDaemon::getDaemonBin));
         
     }
 
@@ -66,6 +67,7 @@ public:
     // Methods
     int                     stop();
     int                     start();
+    int                     check();
     void                    start_thread();
     
     // Read-only properties

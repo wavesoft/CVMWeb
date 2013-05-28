@@ -31,7 +31,9 @@
 #include "CVMWebAPI.h"
 
 #include "Hypervisor.h"
+#include "DaemonCtl.h"
 #include "ThinIPC.h"
+#include "Utilities.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()
@@ -45,6 +47,7 @@ void CVMWeb::StaticInitialize()
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
     thinIPCInitialize();
+    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -68,7 +71,7 @@ void CVMWeb::StaticDeinitialize()
 CVMWeb::CVMWeb()
 {
     // Detect the hypervisor the user has installed
-    this->hv = detectHypervisor( this->getDaemonBin() );
+    this->hv = detectHypervisor(); // !IMPORTANT! Populate the daemonBin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -90,6 +93,11 @@ void CVMWeb::onPluginReady()
     // created, and we are ready to interact with the page and such.  The
     // PluginWindow may or may not have already fire the AttachedEvent at
     // this point.
+    
+    // We now have the plugin path, get the location of the daemon binary
+    if (this->hv != NULL)
+        this->hv->daemonBinPath = this->getDaemonBin();
+        
 }
 
 void CVMWeb::shutdown()
@@ -154,20 +162,6 @@ bool CVMWeb::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
 std::string CVMWeb::getFilesystemPath() {
     // Return the path where the DLL is
     return m_filesystemPath;
-}
-
-/**
- * Remove a trailing folder from the given path
- */
-std::string stripComponent( std::string path ) {
-    /* Find the last trailing slash */
-    size_t iPos = path.find_last_of('/');
-    if (iPos == std::string::npos) { // Check for windows-like trailing path
-        iPos = path.find_last_of('\\');
-    }
-    
-    /* Keep only path */
-    return path.substr(0, iPos);
 }
 
 /**

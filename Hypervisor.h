@@ -56,7 +56,7 @@
 #define STATE_PAUSED            6
 
 /* Default CernVM Version */
-#define DEFAULT_CERNVM_VERSION  "1.3.1"
+#define DEFAULT_CERNVM_VERSION  "1.4"
 #define DEFAULT_API_PORT        80
 
 /**
@@ -101,6 +101,7 @@ public:
     bool                    daemonControlled;
     int                     daemonMinCap;
     int                     daemonMaxCap;
+    int                     daemonFlags;
 
     int                     internalID;
         
@@ -233,7 +234,7 @@ private:
 /**
  * Exposed functions
  */
-Hypervisor *                    detectHypervisor    ( std::string pathToDaemonBin );
+Hypervisor *                    detectHypervisor    ( );
 void                            freeHypervisor      ( Hypervisor * );
 int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData );
 std::string                     hypervisorErrorStr  ( int error );

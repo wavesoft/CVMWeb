@@ -145,6 +145,20 @@ std::string prepareAppDataPath() {
 }
 
 /**
+ * Remove a trailing folder from the given path
+ */
+std::string stripComponent( std::string path ) {
+    /* Find the last trailing slash */
+    size_t iPos = path.find_last_of('/');
+    if (iPos == std::string::npos) { // Check for windows-like trailing path
+        iPos = path.find_last_of('\\');
+    }
+    
+    /* Keep only path */
+    return path.substr(0, iPos);
+}
+
+/**
  * Run prepareAppDataPath only once, then use string singleton
  */
 std::string getAppDataPath() {
@@ -757,11 +771,19 @@ void hexDump (const char *desc, void *addr, int len) {
 /**
  * Check if the given string contains only the specified chars
  */
-bool isSanitized( std::string * check, std::string chars ) {
-    for (int i=0; i<check->length(); i++) {
-        if (chars.find( check->at(i) ) == string::npos) {
-            return false;
+bool isSanitized( std::string * check, const char * chars ) {
+    int numChars = strlen(chars);
+    bool foundInChars = false;
+    for (int j=0; j<check->length(); j++) {
+        foundInChars = false;
+        char c = check->at(j);
+        for (int i=0; i<numChars; i++) {
+            if (c == chars[i]) {
+                foundInChars = true;
+                break;
+            }
         }
+        if (!foundInChars) return false;
     }
     return true;
 }

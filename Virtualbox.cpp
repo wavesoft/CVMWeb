@@ -335,6 +335,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     this->setProperty("/CVMWeb/daemon/controlled", (this->daemonControlled ? "1" : "0"));
     this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(this->daemonMinCap));
     this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(this->daemonMaxCap));
+    this->setProperty("/CVMWeb/daemon/flags", ntos<int>(this->daemonFlags));
 
     /* Last callbacks */
     if (this->onProgress!=NULL) (this->onProgress)(100, 100, "Completed", this->cbObject);
@@ -351,7 +352,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
  * Start VM with the given
  */
 int VBoxSession::start( std::string userData ) { 
-    cout << "The very first thing!\n";
     string vmContextISO, kk, kv;
     ostringstream args;
     int ans;
@@ -362,19 +362,15 @@ int VBoxSession::start( std::string userData ) {
     this->state = STATE_STARTING;
 
     /* Fetch information to validate disks */
-    cout << "1\n";
     map<string, string> machineInfo = this->getMachineInfo();
     
     /* Detach & Delete previous context ISO */
-    cout << "2\n";
     if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
         
-        cout << "2.1\n";
         /* Get the filename of the iso */
         getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
-        cout << "2.2\n";
         cout << "Detaching " << kk << "\n";
 
         /* Detach iso */
@@ -923,6 +919,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->daemonControlled = false;
     sess->daemonMinCap = 0;
     sess->daemonMaxCap = 100;
+    sess->daemonFlags = 0;
     return sess;
 }
 
@@ -1111,6 +1108,8 @@ int Virtualbox::loadSessions() {
             session->daemonMinCap = ston<int>(strProp);
             strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
             session->daemonMaxCap = ston<int>(strProp);
+            strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
+            session->daemonFlags = ston<int>(strProp);
 
             /* Register this session */
             cout << "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state << "\n";

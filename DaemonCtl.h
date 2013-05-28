@@ -20,16 +20,20 @@ typedef struct {
 #define DIPC_ANS_OK         0x0001
 #define DIPC_ANS_ERROR      0xFFFF
 
+/* Daemon flags */
+#define DF_SUSPEND          0x01    // Suspend VM instead of pausing
+
 /* Config constants */
 #define DAEMON_PORT         58740
 
 /* Daemon controlling functions */
 std::string             getDaemonLockfile   ( );
-bool                    isDaemonRunning     ( std::string lockfile );
+bool                    isDaemonRunning     ( );
 short int               daemonIPC           ( ThinIPCMessage * send, ThinIPCMessage * recv );
 short int               daemonGet           ( short int action );
 short int               daemonSet           ( short int action, short int value );
 int                     daemonStart         ( std::string path_to_bin );
+int                     daemonStop          ( );
 
 /* Used by the daemon process */
 DLOCKINFO *             daemonLock          ( std::string lockfile );

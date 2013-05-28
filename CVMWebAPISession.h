@@ -73,6 +73,8 @@ public:
                                                                     &CVMWebAPISession::set_daemonMinCap));
         registerProperty("daemonMaxCap",        make_property(this, &CVMWebAPISession::get_daemonMaxCap,
                                                                     &CVMWebAPISession::set_daemonMaxCap));
+        registerProperty("daemonFlags",         make_property(this, &CVMWebAPISession::get_daemonFlags,
+                                                                    &CVMWebAPISession::set_daemonFlags));
 
         // Beautification
         registerMethod("toString",              make_method(this, &CVMWebAPISession::toString));
@@ -158,6 +160,7 @@ public:
     int get_state();
     int get_daemonMinCap();
     int get_daemonMaxCap();
+    int get_daemonFlags();
     bool get_daemonControlled();
     bool get_live();
     std::string get_ip();
@@ -169,6 +172,7 @@ public:
     // Property setters
     void set_daemonMinCap( int Cap );
     void set_daemonMaxCap( int Cap );
+    void set_daemonFlags( int Cap );
     void set_daemonControlled( bool controled );
     
     // Callback forwards

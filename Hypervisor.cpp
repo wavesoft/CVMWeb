@@ -246,6 +246,7 @@ HVSession * Hypervisor::allocateSession ( std::string name, std::string key ) {
     sess->daemonControlled = false;
     sess->daemonMinCap = 0;
     sess->daemonMaxCap = 100;
+    sess->daemonFlags = 0;
     return sess;
 }
 
@@ -364,6 +365,8 @@ HVSession * Hypervisor::sessionGet( int id ) {
 /* Check if we need to start or stop the daemon */
 int Hypervisor::checkDaemonNeed() {
     
+    std::cout << "[checkDaemonNeed] Checking daemon needs" << std::endl;
+    
     // If we haven't specified where the daemon is, we cannot do much
     if (daemonBinPath.empty()) return HVE_NOT_SUPPORTED;
     
@@ -371,19 +374,23 @@ int Hypervisor::checkDaemonNeed() {
     bool daemonNeeded = false;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        if (sess->daemonControlled) {
+        std::cout << "[checkDaemonNeed] Session " << sess->uuid << ", daemonControlled=" << sess->daemonControlled << ", state=" << sess->state << std::endl;
+        if ( sess->daemonControlled && ((sess->state == STATE_OPEN) || (sess->state == STATE_STARTED) || (sess->state == STATE_PAUSED)) ) {
             daemonNeeded = true;
             break;
         }
     }
     
     // Check if the daemon state is valid
-    bool daemonState = isDaemonRunning(getDaemonLockfile());
+    bool daemonState = isDaemonRunning();
+    std::cout << "[checkDaemonNeed] Daemon is " << daemonState << ", daemonNeed is " << daemonNeeded << std::endl;
     if (daemonNeeded != daemonState) {
         if (daemonNeeded) {
+            std::cout << "[checkDaemonNeed] Starting daemon" << std::endl;
             return daemonStart( daemonBinPath ); /* START the daemon */
         } else {
-            return daemonGet( DIPC_SHUTDOWN ); /* KILL the daemon */
+            std::cout << "[checkDaemonNeed] Stopping daemon" << std::endl;
+            return daemonStop(); /* KILL the daemon */
         }
     }
     
@@ -397,7 +404,7 @@ int Hypervisor::checkDaemonNeed() {
  * the user has installed and it will then populate the Hypervisor Config
  * structure that was passed to it.
  */
-Hypervisor * detectHypervisor( std::string pathToDaemonBin ) {
+Hypervisor * detectHypervisor() {
     using namespace std;
     
     Hypervisor * hv;
@@ -437,7 +444,7 @@ Hypervisor * detectHypervisor( std::string pathToDaemonBin ) {
             }
             hv->detectVersion();
             hv->loadSessions();
-            hv->daemonBinPath = pathToDaemonBin;
+            hv->daemonBinPath = "";
             return hv;
         }
         #endif
@@ -455,7 +462,7 @@ Hypervisor * detectHypervisor( std::string pathToDaemonBin ) {
             }
             hv->detectVersion();
             hv->loadSessions();
-            hv->daemonBinPath = pathToDaemonBin;
+            hv->daemonBinPath = "";
             return hv;
         }
         #endif
@@ -473,7 +480,7 @@ Hypervisor * detectHypervisor( std::string pathToDaemonBin ) {
             }
             hv->detectVersion();
             hv->loadSessions();
-            hv->daemonBinPath = pathToDaemonBin;
+            hv->daemonBinPath = "";
             return hv;
         }
         #endif
@@ -730,7 +737,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     /**
      * Check if it was successful
      */
-    Hypervisor * hv = detectHypervisor( "" );
+    Hypervisor * hv = detectHypervisor();
     if (hv == NULL) {
         cout << "ERROR: Could not install hypervisor!\n";
         return HVE_NOT_VALIDATED;

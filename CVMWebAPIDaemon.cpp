@@ -99,8 +99,7 @@ std::string CVMWebAPIDaemon::getDaemonBin() {
 bool CVMWebAPIDaemon::getIsRunning() {
     
     /* Check if the daemon is running */
-    std::string dLockfile = getDaemonLockfile();
-    return isDaemonRunning( dLockfile );
+    return isDaemonRunning();
     
 }
 
@@ -128,8 +127,8 @@ int CVMWebAPIDaemon::stop() {
 
     /* Ensure the website is allowed to do so */
     if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
-
-    return daemonGet( DIPC_SHUTDOWN );
+    return daemonStop();
+    
 }
 
 /**
@@ -173,4 +172,13 @@ short int CVMWebAPIDaemon::get( short int var ) {
     if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
 
     return daemonGet( var );
+}
+
+/**
+ * Check if we need a daemon update
+ */
+int CVMWebAPIDaemon::check() {
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv != NULL) return p->hv->checkDaemonNeed();
+    return HVE_NOT_SUPPORTED;
 }

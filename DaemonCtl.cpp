@@ -18,6 +18,11 @@
 using namespace std;
 
 /**
+ * Current daemon pid
+ */
+int currDaemonPid = 0;
+
+/**
  * Return the location of the daemon lockfile
  */
 std::string getDaemonLockfile() {
@@ -60,30 +65,41 @@ bool isAlive( int pid ) {
 }
 
 /**
- * Check if the file exists and is locked
+ * Return the daemon pid from the lockfile
  */
-bool isDaemonRunning ( std::string lockfile ) {
+int daemonLockFilePID () {
+    std::string lockfile = getDaemonLockfile();
     
-    /* Lockfile not there, it's not running */
+    /* If thre is no lockfile return 0 */
     if (!file_exists(lockfile))
-        return false;
+        return 0;
     
-    /* Check if we can acquire lock */
+    /* Read file */
     ifstream lfStream;
     lfStream.open( lockfile.c_str(), std::ios_base::in );
     if (!lfStream.fail()) {
-        
         /* Get PID */
         int pid; lfStream >> pid;
         lfStream.close();
-
-        /* Check if it's running */
-        return isAlive( pid );
-        
+        return pid;
     }
     
-    /* Not running */
-    return false;
+    /* Unable to read file */
+    return 0;
+}
+
+/**
+ * Check if the file exists and is locked
+ */
+bool isDaemonRunning () {
+    
+    /* Fetch daemon PID */
+    int pid = daemonLockFilePID();
+    if (pid == 0)
+        return false;
+    
+    /* Check if it's running */
+    return isAlive( pid );
     
 }
 
@@ -205,14 +221,48 @@ int daemonStart( std::string path_to_bin ) {
             return HVE_IO_ERROR;
         }
     #else
+        
+        // Use a local pointer for the fork
+        char * file = (char *) malloc( path_to_bin.length() );
+        path_to_bin.copy( file, path_to_bin.length(), 0 );
+        
+        // Fork and start
         int pid = fork();
         if (pid==0) {
             setsid();
-            execl( path_to_bin.c_str(), path_to_bin.c_str(), (char*) 0 );
+            std::cout << "[daemonStart::child] Running " << file << std::endl;
+            execl( file, file, (char*) 0 );
             return 0;
         } else {
+            currDaemonPid = pid;
             return HVE_SCHEDULED;
         }
     #endif
     
 };
+
+/**
+ * Shut down and reap daemon
+ */
+int daemonStop( ) {
+    
+    /* (Assuming the user did his homework and checked if the daemon was running) */
+    int ipcRes = daemonGet( DIPC_SHUTDOWN );
+    if (ipcRes < 0) return ipcRes;
+    
+    #ifndef _WIN32
+    /* (*NIX platforms require child reap in order to avoid leaving zombies) */
+
+    /* Try to find the daemon PID to reap */
+    int reapPid = currDaemonPid;
+    if (reapPid == 0) reapPid = daemonLockFilePID();
+    
+    /* Wait PID */
+    pid_t pid; int status;
+    if (reapPid != 0) while((pid = waitpid(reapPid, &status, 0)) > 0) ;
+    
+    #endif
+    
+    /* Everything is OK */
+    return HVE_OK;
+}

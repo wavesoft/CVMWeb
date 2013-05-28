@@ -108,6 +108,11 @@ void CVMWebAPISession::thread_close(){
         this->fire_closeError(hypervisorErrorStr(ans), ans);
         this->fire_error(hypervisorErrorStr(ans), ans, "close");
     }
+    
+    /* The needs of having a daemon might have changed */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv != NULL) p->hv->checkDaemonNeed();
+    
 }
 
 int CVMWebAPISession::resume(){
@@ -231,7 +236,10 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
         if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
         if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
         if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
-        if (o->HasProperty("version")) ver = o->GetProperty("version").cast<std::string>();
+        if (o->HasProperty("version")) {
+            ver = o->GetProperty("version").cast<std::string>();
+            if (!isSanitized(&ver, "01234567890.")) ver=DEFAULT_CERNVM_VERSION;
+        }
     }
     ans = this->session->open( cpus, ram, disk, ver);
     if (ans == 0) {
@@ -240,6 +248,11 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
         this->fire_openError(hypervisorErrorStr(ans), ans);
         this->fire_error(hypervisorErrorStr(ans), ans, "open");
     }
+    
+    /* The needs of having a daemon might have changed */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv != NULL) p->hv->checkDaemonNeed();
+    
 }
 
 int CVMWebAPISession::start( const FB::variant& cfg ) {
@@ -403,6 +416,10 @@ bool CVMWebAPISession::get_daemonControlled() {
     return this->session->daemonControlled;
 }
 
+int CVMWebAPISession::get_daemonFlags() {
+    return this->session->daemonFlags;
+}
+
 void CVMWebAPISession::set_daemonMinCap( int cap ) {
     this->session->daemonMinCap = cap;
     this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(cap));
@@ -419,7 +436,10 @@ void CVMWebAPISession::set_daemonControlled( bool controled ) {
 
     /* The needs of having a daemon might have changed */
     CVMWebPtr p = this->getPlugin();
-    if (p->hv == NULL) {
-        p->hv->checkDaemonNeed();
-    }
+    if (p->hv != NULL) p->hv->checkDaemonNeed();
+}
+
+void CVMWebAPISession::set_daemonFlags( int flags ) {
+    this->session->daemonFlags = flags;
+    this->setProperty("/CVMWeb/daemon/flags", ntos<int>(flags));
 }

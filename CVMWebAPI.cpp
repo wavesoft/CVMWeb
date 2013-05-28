@@ -223,6 +223,9 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
                 boost::make_shared<CVMWebAPISession>(p, m_host, session)
             ));
         
+        /* Check if we need a daemon for our current services */
+        p->hv->checkDaemonNeed();
+
     }
     
 }

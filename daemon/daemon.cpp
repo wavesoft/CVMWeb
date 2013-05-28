@@ -54,9 +54,18 @@ void switchIdleStates( bool idle ) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
                 cout << "INFO: Switching to idle VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                if ((sess->daemonMinCap == 0) && (sess->state == STATE_STARTED)) {
-                    cout << "INFO: Pausing VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                    sess->pause();
+                if (sess->daemonMinCap == 0) {
+                    
+                    if (sess->state == STATE_STARTED) {
+                        if ((sess->daemonFlags & DF_SUSPEND) != 0) {
+                            cout << "INFO: Suspending VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                            sess->hibernate();
+                        } else {
+                            cout << "INFO: Pausing VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                            sess->pause();
+                        }
+                    }
+                    
                 } else {
                     cout << "INFO: Setting cap to " << sess->daemonMinCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
                     sess->setExecutionCap( sess->daemonMinCap );
@@ -69,9 +78,17 @@ void switchIdleStates( bool idle ) {
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
-                if ((sess->daemonMinCap == 0) && (sess->state == STATE_PAUSED)) {
-                    cout << "INFO: Resuming VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                    sess->resume();
+                if (sess->daemonMinCap == 0) {
+                    
+                    if ( ((sess->daemonFlags & DF_SUSPEND) != 0) || (sess->state == STATE_OPEN) ) {
+                        cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                        sess->start( "" ); // ( TODO: WARNING! Assuming the VM is alraedy started, so no contextualization is needed )
+                        
+                    } else if (sess->state == STATE_PAUSED) {
+                        cout << "INFO: Resuming VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                        sess->resume();
+                    }
+                    
                 } else {
                     cout << "INFO: Setting cap to " << sess->daemonMaxCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
                     sess->setExecutionCap( sess->daemonMaxCap );
@@ -89,7 +106,7 @@ void switchIdleStates( bool idle ) {
 int main( int argc, char ** argv ) {
     
     /* Get a hypervisor control instance */
-    hv = detectHypervisor( argv[0] );
+    hv = detectHypervisor();
     if (hv == NULL) {
         cerr << "ERROR: Unable to detect hypervisor!\n";
         return 3;
@@ -104,7 +121,7 @@ int main( int argc, char ** argv ) {
     /* Lock file */
     DLOCKINFO * lockInfo;
     std::string lockFile = getDaemonLockfile();
-    if (isDaemonRunning(lockFile)) {
+    if (isDaemonRunning()) {
         /* Already locked */
         cerr << "ERROR: Another daemon process is running!\n";
         return 2;
