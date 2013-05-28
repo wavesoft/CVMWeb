@@ -1028,34 +1028,60 @@ int Virtualbox::updateSession( HVSession * session ) {
     
     /* Get session's uuid */
     string uuid = session->uuid;
+    if (uuid.empty()) return HVE_USAGE_ERROR;
     
     /* Collect details */
     map<string, string> info = this->getMachineInfo( uuid );
-    string state = info["State"];
-    if (state.find("running") != string::npos) {
-        session->state = STATE_STARTED;
-    } else if (state.find("paused") != string::npos) {
-        session->state = STATE_PAUSED;
-    } else {
-        session->state = STATE_OPEN;
+    
+    /* Check state */
+    if (info.find("State") != info.end()) {
+        string state = info["State"];
+        if (state.find("running") != string::npos) {
+            session->state = STATE_STARTED;
+        } else if (state.find("paused") != string::npos) {
+            session->state = STATE_PAUSED;
+        } else {
+            session->state = STATE_OPEN;
+        }
     }
-    session->cpus = ston<int>( info["Number of CPUs"] );
+    
+    /* Get CPU */
+    if (info.find("Number of CPUs") != info.end()) {
+        session->cpus = ston<int>( info["Number of CPUs"] );
+    }
     
     /* Parse RDP info */
     if (info.find("VRDE") != info.end()) {
         string rdpInfo = info["VRDE"];
-        string rdpPort = info["VRDE port"];
+
+        // Example line: 'enabled (Address 127.0.0.1, Ports 39211, MultiConn: off, ReuseSingleConn: off, Authentication type: null)'
         if (rdpInfo.find("enabled") != string::npos) {
-            ((VBoxSession *)session)->rdpPort = ston<int>(rdpPort);
+            size_t pStart = rdpInfo.find("Ports ");
+            if (pStart == stding::npos) {
+                ((VBoxSession *)session)->rdpPort = 0;
+            } else {
+                pStart += 6;
+                size_t pEnd = rdpInfo.find(",", pStart);
+                string rdpPort = rdpInfo.substr( pStart, pEnd-pStart );
+
+                // Apply the rdp port
+                ((VBoxSession *)session)->rdpPort = ston<int>(rdpPort);
+            }
         } else {
             ((VBoxSession *)session)->rdpPort = 0;
         }
     }
     
     /* Parse memory */
-    string mem = info["Memory size"];
-    mem = mem.substr(0, mem.length()-2);
-    session->memory = ston<int>(mem);
+    if (info.find("Memory size") != info.end()) {
+        session->cpus = ston<int>( info["Number of CPUs"] );
+
+        /* Parse memory */
+        string mem = info["Memory size"];
+        mem = mem.substr(0, mem.length()-2);
+        session->memory = ston<int>(mem);
+
+    }
     
     /* Parse CernVM Version from the ISO */
     session->version = DEFAULT_CERNVM_VERSION;
@@ -1097,13 +1123,29 @@ int Virtualbox::updateSession( HVSession * session ) {
     /* Parse daemon information */
     string strProp;
     strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
-    session->daemonControlled = (strProp.compare("1") == 0);
+    if (strProp.empty()) {
+        session->daemonControlled = false;
+    } else {
+        session->daemonControlled = (strProp.compare("1") == 0);
+    }
     strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
-    session->daemonMinCap = ston<int>(strProp);
+    if (strProp.empty()) {
+        session->daemonMinCap = 0;
+    } else {
+        session->daemonMinCap = ston<int>(strProp);
+    }
     strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
-    session->daemonMaxCap = ston<int>(strProp);
+    if (strProp.empty()) {
+        session->daemonMaxCap = 100;
+    } else {
+        session->daemonMaxCap = ston<int>(strProp);
+    }
     strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
-    session->daemonFlags = ston<int>(strProp);
+    if (strProp.empty()) {
+        session->daemonFlags = 0;
+    } else {
+        session->daemonFlags = ston<int>(strProp);
+    }
     
     /* Updated successfuly */
     return HVE_OK;
@@ -1137,6 +1179,7 @@ int Virtualbox::loadSessions() {
             /* Create a populate session object */
             HVSession * session = this->allocateSession( name, secret );
             session->uuid = "{" + uuid + "}";
+            session->key = secret;
 
             /* Update session info */
             updateSession( session );

@@ -56,8 +56,13 @@
 				// Periodically poll the daemon status
 				setInterval(function() {
 					_txt("daemon-live", daemon.isRunning ? "Yes" : "No");
-					_txt("daemon-sysidle", daemon.isSystemIdle ? "Yes" : "No");
-					_txt('daemon-idle', daemon.idleTime);
+					if (daemon.isRunning) {
+						_txt("daemon-sysidle", daemon.isSystemIdle ? "Yes" : "No");
+						_txt('daemon-idle', daemon.idleTime);
+					} else {
+						_txt("daemon-sysidle", "---");
+						_txt('daemon-idle', "---");
+					}
 				}, 1000);
 			}
 		};
@@ -131,6 +136,8 @@
 						_sval("session-disk", session.disk);
 						_sval("session-ver", session.version);
 						
+						// Update the common values
+						_txt('session-rdp', session.rdpURL);
 						_sval('daemon-min-cap', session.daemonMinCap );
 						_sval('daemon-max-cap', session.daemonMaxCap );
 						document.getElementById('daemon-enable').checked = session.daemonControlled;
@@ -140,23 +147,32 @@
 						if (session.live) {
 							_txt( "flags", "<strong>(live)</strong>" );
 							_txt( "session-api", session.apiURL );
+							document.getElementById('session-api').href = session.apiURL;
 						}
 						
 					} else {
 						_txt( "state", "Set your requirements and press 'Open Session'" );
 
 					}
-					
-					// Get the allocated RDP URL
-					_txt('session-rdp', session.rdpURL);
 
 					// Bind event listeners 
 					session.addEventListener('open', function() { // Session Opened
 						_vis('tbl-run', true);
 						_txt( "state", "Session open" );
-					
-						// Get the allocated RDP URL
+						
+						// Update the common values
 						_txt('session-rdp', session.rdpURL);
+						_sval('daemon-min-cap', session.daemonMinCap );
+						_sval('daemon-max-cap', session.daemonMaxCap );
+						document.getElementById('daemon-enable').checked = session.daemonControlled;
+						document.getElementById('daemon-suspend').checked = ((session.daemonFlags & 1) != 0);
+						document.getElementById('daemon-autostart').checked = ((session.daemonFlags & 2) != 0);
+						
+						if (session.live) {
+							_txt( "flags", "<strong>(live)</strong>" );
+							_txt( "session-api", session.apiURL );
+							document.getElementById('session-api').href = session.apiURL;
+						}
 
 					});
 					session.addEventListener('openError', function(msg, id) { // Open Error
@@ -181,6 +197,7 @@
 					});
 					session.addEventListener('start', function() { // Started
 						_txt( "state", "Session started" );
+						_txt('session-rdp', session.rdpURL);
 					});
 					session.addEventListener('startError', function(msg, id) { // Start Error
 						_txt( "state", "Error while starting (" + msg + ")" );
@@ -229,10 +246,12 @@
 					session.addEventListener('apiAvailable', function(ip, url) { // Reset Error
 						_txt( "flags", "<strong>(live)</strong>" );
 						_txt( "session-api", url );
+						document.getElementById('session-api').href = session.apiURL;
 					});
 					session.addEventListener('apiUnavailable', function(msg, id) { // Reset Error
 						_txt( "flags", "" );
 						_txt( "session-api", "---" );
+						document.getElementById('session-api').href = 'javascript:;';
 					});
 
 					
@@ -495,7 +514,7 @@ services=httpd
 						</tr>
 						<tr>
 							<td align="right">API URL:</td>
-							<td><span id="session-api">--</span></td>
+							<td><a href="javascript:;" id="session-api">--</span></td>
 						</tr>
 						<tr>
 							<td colspan="2" align="center">
@@ -516,7 +535,7 @@ services=httpd
 					<table>
 						<tr>
 							<td align="right"><input type="checkbox" id="daemon-enable"></td>
-							<td><label for="daemon-enable" onclick="updateDaemonControl();">Controlled by daemon</label></td>
+							<td><label for="daemon-enable" onclick="updateDaemonControl();">VM is controlled by daemon</label></td>
 						</tr>
 						<tr>
 							<td align="right">Idle Cap:</td>

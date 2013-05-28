@@ -106,7 +106,7 @@ public:
             /* Check if the api URL is alive */
             if (this->session->state == STATE_STARTED) {
                 if (this->session->isAPIAlive()) {
-                    isAlive = true;
+                    this->isAlive = true;
                 }
             }
             
