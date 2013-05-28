@@ -44,9 +44,15 @@ ENDIF(OPENSSL_FOUND)
 # Use FireBreath (already built) boost libraries
 ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
 INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
-file ( GLOB BOOST_LIBRARIES 
-	${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
-	${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+if(UNIX)
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/*.a
+		${FB_BOOST_LIB_DIR}/system/*.a )
+else()
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+endif()
 IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 ENDIF()
