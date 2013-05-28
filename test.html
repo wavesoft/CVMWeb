@@ -31,7 +31,7 @@
 		// 1) Core initialization happens here
 		///////////////////////////////////////////////////
 		
-		var core, session;
+		var core, session, daemon;
 		window.onload = function() { 
 			core = document.getElementById('cvmweb'); 
 			if (core.hypervisorName === undefined) {
@@ -49,6 +49,16 @@
 			} else {
 				_txt("hv", "Using " + core.hypervisorName + " v"+ core.hypervisorVersion +" (WebAPI v" + core.version + ")");
 				
+				// Request access on the daemon service
+				daemon = core.requestDaemonAccess();
+				_txt("daemon-bin", daemon.path);
+				
+				// Periodically poll the daemon status
+				setInterval(function() {
+					_txt("daemon-live", daemon.isRunning ? "Yes" : "No");
+					_txt("daemon-sysidle", daemon.isSystemIdle ? "Yes" : "No");
+					_txt('daemon-idle', daemon.idleTime);
+				}, 1000);
 			}
 		};
 		
@@ -355,12 +365,19 @@
 		#hv {
 			color: #FF0000;
 		}
-		#tbl-request, #tbl-open, #tbl-run > table {
+		#tbl-request, #tbl-open, #tbl-run > table, #tbl-daemon {
 			border: solid 1px #333;
 			background: #CCF;
 			border-radius: 10px;
 			padding: 8px;
 			margin-bottom: 8px;
+		}
+		#tbl-daemon {
+			background: #CFC !important;
+			width: 300px;
+		}
+		#tbl-daemon span {
+			font-weight: bold;
 		}
 		</style>
 	</head>
@@ -392,6 +409,37 @@
 							</td>
 						</tr>
 					</table>
+					<table id="tbl-daemon">
+						<tr>
+							<td colspan="2"><small>The following controls are available only when you visit this website offline (from file://).</small></td>
+						</tr>
+						<tr>
+							<td align="right">Path to daemon:</td>
+							<td><span id="daemon-bin">--</span></td>
+						</tr>
+						<tr>
+							<td align="right">Running:</td>
+							<td><span id="daemon-live">--</span></td>
+						</tr>
+						<tr>
+							<td align="right">Idle:</td>
+							<td><span id="daemon-sysidle">--</span></td>
+						</tr>
+						<tr>
+							<td align="right">Wait:</td>
+							<td><span id="daemon-idle">--</span> sec</td>
+						</tr>
+						<tr>
+							<td align="right">&nbsp;</td>
+							<td><input id="daemon-set-idle" type="text" value="30" /> <input type="button" value="Set" onclick="daemon.idleTime=_val('daemon-set-idle');" /></td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center">
+								<input type="button" value="Start Daemon" onclick="daemon.start();" />
+								<input type="button" value="Stop Daemon" onclick="daemon.stop();" />
+							</td>
+						</tr>
+					</table>
 				</td>
 				<td valign="top">
 					<table id="tbl-open" style="visibility: hidden">
@@ -412,7 +460,9 @@
 							<td><input id="session-ver" value="1.4" type="text" /></td>
 						</tr>
 						<tr>
-							<td colspan="2" align="center"><input type="button" value="Open Session" id="session-open" onclick="openSession(_val('session-cpus'), _val('session-ram'), _val('session-disk'), _val('session-ver'));" /></td>
+							<td colspan="2" align="center">
+								<input type="button" value="Open Session" id="session-open" onclick="openSession(_val('session-cpus'), _val('session-ram'), _val('session-disk'), _val('session-ver'));" />
+							</td>
 						</tr>
 					</table>
 				</td>
