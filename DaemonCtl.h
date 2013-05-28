@@ -22,6 +22,7 @@ typedef struct {
 
 /* Daemon flags */
 #define DF_SUSPEND          0x01    // Suspend VM instead of pausing
+#define DF_AUTOSTART        0x02    // If the VM is down, start it with blank userData
 
 /* Config constants */
 #define DAEMON_PORT         58740

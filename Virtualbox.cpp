@@ -364,72 +364,77 @@ int VBoxSession::start( std::string userData ) {
     /* Fetch information to validate disks */
     map<string, string> machineInfo = this->getMachineInfo();
     
-    /* Detach & Delete previous context ISO */
-    if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
+    /* Touch context ISO only if we have user-data */
+    if (!userData.empty()) {
+    
+        /* Detach & Delete previous context ISO */
+        if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
         
-        /* Get the filename of the iso */
-        getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
-        kk = kk.substr(0, kk.length()-1);
+            /* Get the filename of the iso */
+            getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
+            kk = kk.substr(0, kk.length()-1);
 
-        cout << "Detaching " << kk << "\n";
+            cout << "Detaching " << kk << "\n";
 
-        /* Detach iso */
+            /* Detach iso */
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << CONTEXT_CONTROLLER
+                << " --port "       << CONTEXT_PORT
+                << " --device "     << CONTEXT_DEVICE
+                << " --medium "     << "none";
+
+            if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Storage Attach (context)=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_OPEN;
+                return HVE_MODIFY_ERROR;
+            }
+        
+            /* Unregister/delete iso */
+            args.str("");
+            args << "closemedium dvd "
+                << "\"" << kk << "\"";
+
+            if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing contextualization CD-ROM", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Closemedium (context)=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_OPEN;
+                return HVE_MODIFY_ERROR;
+            }
+        
+            /* Delete actual file */
+            if (this->onProgress!=NULL) (this->onProgress)(3, 7, "Removing contextualization CD-ROM", this->cbObject);
+            remove( kk.c_str() );
+        
+        }
+    
+        /* Create Context ISO */
+        if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building contextualization CD-ROM", this->cbObject);
+        if (this->host->buildContextISO( userData, &vmContextISO ) != 0) 
+            return HVE_CREATE_ERROR;
+
+        /* Attach context CD-ROM to the IDE controller */
         args.str("");
         args << "storageattach "
             << uuid
             << " --storagectl " << CONTEXT_CONTROLLER
             << " --port "       << CONTEXT_PORT
             << " --device "     << CONTEXT_DEVICE
-            << " --medium "     << "none";
+            << " --type "       << "dvddrive"
+            << " --medium "     << "\"" << vmContextISO << "\"";
 
-        if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
+        if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
-        cout << "Storage Attach (context)=" << ans << "\n";
+        cout << "StorageAttach (context)=" << ans << "\n";
         if (ans != 0) {
             this->state = STATE_OPEN;
             return HVE_MODIFY_ERROR;
         }
-        
-        /* Unregister/delete iso */
-        args.str("");
-        args << "closemedium dvd "
-            << "\"" << kk << "\"";
-
-        if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing contextualization CD-ROM", this->cbObject);
-        ans = this->wrapExec(args.str(), NULL);
-        cout << "Closemedium (context)=" << ans << "\n";
-        if (ans != 0) {
-            this->state = STATE_OPEN;
-            return HVE_MODIFY_ERROR;
-        }
-        
-        /* Delete actual file */
-        if (this->onProgress!=NULL) (this->onProgress)(3, 7, "Removing contextualization CD-ROM", this->cbObject);
-        remove( kk.c_str() );
-        
-    }
     
-    /* Create Context ISO */
-    if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building contextualization CD-ROM", this->cbObject);
-    if (this->host->buildContextISO( userData, &vmContextISO ) != 0) 
-        return HVE_CREATE_ERROR;
-
-    /* Attach context CD-ROM to the IDE controller */
-    args.str("");
-    args << "storageattach "
-        << uuid
-        << " --storagectl " << CONTEXT_CONTROLLER
-        << " --port "       << CONTEXT_PORT
-        << " --device "     << CONTEXT_DEVICE
-        << " --type "       << "dvddrive"
-        << " --medium "     << "\"" << vmContextISO << "\"";
-
-    if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
-    ans = this->wrapExec(args.str(), NULL);
-    cout << "StorageAttach (context)=" << ans << "\n";
-    if (ans != 0) {
-        this->state = STATE_OPEN;
-        return HVE_MODIFY_ERROR;
     }
     
     /* Start VM */

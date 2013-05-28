@@ -54,6 +54,8 @@ void switchIdleStates( bool idle ) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
                 cout << "INFO: Switching to idle VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                
+                /* If daemonMinCap == 0 then either pause or suspend the vm */
                 if (sess->daemonMinCap == 0) {
                     
                     if (sess->state == STATE_STARTED) {
@@ -66,7 +68,16 @@ void switchIdleStates( bool idle ) {
                         }
                     }
                     
+                /* Otherwise, set the execution cap to the given value */
                 } else {
+                    
+                    /* Having a cap value means that we want the VM running. If we also 
+                      have the DF_AUTOSTART flag, start the VM now. */
+                    if ((sess->state == STATE_OPEN) && ((sess->daemonFlags & DF_AUTOSTART) != 0)) {
+                        cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                    }
+                    
                     cout << "INFO: Setting cap to " << sess->daemonMinCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
                     sess->setExecutionCap( sess->daemonMinCap );
                 }
@@ -78,20 +89,42 @@ void switchIdleStates( bool idle ) {
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
+                cout << "INFO: Switching to active VM " << sess->uuid << " (" << sess->name << ")" << endl;
+
+                /* If daemonMinCap == 0 then either start or resume the vm */
                 if (sess->daemonMinCap == 0) {
                     
-                    if ( ((sess->daemonFlags & DF_SUSPEND) != 0) || (sess->state == STATE_OPEN) ) {
+                    /* If we have the DF_SUSPEND flag, start the vm */
+                    if ( (sess->daemonFlags & DF_SUSPEND) != 0 ) {
                         cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                        sess->start( "" ); // ( TODO: WARNING! Assuming the VM is alraedy started, so no contextualization is needed )
+                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
                         
+                    /* Otherwise, resume the VM if it's paused */
                     } else if (sess->state == STATE_PAUSED) {
                         cout << "INFO: Resuming VM " << sess->uuid << " (" << sess->name << ")" << endl;
                         sess->resume();
+                        
+                    /* If we have the DF_AUTOSTART flag, start the vm */
+                    } else if ((sess->state == STATE_OPEN) || ((sess->daemonFlags & DF_AUTOSTART) != 0 )) {
+                        cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                        
                     }
                     
+                /* Otherwise, set the execution cap to the given value */
                 } else {
+                    
+                    /* Having a cap value means that we want the VM running. If we also 
+                      have the DF_AUTOSTART flag, start the VM now. */
+                    if ((sess->state == STATE_OPEN) && ((sess->daemonFlags & DF_AUTOSTART) != 0)) {
+                        cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
+                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                    }
+                    
+                    /* Set execution cap */
                     cout << "INFO: Setting cap to " << sess->daemonMaxCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
                     sess->setExecutionCap( sess->daemonMaxCap );
+                    
                 }
             }
         }
