@@ -449,6 +449,9 @@ int VBoxSession::start( std::string userData ) {
     if (this->onProgress!=NULL) (this->onProgress)(7, 7, "Completed", this->cbObject);
     this->executionCap = 100;
     this->state = STATE_STARTED;
+    
+    /* Check for daemon need */
+    this->host->checkDaemonNeed();
     return 0;
 }
 
@@ -689,6 +692,9 @@ int VBoxSession::stop() {
     /* Stop VM */
     ans = this->controlVM( "poweroff" );
     this->state = STATE_OPEN;
+    
+    /* Check for daemon need */
+    this->host->checkDaemonNeed();
     return ans;
     
 }
@@ -806,6 +812,9 @@ int VBoxSession::controlVM( std::string how ) {
 int VBoxSession::startVM() {
     int ans = this->wrapExec("startvm "+this->uuid+" --type headless", NULL);
     if (ans != 0) return HVE_CONTROL_ERROR;
+
+    /* Check for daemon need */
+    this->host->checkDaemonNeed();
     return 0;
 }
 

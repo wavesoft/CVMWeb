@@ -51,6 +51,9 @@ static const char reverse_table[128] = {
    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64
 };
 
+/* Singleton optimization for AppData folder */
+std::string appDataDir = "";
+
 /**
  * Convert an std::string to a number
  */
@@ -78,6 +81,77 @@ template int ston<int>( const std::string &Text );
 template long ston<long>( const std::string &Text );
 template std::string ntos<int>( int &value );
 template std::string ntos<long>( long &value );
+
+/**
+ * Get the location of the platform-dependant application data folder
+ * This function also builds the required directory structure:
+ *
+ * + CernVM/
+ * +-- WebAPI/
+ *   +-- cache/
+ *   +-- run/
+ *
+ */
+std::string prepareAppDataPath() {
+    std::string homeDir;
+    std::string subDir;
+    
+    /* On windows it goes on AppData */
+    #ifdef _WIN32
+    homeDir = getenv("APPDATA");
+    homeDir += "/CernVM";
+    _mkdir(homeDir.c_str());
+    homeDir += "/WebAPI";
+    _mkdir(homeDir.c_str());
+    subDir = homeDir + "/cache";
+    _mkdir(subDir.c_str());
+    subDir = homeDir + "/run";
+    _mkdir(subDir.c_str());
+    #endif
+    
+    /* On Apple it goes on user's Application Support */
+    #if defined(__APPLE__) && defined(__MACH__)
+    struct passwd *p = getpwuid(getuid());
+    char *home = p->pw_dir;
+    homeDir = home;
+    homeDir += "/Library/Application Support/CernVM";
+    mkdir(homeDir.c_str(), 0777);
+    homeDir += "/WebAPI";
+    mkdir(homeDir.c_str(), 0777);
+    subDir = homeDir + "/cache";
+    mkdir(subDir.c_str(), 0777);
+    subDir = homeDir + "/run";
+    mkdir(subDir.c_str(), 0777);
+    #endif
+    
+    /* On linux it goes on the .cernvm dotfolder in user's home dir */
+    #ifdef __linux__
+    struct passwd *p = getpwuid(getuid());
+    char *home = p->pw_dir;
+    homeDir = home;
+    homeDir += "/.cernvm";
+    mkdir(homeDir.c_str(), 0777);
+    homeDir += "/WebAPI";
+    mkdir(homeDir.c_str(), 0777);
+    subDir = homeDir + "/cache";
+    mkdir(subDir.c_str(), 0777);
+    subDir = homeDir + "/run";
+    mkdir(subDir.c_str(), 0777);
+    #endif
+    
+    /* Return the home directory */
+    return homeDir;
+    
+}
+
+/**
+ * Run prepareAppDataPath only once, then use string singleton
+ */
+std::string getAppDataPath() {
+    if (appDataDir.empty())
+        appDataDir = prepareAppDataPath();
+    return appDataDir;
+}
 
 /**
  * Split the given line into a key and value using the delimited provided

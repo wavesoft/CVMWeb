@@ -68,7 +68,7 @@ void CVMWeb::StaticDeinitialize()
 CVMWeb::CVMWeb()
 {
     // Detect the hypervisor the user has installed
-    this->hv = detectHypervisor();
+    this->hv = detectHypervisor( this->getDaemonBin() );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -193,3 +193,29 @@ std::string CVMWeb::getDataFolderPath() {
     return dPath;
 }
 
+/**
+ * Get the path of the daemon process
+ */
+std::string CVMWeb::getDaemonBin() {
+    
+    /* Get the data folder location */
+    std::string dPath = this->getDataFolderPath();
+    
+    /* Pick a daemon name according to platform */
+    #ifdef _WIN32
+    dPath += "/daemon/CVMWADaemon.exe";
+    #endif
+    #if defined(__APPLE__) && defined(__MACH__)
+    dPath += "/daemon/CVMWADaemonOSX";
+    #endif
+    #ifdef __linux__
+        #if defined(__LP64__) || defined(_LP64)
+            dPath += "/daemon/CVMWADaemonLinux64";
+        #else
+            dPath += "/daemon/CVMWADaemonLinux";
+        #endif
+    #endif
+    
+    /* Return it */
+    return dPath;
+}

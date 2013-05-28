@@ -1,6 +1,7 @@
 
 #include "DaemonCtl.h"
 #include "Utilities.h"
+#include "Hypervisor.h"
 
 #include <sstream>
 #include <cstdlib>
@@ -19,9 +20,10 @@ using namespace std;
 /**
  * Return the location of the daemon lockfile
  */
-std::string getDaemonLockfile ( std::string exePath ) {
-    /* Return path + '.pid'  */
-    return exePath + ".pid";
+std::string getDaemonLockfile() {
+    /* Return the system-wide daemon pidfile location  */
+    std::string appDir = getAppDataPath();
+    return appDir + "/run/daemon.pid";
 }
 
 /**
@@ -184,3 +186,33 @@ short int daemonSet( short int action, short int value ) {
     if (res != 0) return res;
     return recv.readShort();
 }
+
+/**
+ * Cross-platform way to start the daemon process in the background
+ */
+int daemonStart( std::string path_to_bin ) {
+    #ifdef _WIN32
+        HINSTANCE hApp = ShellExecuteA(
+            NULL,
+            NULL,
+            path_to_bin.c_str(),
+            NULL,
+            NULL,
+            SW_HIDE);
+        if ( (int)hApp > 32 ) {
+            return HVE_SCHEDULED;
+        } else {
+            return HVE_IO_ERROR;
+        }
+    #else
+        int pid = fork();
+        if (pid==0) {
+            setsid();
+            execl( path_to_bin.c_str(), path_to_bin.c_str(), (char*) 0 );
+            return 0;
+        } else {
+            return HVE_SCHEDULED;
+        }
+    #endif
+    
+};

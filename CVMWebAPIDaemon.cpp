@@ -87,28 +87,10 @@ std::string CVMWebAPIDaemon::toString() {
 std::string CVMWebAPIDaemon::getDaemonBin() {
     if (!isDomainPriviledged()) return "";
     
+    /* Get daemon bin from the plugin */
     CVMWebPtr p = this->getPlugin();
+    return p->getDaemonBin();
     
-    /* Get the data folder location */
-    std::string dPath = p->getDataFolderPath();
-    
-    /* Pick a daemon name according to platform */
-    #ifdef _WIN32
-    dPath += "/daemon/CVMWADaemon.exe";
-    #endif
-    #if defined(__APPLE__) && defined(__MACH__)
-    dPath += "/daemon/CVMWADaemonOSX";
-    #endif
-    #ifdef __linux__
-        #if defined(__LP64__) || defined(_LP64)
-            dPath += "/daemon/CVMWADaemonLinux64";
-        #else
-            dPath += "/daemon/CVMWADaemonLinux";
-        #endif
-    #endif
-    
-    /* Return it */
-    return dPath;
 }
 
 /**
@@ -117,40 +99,10 @@ std::string CVMWebAPIDaemon::getDaemonBin() {
 bool CVMWebAPIDaemon::getIsRunning() {
     
     /* Check if the daemon is running */
-    std::string dLockfile = getDaemonLockfile( this->getDaemonBin() );
+    std::string dLockfile = getDaemonLockfile();
     return isDaemonRunning( dLockfile );
     
 }
-
-/**
- * Start the daemon in the background
- */
-int startDaemon( char * path_to_bin ) {
-    #ifdef _WIN32
-        HINSTANCE hApp = ShellExecuteA(
-            NULL,
-            NULL,
-            path_to_bin,
-            NULL,
-            NULL,
-            SW_HIDE);
-        if ( (int)hApp > 32 ) {
-            return HVE_SCHEDULED;
-        } else {
-            return HVE_IO_ERROR;
-        }
-    #else
-        int pid = fork();
-        if (pid==0) {
-            setsid();
-            execl( path_to_bin, path_to_bin, (char*) 0 );
-            return 0;
-        } else {
-            return HVE_SCHEDULED;
-        }
-    #endif
-    
-};
 
 /**
  * Start daemon if it's not already running
@@ -163,14 +115,8 @@ int CVMWebAPIDaemon::start() {
     /* Check if it's running */
     if (getIsRunning()) return HVE_OK;
     
-    /* Get the daemon path */
-    char buf[1024];
-    std::string binDaemon = this->getDaemonBin();
-    size_t strLen = binDaemon.copy(buf, 1024, 0);
-    buf[strLen] = '\0';
-    
     /* Start daemon thread */
-    startDaemon( buf );
+    daemonStart( this->getDaemonBin() );
     return HVE_SCHEDULED;
     
 }

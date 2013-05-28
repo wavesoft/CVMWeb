@@ -58,6 +58,7 @@ public:
     virtual FB::JSAPIPtr                createJSAPI();
     std::string                         getFilesystemPath();
     std::string                         getDataFolderPath();
+    std::string                         getDaemonBin();
     
     
     /* Always windowless */

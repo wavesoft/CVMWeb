@@ -391,4 +391,10 @@ void CVMWebAPISession::set_daemonMaxCap( int cap ) {
 void CVMWebAPISession::set_daemonControlled( bool controled ) {
     this->session->daemonControlled = controled;
     this->setProperty("/CVMWeb/daemon/controlled", (controled ? "1" : "0"));
+
+    /* The needs of having a daemon might have changed */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) {
+        p->hv->checkDaemonNeed();
+    }
 }

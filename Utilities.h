@@ -86,6 +86,11 @@ typedef struct {
 } HVPROGRESS_FEEDBACK;
 
 /**
+ * Get the location of the application's AppData folder
+ */
+std::string                                         getAppDataPath  ( );
+
+/**
  * Download a string from the given URL
  */
 int                                                 downloadText    ( std::string url, std::string * buffer );

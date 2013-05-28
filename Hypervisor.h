@@ -214,6 +214,15 @@ public:
     int                     cernVMCached    ( std::string version, std::string * filename );
     std::string             cernVMVersion   ( std::string filename );
     int                     buildContextISO ( std::string userData, std::string * filename );
+
+    /* Check if we need to start or stop the daemon */
+    int                     checkDaemonNeed ();
+    
+    /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
+             the Hypervisor class in order to use the checkDaemonNeed() function. It's
+             a hack because those two systems (JSAPI & HypervisorAPI) should be isolated. */
+    std::string             daemonBinPath;
+    
     
 private:
     int                     sessionID;
@@ -223,7 +232,7 @@ private:
 /**
  * Exposed functions
  */
-Hypervisor *                    detectHypervisor    ();
+Hypervisor *                    detectHypervisor    ( std::string pathToDaemonBin );
 void                            freeHypervisor      ( Hypervisor * );
 int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData );
 std::string                     hypervisorErrorStr  ( int error );

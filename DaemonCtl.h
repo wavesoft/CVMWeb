@@ -24,11 +24,12 @@ typedef struct {
 #define DAEMON_PORT         58740
 
 /* Daemon controlling functions */
-std::string             getDaemonLockfile   ( std::string path );
+std::string             getDaemonLockfile   ( );
 bool                    isDaemonRunning     ( std::string lockfile );
 short int               daemonIPC           ( ThinIPCMessage * send, ThinIPCMessage * recv );
 short int               daemonGet           ( short int action );
 short int               daemonSet           ( short int action, short int value );
+int                     daemonStart         ( std::string path_to_bin );
 
 /* Used by the daemon process */
 DLOCKINFO *             daemonLock          ( std::string lockfile );

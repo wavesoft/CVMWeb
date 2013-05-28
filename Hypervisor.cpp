@@ -27,11 +27,12 @@
 #include <vector>
 #include <cmath>
 
+#include "Utilities.h"
 #include "Hypervisor.h"
 #include "Virtualbox.h"
-#include "contextiso.h"
+#include "DaemonCtl.h"
 
-#include "Utilities.h"
+#include "contextiso.h"
 
 using namespace std;
 
@@ -197,46 +198,11 @@ int Hypervisor::exec( string args, vector<string> * stdoutList ) {
  */
 Hypervisor::Hypervisor() {
     this->sessionID = 1;
-    std::string homeDir;
     
-    /* Pick a system folder to store information  */
-    #ifdef _WIN32
-    homeDir = getenv("APPDATA");
-    homeDir += "/CernVM";
-    _mkdir(homeDir.c_str());
-    homeDir += "/WebAPI";
-    _mkdir(homeDir.c_str());
-    this->dirDataCache = homeDir + "/cache";
-    _mkdir(this->dirDataCache.c_str());
-    this->dirData = homeDir;
-    #endif
+    /* Pick a system folder to store persistent information  */
+    this->dirDataCache = getAppDataPath();
+    this->dirData = this->dirDataCache + "/cache";
     
-    #if defined(__APPLE__) && defined(__MACH__)
-    struct passwd *p = getpwuid(getuid());
-    char *home = p->pw_dir;
-    homeDir = home;
-    homeDir += "/Library/Application Support/CernVM";
-    mkdir(homeDir.c_str(), 0777);
-    homeDir += "/WebAPI";
-    mkdir(homeDir.c_str(), 0777);
-    this->dirDataCache = homeDir + "/cache";
-    mkdir(this->dirDataCache.c_str(), 0777);
-    this->dirData = homeDir;
-    #endif
-    
-    #ifdef __linux__
-    struct passwd *p = getpwuid(getuid());
-    char *home = p->pw_dir;
-    homeDir = home;
-    homeDir += "/.cernvm";
-    mkdir(homeDir.c_str(), 0777);
-    homeDir += "/WebAPI";
-    mkdir(homeDir.c_str(), 0777);
-    this->dirDataCache = homeDir + "/cache";
-    mkdir(this->dirDataCache.c_str(), 0777);
-    this->dirData = homeDir;
-    #endif
-        
 };
 
 /**
@@ -394,12 +360,43 @@ HVSession * Hypervisor::sessionGet( int id ) {
     return NULL;
 }
 
+/* Check if we need to start or stop the daemon */
+int Hypervisor::checkDaemonNeed() {
+    
+    // If we haven't specified where the daemon is, we cannot do much
+    if (daemonBinPath.empty()) return HVE_NOT_SUPPORTED;
+    
+    // Check if at least one session uses daemon
+    bool daemonNeeded = false;
+    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSession* sess = *i;
+        if (sess->daemonControlled) {
+            daemonNeeded = true;
+            break;
+        }
+    }
+    
+    // Check if the daemon state is valid
+    bool daemonState = isDaemonRunning(getDaemonLockfile());
+    if (daemonNeeded != daemonState) {
+        if (daemonNeeded) {
+            return daemonStart( daemonBinPath ); /* START the daemon */
+        } else {
+            return daemonGet( DIPC_SHUTDOWN ); /* KILL the daemon */
+        }
+    }
+    
+    // No change
+    return HVE_OK;
+    
+}
+
 /**
  * Search the system's folders and try to detect what hypervisor
  * the user has installed and it will then populate the Hypervisor Config
  * structure that was passed to it.
  */
-Hypervisor * detectHypervisor() {
+Hypervisor * detectHypervisor( std::string pathToDaemonBin ) {
     using namespace std;
     
     Hypervisor * hv;
@@ -439,6 +436,7 @@ Hypervisor * detectHypervisor() {
             }
             hv->detectVersion();
             hv->loadSessions();
+            hv->daemonBinPath = pathToDaemonBin;
             return hv;
         }
         #endif
@@ -456,6 +454,7 @@ Hypervisor * detectHypervisor() {
             }
             hv->detectVersion();
             hv->loadSessions();
+            hv->daemonBinPath = pathToDaemonBin;
             return hv;
         }
         #endif
@@ -473,6 +472,7 @@ Hypervisor * detectHypervisor() {
             }
             hv->detectVersion();
             hv->loadSessions();
+            hv->daemonBinPath = pathToDaemonBin;
             return hv;
         }
         #endif
@@ -729,7 +729,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     /**
      * Check if it was successful
      */
-    Hypervisor * hv = detectHypervisor();
+    Hypervisor * hv = detectHypervisor( "" );
     if (hv == NULL) {
         cout << "ERROR: Could not install hypervisor!\n";
         return HVE_NOT_VALIDATED;

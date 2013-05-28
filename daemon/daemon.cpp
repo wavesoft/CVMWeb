@@ -89,7 +89,7 @@ void switchIdleStates( bool idle ) {
 int main( int argc, char ** argv ) {
     
     /* Get a hypervisor control instance */
-    hv = detectHypervisor();
+    hv = detectHypervisor( argv[0] );
     if (hv == NULL) {
         cerr << "ERROR: Unable to detect hypervisor!\n";
         return 3;
@@ -103,7 +103,7 @@ int main( int argc, char ** argv ) {
     
     /* Lock file */
     DLOCKINFO * lockInfo;
-    std::string lockFile = getDaemonLockfile( argv[0] );
+    std::string lockFile = getDaemonLockfile();
     if (isDaemonRunning(lockFile)) {
         /* Already locked */
         cerr << "ERROR: Another daemon process is running!\n";
