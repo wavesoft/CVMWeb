@@ -51,6 +51,7 @@ public:
         registerMethod("reset",                 make_method(this, &CVMWebAPISession::reset));
         registerMethod("close",                 make_method(this, &CVMWebAPISession::close));
         registerMethod("stop",                  make_method(this, &CVMWebAPISession::stop));
+        registerMethod("update",                make_method(this, &CVMWebAPISession::update));
         registerMethod("hibernate",             make_method(this, &CVMWebAPISession::hibernate));
         registerMethod("setProperty",           make_method(this, &CVMWebAPISession::setProperty));
         registerMethod("getProperty",           make_method(this, &CVMWebAPISession::getProperty));
@@ -145,6 +146,7 @@ public:
     int resume();
     int reset();
     int stop();
+    int update();
     int hibernate();
     int open( const FB::JSObjectPtr &o );
     int start( const FB::variant& cfg );

@@ -29,6 +29,7 @@
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message)
 {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 	NSString *confirmMessage = [NSString stringWithUTF8String:message.c_str()];
 
 	NSAlert *alert = [[[NSAlert alloc] init] autorelease];
@@ -39,5 +40,7 @@ bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std
     [alert setInformativeText: confirmMessage ];
 
 	int ans = [alert runModal];
+	[pool drain];
+    
 	return (ans == NSAlertFirstButtonReturn);
 }

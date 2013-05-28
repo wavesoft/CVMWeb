@@ -863,6 +863,13 @@ std::string VBoxSession::getRDPHost() {
     return ip + numstr;
 }
 
+/**
+ * Update session information
+ */
+int VBoxSession::update() {
+    return this->host->updateSession( this );
+}
+
 /** =========================================== **\
             Virtualbox Implementation
 \** =========================================== **/
@@ -1012,6 +1019,97 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
 };
 
 /**
+ * Update session information from VirtualBox
+ */
+int Virtualbox::updateSession( HVSession * session ) {
+    vector<string> lines;
+    map<string, string> vms, diskinfo;
+    string secret, kk, kv;
+    
+    /* Get session's uuid */
+    string uuid = session->uuid;
+    
+    /* Collect details */
+    map<string, string> info = this->getMachineInfo( uuid );
+    string state = info["State"];
+    if (state.find("running") != string::npos) {
+        session->state = STATE_STARTED;
+    } else if (state.find("paused") != string::npos) {
+        session->state = STATE_PAUSED;
+    } else {
+        session->state = STATE_OPEN;
+    }
+    session->cpus = ston<int>( info["Number of CPUs"] );
+    
+    /* Parse RDP info */
+    if (info.find("VRDE") != info.end()) {
+        string rdpInfo = info["VRDE"];
+        string rdpPort = info["VRDE port"];
+        if (rdpInfo.find("enabled") != string::npos) {
+            ((VBoxSession *)session)->rdpPort = ston<int>(rdpPort);
+        } else {
+            ((VBoxSession *)session)->rdpPort = 0;
+        }
+    }
+    
+    /* Parse memory */
+    string mem = info["Memory size"];
+    mem = mem.substr(0, mem.length()-2);
+    session->memory = ston<int>(mem);
+    
+    /* Parse CernVM Version from the ISO */
+    session->version = DEFAULT_CERNVM_VERSION;
+    if (info.find( BOOT_DSK ) != info.end()) {
+
+        /* Get the filename of the iso */
+        getKV( info[ BOOT_DSK ], &kk, &kv, '(', 0 );
+        kk = kk.substr(0, kk.length()-1);
+        
+        /* Extract CernVM Version from file */
+        session->version = this->cernVMVersion( kk );
+        if (session->version.empty()) 
+            session->version = DEFAULT_CERNVM_VERSION;
+    }
+    
+    /* Parse disk size */
+    session->disk = 1024;
+    if (info.find( SCRATCH_DSK ) != info.end()) {
+
+        /* Get the filename of the iso */
+        getKV( info[ SCRATCH_DSK ], &kk, &kv, '(', 0 );
+        kk = kk.substr(0, kk.length()-1);
+        
+        /* Collect disk info */
+        int ans = this->exec("showhdinfo "+kk, &lines);
+        if (ans == 0) {
+        
+            /* Tokenize data */
+            diskinfo = tokenize( &lines, ':' );
+            if (diskinfo.find("Logical size") != info.end()) {
+                kk = diskinfo["Logical size"];
+                kk = kk.substr(0, kk.length()-7); // Strip " MBytes"
+                session->disk = ston<int>(kk);
+            }
+            
+        }
+    }
+    
+    /* Parse daemon information */
+    string strProp;
+    strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
+    session->daemonControlled = (strProp.compare("1") == 0);
+    strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
+    session->daemonMinCap = ston<int>(strProp);
+    strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
+    session->daemonMaxCap = ston<int>(strProp);
+    strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
+    session->daemonFlags = ston<int>(strProp);
+    
+    /* Updated successfuly */
+    return HVE_OK;
+}
+
+/**
  * Load session state from VirtualBox
  */
 int Virtualbox::loadSessions() {
@@ -1039,82 +1137,9 @@ int Virtualbox::loadSessions() {
             /* Create a populate session object */
             HVSession * session = this->allocateSession( name, secret );
             session->uuid = "{" + uuid + "}";
-            
-            /* Collect details */
-            map<string, string> info = this->getMachineInfo( uuid );
-            string state = info["State"];
-            if (state.find("running") != string::npos) {
-                session->state = STATE_STARTED;
-            } else if (state.find("paused") != string::npos) {
-                session->state = STATE_PAUSED;
-            } else {
-                session->state = STATE_OPEN;
-            }
-            session->cpus = ston<int>( info["Number of CPUs"] );
-            
-            /* Parse RDP info */
-            if (info.find("VRDE") != info.end()) {
-                string rdpInfo = info["VRDE"];
-                string rdpPort = info["VRDE port"];
-                if (rdpInfo.find("enabled") != string::npos) {
-                    ((VBoxSession *)session)->rdpPort = ston<int>(rdpPort);
-                } else {
-                    ((VBoxSession *)session)->rdpPort = 0;
-                }
-            }
-            
-            /* Parse memory */
-            string mem = info["Memory size"];
-            mem = mem.substr(0, mem.length()-2);
-            session->memory = ston<int>(mem);
-            
-            /* Parse CernVM Version from the ISO */
-            session->version = DEFAULT_CERNVM_VERSION;
-            if (info.find( BOOT_DSK ) != info.end()) {
 
-                /* Get the filename of the iso */
-                getKV( info[ BOOT_DSK ], &kk, &kv, '(', 0 );
-                kk = kk.substr(0, kk.length()-1);
-                
-                /* Extract CernVM Version from file */
-                session->version = this->cernVMVersion( kk );
-                if (session->version.empty()) 
-                    session->version = DEFAULT_CERNVM_VERSION;
-            }
-            
-            /* Parse disk size */
-            session->disk = 1024;
-            if (info.find( SCRATCH_DSK ) != info.end()) {
-
-                /* Get the filename of the iso */
-                getKV( info[ SCRATCH_DSK ], &kk, &kv, '(', 0 );
-                kk = kk.substr(0, kk.length()-1);
-                
-                /* Collect disk info */
-                int ans = this->exec("showhdinfo "+kk, &lines);
-                if (ans == 0) {
-                
-                    /* Tokenize data */
-                    diskinfo = tokenize( &lines, ':' );
-                    if (diskinfo.find("Logical size") != info.end()) {
-                        kk = diskinfo["Logical size"];
-                        kk = kk.substr(0, kk.length()-7); // Strip " MBytes"
-                        session->disk = ston<int>(kk);
-                    }
-                    
-                }
-            }
-            
-            /* Parse daemon information */
-            string strProp;
-            strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
-            session->daemonControlled = (strProp.compare("1") == 0);
-            strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
-            session->daemonMinCap = ston<int>(strProp);
-            strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
-            session->daemonMaxCap = ston<int>(strProp);
-            strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
-            session->daemonFlags = ston<int>(strProp);
+            /* Update session info */
+            updateSession( session );
 
             /* Register this session */
             cout << "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state << "\n";

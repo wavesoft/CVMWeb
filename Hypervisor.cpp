@@ -38,13 +38,15 @@ using namespace std;
 
 /* Incomplete type placeholders */
 int Hypervisor::loadSessions()                                      { return HVE_NOT_IMPLEMENTED; }
-int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; };
+int Hypervisor::updateSession( HVSession * session )                { return HVE_NOT_IMPLEMENTED; }
+int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; }
 int HVSession::pause()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::close()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
 int HVSession::resume()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
 int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
+int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
 int HVSession::start( std::string userData )                        { return HVE_NOT_IMPLEMENTED; }

@@ -443,3 +443,83 @@ void CVMWebAPISession::set_daemonFlags( int flags ) {
     this->session->daemonFlags = flags;
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(flags));
 }
+
+/**
+ * Update session information from disk
+ */
+int CVMWebAPISession::update() {
+
+    // Don't do anything if we are in the middle of something
+    if ((this->session->state == STATE_OPPENING) || (this->session->state == STATE_STARTING)) return 0;
+    
+    // Keep old state in order to detect state changes
+    int oldState = this->session->state;
+    
+    // Update session info from driver
+    int ans = this->session->update();
+    if (ans < 0) return ans;
+    
+    // Check state differences
+    if (oldState != this->session->state) {
+        switch (this->session->state) {
+            
+            case STATE_CLOSED:
+            
+                /* Stop probing timer */
+                this->probeTimer->stop();
+
+                /* Make it unavailable */
+                if (this->isAlive) {
+                    this->isAlive = false;
+                    this->fire_apiUnavailable();
+                }
+                
+                /* Session closed */
+                this->fire_close();
+                break;
+            
+            case STATE_OPEN:
+            
+                /* Start probing timer */
+                this->probeTimer->start();
+                
+                /* Session open */
+                this->fire_open();
+                break;
+            
+            case STATE_STARTED:
+            
+                /* Start probing timer */
+                this->probeTimer->start();
+                
+                /* Session started */
+                this->fire_start();
+                break;
+            
+            case STATE_PAUSED:
+
+                /* Stop probing timer */
+                this->probeTimer->stop();
+
+                /* Make it unavailable */
+                if (this->isAlive) {
+                    this->isAlive = false;
+                    this->fire_apiUnavailable();
+                }
+    
+                /* Session paused */
+                this->fire_pause();
+                break;
+            
+            case STATE_ERROR:
+                
+                // TODO: Am I really using this somewhere? :P :P
+                break;
+            
+        }
+    }
+    
+    /* Everything was OK */
+    return HVE_OK;
+    
+}

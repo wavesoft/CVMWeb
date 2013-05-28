@@ -48,6 +48,8 @@ public:
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
     virtual std::string     getRDPHost();
+
+    virtual int             update();
     
     /* VirtualBox-specific functions */
     int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList );
@@ -76,6 +78,7 @@ public:
 
     /* Overloads */
     virtual int             loadSessions        ( );
+    virtual int             updateSession       ( HVSession * session );
     virtual HVSession *     allocateSession     ( std::string name, std::string key );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
 };

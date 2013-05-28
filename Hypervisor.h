@@ -120,6 +120,8 @@ public:
     virtual std::string     getRDPHost();
     virtual bool            isAPIAlive();
 
+    virtual int             update();
+
     void *                  cbObject;
     void (*onProgress)      (int, int, std::string, void *);
     void (*onError)         (std::string, int, std::string, void *);
@@ -203,6 +205,7 @@ public:
 
     /* Overridable functions */
     virtual int             loadSessions    ( );
+    virtual int             updateSession   ( HVSession * session );
     virtual HVSession *     allocateSession ( std::string name, std::string key );
     virtual int             freeSession     ( HVSession * sess );
     virtual int             registerSession ( HVSession * sess );
