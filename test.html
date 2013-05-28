@@ -70,7 +70,12 @@
 			});
 			_txt("state", "Starting installation of the hypervisor. Please wait and follow the on-screen instructions.");
 			_dis("session-install", true);
-			core.installHypervisor();
+			var ans = core.installHypervisor();
+			if (ans == -8) {
+				_txt("state", "You already have a hypervisor!");
+			} else {
+				_txt("state", "Installation error #" + ans);
+			}
 		}
 		
 		///////////////////////////////////////////////////
@@ -79,7 +84,7 @@
 
 		function requestSession( name, key ) {
 			
-			var handleError = function(code) {
+			var handleError = function(res) {
 				if (res == -20) {
 					alert('Your session key is invalid!');
 				} else if (res == -10) {
@@ -115,6 +120,15 @@
 						_sval("session-ram", session.ram);
 						_sval("session-disk", session.disk);
 						_sval("session-ver", session.version);
+						
+						_sval('daemon-min-cap', session.daemonMinCap );
+						_sval('daemon-max-cap', session.daemonMaxCap );
+						document.getElementById('daemon-enable').checked = session.daemonControlled;
+						document.getElementById('daemon-suspend').checked = ((session.daemonFlags & 1) != 0);
+						document.getElementById('daemon-autostart').checked = ((session.daemonFlags & 2) != 0);
+						
+						if (session.live) _txt( "flags", "<strong>(live)</strong>" );
+						
 					} else {
 						_txt( "state", "Set your requirements and press 'Open Session'" );
 
@@ -298,6 +312,27 @@
 			return session.getProperty(propName);
 		}
 		
+		function updateDaemonControl(isControlled) {
+			setTimeout(function() {
+				session.daemonControlled = document.getElementById('daemon-enable').checked;
+				window.console.log("[debug] Setting daemonControlled to " + session.daemonControlled);
+			}, 1);
+		}
+		
+		function setDaemonCap(minCap, maxCap) {
+			session.daemonMinCap = minCap;
+			session.daemonMaxCap = maxCap;
+		}
+		
+		function updateDaemonFlags() {
+			setTimeout(function() {
+				var flags = 0;
+				if (document.getElementById('daemon-suspend').checked) flags |= 1;
+				if (document.getElementById('daemon-autostart').checked) flags |= 2;
+				session.daemonFlags = flags;
+			}, 1);
+		}
+		
 		///////////////////////////////////////////////////
 		// 6) When you are done, don't forget to close your
 		//    session. This will also erase the VM and it's
@@ -403,6 +438,33 @@ users=user:users:s3cret
 							<td colspan="2" align="center">
 								<input type="button" value="Close Session" id="session-start" onclick="closeSession();" />
 							</td>
+						</tr>
+					</table>
+					<table>
+						<tr>
+							<td align="right"><input type="checkbox" id="daemon-enable"></td>
+							<td><label for="daemon-enable" onclick="updateDaemonControl();">Controlled by daemon</label></td>
+						</tr>
+						<tr>
+							<td align="right">Idle Cap:</td>
+							<td><input id="daemon-min-cap" value="" type="text" /> % (0=pause)</td>
+						</tr>
+						<tr>
+							<td align="right">Active Cap:</td>
+							<td><input id="daemon-max-cap" value="" type="text" /> %</td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center">
+								<input type="button" value="Update cap values" onclick="setDaemonCap(_val('daemon-min-cap'), _val('daemon-max-cap'));" />
+							</td>
+						</tr>
+						<tr>
+							<td align="right"><input type="checkbox" id="daemon-autostart"></td>
+							<td><label for="daemon-autostart" onclick="updateDaemonFlags();">Start VM automatically</label></td>
+						</tr>
+						<tr>
+							<td align="right"><input type="checkbox" id="daemon-suspend"></td>
+							<td><label for="daemon-suspend" onclick="updateDaemonFlags();">Hibernate instead of pause</label></td>
 						</tr>
 					</table>
 					<table>

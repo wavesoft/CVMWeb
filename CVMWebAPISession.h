@@ -88,6 +88,9 @@ public:
         this->probeTimer = FB::Timer::getTimer( TIMER_PROBE_INTERVAL, true, boost::bind(&CVMWebAPISession::cb_timer, this ) );
         this->probeTimer->start();
         
+        /* Defaults */
+        this->isAlive = false;
+        
         /* Setup session connections */
         if (this->session != NULL) {
 
