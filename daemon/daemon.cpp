@@ -25,6 +25,8 @@
 #include <iostream>
 #include <time.h>
 
+#include <boost/thread.hpp>
+
 #include "Hypervisor.h"
 #include "Virtualbox.h"
 #include "ThinIPC.h"
@@ -41,6 +43,7 @@ Hypervisor          * hv;
 time_t                reloadTimer;
 int                   idleTime;
 bool                  isIdle = false;
+bool                  isAlive = true;
 
 /**
  * Switch the idle states of the VMs
@@ -134,48 +137,11 @@ void switchIdleStates( bool idle ) {
 }
 
 /**
- * Entry point
+ * Asynchronous UDP server thread
  */
-int main( int argc, char ** argv ) {
-    
-    /* Get a hypervisor control instance */
-    hv = detectHypervisor();
-    if (hv == NULL) {
-        cerr << "ERROR: Unable to detect hypervisor!\n";
-        return 3;
-    }
-    
-    /* This is working only with VirtualBox */
-    if (hv->type != HV_VIRTUALBOX) {
-        cerr << "ERROR: Only VirtualBox is currently supproted!\n";
-        return 4;
-    }
-    
-    /* Lock file */
-    DLOCKINFO * lockInfo;
-    std::string lockFile = getDaemonLockfile();
-    if (isDaemonRunning()) {
-        /* Already locked */
-        cerr << "ERROR: Another daemon process is running!\n";
-        return 2;
-    }
-    if ( (lockInfo = daemonLock(lockFile)) == NULL ) {
-        /* Could not lock */
-        cerr << "ERROR: Could not acquire lockfile\n";
-        return 2;
-    }
-    
-    /* Initialize ThinIPC */
-    thinIPCInitialize();
-    
-    /* Initialize arguments */
+void serverThread() {
+    std::cout << "[UDP] Started listening on port " << DAEMON_PORT << std::endl;
     ipc = new ThinIPCEndpoint( DAEMON_PORT );
-    idleTime = 30;
-    
-    /* Reset state */
-    reloadTimer = time( NULL );
-    
-    /* Main loop */
     for (;;) {
         
         /* Check if we have IPC data to read 
@@ -217,8 +183,59 @@ int main( int argc, char ** argv ) {
             
             /* Send responpse */
             ipc->send( port, &ans );
-            
         }
+        
+    }
+    isAlive = false;
+}
+
+/**
+ * Entry point
+ */
+int main( int argc, char ** argv ) {
+    
+    /* Get a hypervisor control instance */
+    hv = detectHypervisor();
+    if (hv == NULL) {
+        cerr << "ERROR: Unable to detect hypervisor!\n";
+        return 3;
+    }
+    
+    /* This is working only with VirtualBox */
+    if (hv->type != HV_VIRTUALBOX) {
+        cerr << "ERROR: Only VirtualBox is currently supproted!\n";
+        return 4;
+    }
+    
+    /* Lock file */
+    DLOCKINFO * lockInfo;
+    std::string lockFile = getDaemonLockfile();
+    if (isDaemonRunning()) {
+        /* Already locked */
+        cerr << "ERROR: Another daemon process is running!\n";
+        return 2;
+    }
+    if ( (lockInfo = daemonLock(lockFile)) == NULL ) {
+        /* Could not lock */
+        cerr << "ERROR: Could not acquire lockfile\n";
+        return 2;
+    }
+    
+    /* Initialize ThinIPC */
+    thinIPCInitialize();
+    
+    /* Initialize arguments */
+    idleTime = 30;
+    
+    /* Reset state */
+    reloadTimer = time( NULL );
+    
+    /* Start server thread */
+    boost::thread t(&serverThread);
+    
+    /* Main loop */
+    std::cout << "[Main] Processing events" << std::endl;
+    while (isAlive) {
         
         /* Check for state reload times */
         if ( time( NULL ) > ( reloadTimer + RELOAD_TIME ) ) {
@@ -245,6 +262,15 @@ int main( int argc, char ** argv ) {
                 switchIdleStates( true );
             }
         }
+        
+        std::cout << "CHECK!" << std::endl;
+        
+        /* Do not create CPU load on the loop */
+        #ifdef _WIN32
+        Sleep(1);
+        #else
+        sleep(1);
+        #endif
         
     }
     

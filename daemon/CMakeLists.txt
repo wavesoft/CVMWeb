@@ -4,6 +4,7 @@ include_directories( .. )
 
 # Find FireBreath libs dir
 set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
+set( FB_BOOST_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
 
 # Check if we can use libCURL
 FIND_PACKAGE(CURL)
@@ -38,6 +39,10 @@ else()
 		MESSAGE(SEND_ERROR "Could not find OpenSSL on your system")
 	endif()
 ENDIF(OPENSSL_FOUND)
+
+# Use FireBreath boost
+FIND_PACKAGE( Boost 1.40 COMPONENTS thread REQUIRED )
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 # Locate the platform-specific source files
 if (WIN32)
@@ -75,3 +80,4 @@ ENDIF(WIN32)
 # Libraries
 target_link_libraries (${PROJECT_NAME} ${CURL_LIBRARIES})
 target_link_libraries (${PROJECT_NAME} ${OPENSSL_LIBRARIES})
+target_link_libraries (${PROJECT_NAME} ${Boost_LIBRARIES} )
