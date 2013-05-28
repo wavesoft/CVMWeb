@@ -143,6 +143,9 @@
 						_txt( "state", "Set your requirements and press 'Open Session'" );
 
 					}
+					
+					// Get the allocated RDP URL
+					_txt('session-rdp', session.rdpURL);
 
 					// Bind event listeners 
 					session.addEventListener('open', function() { // Session Opened
@@ -376,7 +379,7 @@
 			background: #CFC !important;
 			width: 300px;
 		}
-		#tbl-daemon span {
+		#tbl-daemon span, #tbl-run span {
 			font-weight: bold;
 		}
 		</style>
@@ -470,9 +473,16 @@
 					<table>
 						<tr>
 							<td align="right">User-Data:</td>
-							<td><textarea id="user-data" rows="4" cols="30">[cernvm]
+							<td><textarea id="user-data" rows="4" cols="30">[amiconfig]
+plugins=cernvm
+[cernvm]
 users=user:users:s3cret
+services=httpd
 </textarea></td>
+						</tr>
+						<tr>
+							<td align="right">RDP URL:</td>
+							<td><span id="session-rdp">--</span></td>
 						</tr>
 						<tr>
 							<td colspan="2" align="center">

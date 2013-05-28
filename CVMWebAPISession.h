@@ -103,6 +103,13 @@ public:
             this->session->onStart = &CVMWebAPISession::onStart;
             this->session->onClose = &CVMWebAPISession::onClose;
             
+            /* Check if the api URL is alive */
+            if (this->session->state == STATE_STARTED) {
+                if (this->session->isAPIAlive()) {
+                    isAlive = true;
+                }
+            }
+            
         }
         
     }
