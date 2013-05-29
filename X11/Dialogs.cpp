@@ -46,13 +46,24 @@ static gboolean display_dialog( gpointer user_data ) {
     gtk_window_set_keep_above(GTK_WINDOW(dialog), true);
     gtk_window_set_title(GTK_WINDOW(dialog), "CernVM Web API");
     dialog_data->result = gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(GTK_WIDGET(dialog));
     gtk_main_quit();  // Quits the main loop run in MessageBox()
+    gtk_widget_destroy(GTK_WIDGET(dialog));
 
     return FALSE;
 }
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
+    
+    // Initialize GTK and threads
+    if (!XInitThreads()) {
+        std::cerr << "[Dialogs] XInitThreads Failed" << std::endl;
+        return false;
+    }
+    if (!gtk_init_check(NULL, NULL)) {
+        std::cerr << "[Dialogs] gtk_init_check failed" << std::endl;
+        return false;
+    }
+    
     DialogData dialog_data;
     dialog_data.text = (const char * ) message.c_str();
     g_idle_add(display_dialog, &dialog_data);
