@@ -36,10 +36,13 @@ pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 include_directories(${GTK3_INCLUDE_DIRS})
 link_directories(${GTK3_LIBRARY_DIRS})
 
+# Add libraries
+FIND_LIBRARY(X11_LIBRARY X11)
+
 # Add other flags to the compiler
 add_definitions(${GTK3_CFLAGS_OTHER})
 
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
-    ${PLUGIN_INTERNAL_DEPS} ${GTK3_LIBRARIES}
+    ${PLUGIN_INTERNAL_DEPS} ${GTK3_LIBRARIES} ${X11_LIBRARY}
     )
