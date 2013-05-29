@@ -27,6 +27,11 @@
 #include "../Dialogs.h"
 #include "BrowserHost.h"
 
+void CVMInitializeDialogs()
+{
+    /* Nothing to do here */
+}
+
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message)
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];

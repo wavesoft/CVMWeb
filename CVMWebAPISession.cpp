@@ -237,7 +237,7 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
         if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
         if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
         if (o->HasProperty("version")) {
-            ver = o->GetProperty("version").cast<std::string>();
+            ver = o->GetProperty("version").convert_cast<std::string>();
             if (!isSanitized(&ver, "01234567890.")) ver=DEFAULT_CERNVM_VERSION;
         }
     }

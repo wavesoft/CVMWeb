@@ -174,8 +174,8 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
     } else {
 
         /* Fetch info */
-        std::string vmName = vm.cast<std::string>();
-        std::string vmSecret = secret.cast<std::string>();
+        std::string vmName = vm.convert_cast<std::string>();
+        std::string vmSecret = secret.convert_cast<std::string>();
         
         /* Try to open the session */
         int ans = p->hv->sessionValidate( vmName, vmSecret );

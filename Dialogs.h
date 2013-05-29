@@ -28,5 +28,6 @@
 namespace FB { class PluginWindow; }
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message);
+void CVMInitializeDialogs();
 
 #endif // DialogManager_h__

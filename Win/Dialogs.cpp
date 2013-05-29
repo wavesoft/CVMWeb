@@ -22,6 +22,11 @@
 #include <Windows.h>
 #include <Winuser.h>
 
+void CVMInitializeDialogs()
+{
+    /* Nothing to do here */
+}
+
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
     
     /* Display message box */
