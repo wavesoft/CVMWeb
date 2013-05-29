@@ -323,12 +323,14 @@ The following list of events is fired by the session object. You can listen for 
 	pause				( )
 	resume				( )
 	stop				( )
+	hibernate			( )
 	openError			( errorMessage, errorCode )
 	startError			( errorMessage, errorCode )
 	closeError			( errorMessage, errorCode )
 	pauseError			( errorMessage, errorCode )
 	resumeError			( errorMessage, errorCode )
 	stopError			( errorMessage, errorCode )
+	hibernateError		( errorMessage, errorCode )
 	progress			( tasksCompleted, tasksPending, statusMessage )
 	errror				( errorMessage, errorCode, errorCategory )
 	apiAvailable		( machineIP, apiURL )
@@ -352,19 +354,30 @@ The following list of functions is supported by the session object:
 	resume				( )								1 or < 0 on error
 	reset				( )								1 or < 0 on error
 	close				( )								1 or < 0 on error
+	hibernate			( )								1 or < 0 on error
 	setProperty			( propertyName, propertyValue ) 0 or < 0 on error
 	getProperty			( propertyName )				string
 	setExecutionCap		( cap )							0 or < 0 on error
 
 # Appendix C - Properties
 
-The following list of properties exist in a session object:
+The following list of properties exist in the session objects:
 
 	Property name		Description
 	---------------     -------------------
 	ip					The IP address of the VM (not yet supported)
 	cpus				The number of cpus
 	state				The state of the VM
+	ram					The ammount of memory (in MB) used
+	disk 				The ammount of memory (in MB) allocated for the disk
+	version				The version of CernVM-Micro used
+	executionCap		The current execution cap
+	apiURL				The URL inside the VM to contact for API operations
+	rdpURL				The hostname and the port for the display
+	daemonControlled	TRUE if the session is managed by the daemon
+	daemonMinCap		The min (active) cap of the VM
+	daemonMaxCap		The max (idle) cap of the VM
+	daemonFlags			Additional flags to define how the daemon will control the VM
 
 # Appendix D - State constants
 
