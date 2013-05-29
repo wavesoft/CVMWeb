@@ -25,6 +25,7 @@
 typedef struct {
     int result;
     const char * text;
+    GtkWidget * window;
 } DialogData;
 
 void CVMInitializeDialogs()
@@ -46,18 +47,18 @@ gboolean display_dialog( gpointer user_data )
     GtkWidget *dialog;
     
     /* Create dialog */
-    dialog = gtk_message_dialog_new (NULL, 
-                                     GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+    dialog = gtk_message_dialog_new (NULL,
+                                     GTK_DIALOG_DESTROY_WITH_PARENT,
                                      GTK_MESSAGE_QUESTION,
                                      GTK_BUTTONS_YES_NO,
                                      "%s", dialog_data->text);
 
     /*  Prepare dialog */
-    gtk_window_set_keep_above(GTK_WINDOW(dialog_data->dialog), true);
-    gtk_window_set_title(GTK_WINDOW(dialog_data->dialog), "CernVM Web API");
+    gtk_window_set_keep_above(GTK_WINDOW(dialog), true);
+    gtk_window_set_title(GTK_WINDOW(dialog), "CernVM Web API");
 
     /* Run and destroy when completed */
-    dialog_data->result = gtk_dialog_run(GTK_DIALOG(dialog_data->dialog));
+    dialog_data->result = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
 
     /* Quit the main loop */
@@ -67,13 +68,13 @@ gboolean display_dialog( gpointer user_data )
 }
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
-    
+
     // Prepare dialog I/O
     DialogData dialog_data;
     dialog_data.text = (const char * ) message.c_str();
 
     // Thread-safe GTK init
-    gtk_idle_add( display_dialog, &dialog_data );
+    g_idle_add( display_dialog, &dialog_data );
     gtk_main();
 
     return (dialog_data.result == GTK_RESPONSE_YES);
