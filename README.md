@@ -78,7 +78,7 @@ To use this plugin you must first create an embed element in your website. You m
 You can then get a reference to the object and access it's properties:
 
 	var o = document.getElementById('cvmweb');
-	alert('We are running with ' + o.hypervisorName + "/" + e.hypervisorVersion );
+	alert('We are running with ' + o.hypervisorName + "/" + o.hypervisorVersion );
 
 # Creating sessions
 
