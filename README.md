@@ -94,13 +94,13 @@ This function will return 1 (HVE_SCHEDULED) if succeeded or an error code if fai
 provided by the *success_callback* parameter will be called. The callback signature is the following:
 
 	// Called when session is ready
-	success_callback( core, session ) {
-		
+	success_callback( session ) {
+		...
 	}
 	
 	// Called if an error occured
 	failure_callback( error_code ) {
-		
+		...
 	}
 
 Upon receiving the session object you can bind your event listeners using the *addEventListener(event, callback)* function. 
@@ -164,14 +164,16 @@ You can set or get guest properties on hypervisors that support it using the *se
 
 You can pause, resume and stop the VM using the *pause*, *resume* and *stop* functions:
 
-	sess.pause();	// Pause session
-	sess.resume();	// Resume session
-	sess.stop();	// Shut down VM 
-	sess.reset();	// Hard-reset the VM
+	sess.pause();		// Pause session
+	sess.resume();		// Resume session
+	sess.stop();		// Power of the VM 
+	sess.hibernate();	// Save state and shut down the VM
+	sess.reset();		// Hard-reset the VM
 
-All these functions will also fire the *onPause*, *onResume*, *onStop* and *onReset* events, respectively.
-If an error occurs, the functions will return a non-zero value. An *HVE_INVALID_STATE (-8)* will be returned
-if the VM is not in the appropriate state for the operation.
+All these functions will also fire the *onPause*, *onResume*, *onStop*, *onHibernate* and *onReset* events, respectively.
+If an error occurs the *onPauseError*, *onResumeError*, *onStopError*, *onHibernateError* and *onResetError* events will be fired.
+The function will always return 1 unless the VM is not in the appropriate state for the operation, where an 
+*HVE_INVALID_STATE (-8)* will be returned.
 
 ## Closing session
 
@@ -204,25 +206,64 @@ is started along with every VM.
 
 You can learn more about the daemon if you check the README.md in the daemon/ folder.
 
-*(The following chapters refer to in-development functionality and might be changed in the future)*
+## Checking the daemon from javascript
 
-## Controlling the daemon from javascript
-
-If you need to start the daemon for your plugin you must first request access to the daemon-controlling object. 
-To do so, use the **requestDaemonAccess()** function:
+If you want to monitor the status of the daemon you have to request a daemon access. To do so, use the *requestDaemonAccess()* function
+on the core object:
 
 	var o = document.getElementById('cvmweb'),
 		daemon = o.requestDaemonAccess();
 
 The function will either return a *CVMWebAPIDaemon* instance or an numeric error code if something went wrong.
 
-Most of the times, you will only need to start the daemon. To do so, use the **start()** function:
+If the website is not in a privileged domain you can only access the following properties:
 
-	// Start the daemon (if it's already running this function does nothing)
-	daemon.start();
-	
-If the daemon was successfully started, a non-negative value will be returned. You can always check the status of the daemon
-via the **.isRunning** property.
+ * **.isRunning** (Read-only) : Returns true if the daemon is running.
+ * **.isSystemIdle** (Read-only) : Return true if the user's system is idle.
+ * **.idleTime** (Read-only) : Returns the amount of time the daemon should wait before entering the idle state.
+
+If you are in a privileged domain you get additionally the following:
+
+ * **.idleTime** (Read-Write) : You can change for how long the daemon should wait
+ * **.path** (Read-only) : The location of the daemon, as detected by the plugin
+ * **.start()** : Manually start the daemon
+ * **.stop()** : Manually stop the daemon
+
+## Opting-in for daemon management
+
+In order to control a session with the daemon you must set it's *.daemonControlled* property to *true*. You can then use the *.daemonMinCap*, *.daemonMaxCap*
+and *.daemonFlags* in order to define how the daemon will control the session. For example:
+
+	session.daemonControlled = true;	// Enable daemon on this session
+	session.daemonMinCap = 25;			// When the system is active, the execution cap will be at 25%
+	session.daemonMaxCap = 100;			// When the system is idle, the executionc ap will be at 100%
+
+You can use the following combinations in order to achieve different control options:
+
+<table>
+  <tr>
+  	<th>.daemonMinCap</th>
+	<th>.daemonMaxCap</th>
+	<th>.daemonFlags</th>
+	<th>What happens</th>
+  </tr>
+  <tr><td>&gt; 0</td><td>1 - 100</td><td>0</td><td>The VM is always running and it's execution cap is changed based on system's state.</td></tr>
+  <tr><td>0</td><td>(ignored)</td><td>0</td><td>The VM is paused when the system is active and resumed when idle.</td></tr>
+  <tr><td>0</td><td>(ignored)</td><td>1</td><td>The VM is hibernated when the system is active and started when idle.</td></tr>
+</table>
+
+The *.daemonFlags* is a bitmask integer that defines how the daemon will control the VM. Currently the following bits are used:
+
+<table>
+  <tr>
+  	<th>Bit</th>
+  	<th>Hex value</th>
+  	<th>Name</th>
+  	<th>Description</th>
+  </tr>
+  <tr><td>0</td><td>0x0001</td><td>DF_SUSPEND</td><td>Suspend the VM instead of pausing it when .daemonMinCap is 0.</td></tr>
+  <tr><td>1</td><td>0x0002</td><td>DF_AUTOSTART</td><td>Automatically start the VM if it's shut down.</td></tr>
+</table>
 
 # Security considerations
 
