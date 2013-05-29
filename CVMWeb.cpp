@@ -34,6 +34,7 @@
 #include "DaemonCtl.h"
 #include "ThinIPC.h"
 #include "Utilities.h"
+#include "Dialogs.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()
