@@ -304,6 +304,8 @@ the errors that can occur.
   <tr><td>-10</td><td>Not allowed</td></tr>
   <tr><td>-11</td><td>Not supported</td></tr>
   <tr><td>-12</td><td>Not validated</td></tr>
+  <tr><td>-13</td><td>Not trusted</td></tr>
+  <tr><td>-99</td><td>Invalid usage</td></tr>
   <tr><td>-100</td><td>Function is not implemented</td></tr>
 </table>
 
