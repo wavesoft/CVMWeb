@@ -18,6 +18,13 @@ add_definitions(
     /D "_ATL_STATIC_REGISTRY"
 )
 
+# Add definitions depending on build type
+IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  ADD_DEFINITIONS(/D "DEBUG")   
+ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  ADD_DEFINITIONS(/D "NDEBUG")
+ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+
 SOURCE_GROUP(Win FILES ${PLATFORM})
 
 set (SOURCES

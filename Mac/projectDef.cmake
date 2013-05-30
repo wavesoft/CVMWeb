@@ -14,6 +14,10 @@ file (GLOB PLATFORM RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     Mac/[^.]*.cmake
     )
 
+# use this to add preprocessor definitions
+add_definitions(
+)
+
 # Add definitions depending on build type
 IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
   ADD_DEFINITIONS(-DDEBUG)   

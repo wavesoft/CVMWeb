@@ -75,7 +75,7 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     
     // Truncate file
     std::string file = this->configDir + "/" + name + ".conf";
-    CVMWA_LOG( "Saving" << file );
+    CVMWA_LOG("Config", "Saving" << file );
     std::ofstream ofs ( file.c_str() , std::ofstream::out | std::ofstream::trunc);
     if (ofs.fail()) return false;
     
@@ -83,7 +83,7 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     for (std::map<std::string, std::string>::iterator it=map->begin(); it!=map->end(); ++it) {
         std::string key = (*it).first;
         std::string value = (*it).second;
-        std::cout << "[Config] Storing '" << key << "=" << value << "'" << std::endl;
+        CVMWA_LOG("Config", "Storing '" << key << "=" << value << "'");
         ofs << key << "=" << value << std::endl;
     }
     

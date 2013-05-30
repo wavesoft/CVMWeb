@@ -19,6 +19,13 @@ SOURCE_GROUP(X11 FILES ${PLATFORM})
 add_definitions(
 )
 
+# Add definitions depending on build type
+IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  ADD_DEFINITIONS(-DDEBUG)   
+ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  ADD_DEFINITIONS(-DNDEBUG)
+ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+
 set (SOURCES
     ${SOURCES}
     ${PLATFORM}

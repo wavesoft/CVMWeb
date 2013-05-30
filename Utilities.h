@@ -265,8 +265,8 @@ inline long getMillis() {
  * Debug macro
  */
 #if defined(DEBUG) || defined(LOGGING)
-#define CVMWA_LOG(...) \
-     do { if (DEBUG) { std::cerr << "[" << __func__ << "] " << __VA_ARGS__ << std::endl; }} while(0);
+#define CVMWA_LOG(kind, ...) \
+     do { std::cerr << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0);
 #else
 #define CVMWA_LOG(...) ;
 #endif

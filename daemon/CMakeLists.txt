@@ -13,6 +13,21 @@ set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
 # Static build
 SET(BUILD_SHARED_LIBS OFF)
 
+# Add definitions depending on build type
+if (WIN32)
+	IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(/D "DEBUG")   
+	ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(/D "NDEBUG")
+	ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+else(WIN32)
+	IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(-DDEBUG)   
+	ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(-DNDEBUG)
+	ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+endif(WIN32)
+
 # Check if we can use libCURL
 FIND_PACKAGE(CURL)
 IF(CURL_FOUND)
@@ -93,7 +108,7 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Utilities.cpp
-	${PROJECT_SOURCE_DIR}/../Config.cpp
+	${PROJECT_SOURCE_DIR}/../LocalConfig.cpp
 	${PROJECT_SOURCE_DIR}/../gzstream.cpp
 	)
 
