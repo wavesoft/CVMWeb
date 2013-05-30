@@ -14,11 +14,12 @@ file (GLOB PLATFORM RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     Mac/[^.]*.cmake
     )
 
-# use this to add preprocessor definitions
-add_definitions(
-    
-)
-
+# Add definitions depending on build type
+IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  ADD_DEFINITIONS(-DDEBUG)   
+ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  ADD_DEFINITIONS(-DNDEBUG)
+ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
 
 SOURCE_GROUP(Mac FILES ${PLATFORM})
 
@@ -35,7 +36,7 @@ add_mac_plugin(${PROJECT_NAME} ${PLIST} ${STRINGS} ${LOCALIZED} SOURCES)
 
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
-    ${PLUGIN_INTERNAL_DEPS}
+    ${PLUGIN_INTERNAL_DEPS} zlibstatic
     )
 
 # Include QT

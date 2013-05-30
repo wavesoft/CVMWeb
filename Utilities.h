@@ -261,4 +261,14 @@ inline long getMillis() {
     #endif
 }
 
+/**
+ * Debug macro
+ */
+#if defined(DEBUG) || defined(LOGGING)
+#define CVMWA_LOG(...) \
+     do { if (DEBUG) { std::cerr << "[" << __func__ << "] " << __VA_ARGS__ << std::endl; }} while(0);
+#else
+#define CVMWA_LOG(...) ;
+#endif
+
 #endif /* end of include guard: UTILITIES_H_JA64LPSF */

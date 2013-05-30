@@ -808,6 +808,7 @@ std::string VBoxSession::getProperty( std::string name ) {
     /* Invoke property query */
     int ans = this->wrapExec("guestproperty get "+this->uuid+" \""+name+"\"", &lines);
     if (ans != 0) return "";
+    if (lines.empty()) return "";
     
     /* Process response */
     value = lines[0];
@@ -915,6 +916,7 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
     /* Invoke property query */
     int ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines);
     if (ans != 0) return "";
+    if (lines.empty()) return "";
     
     /* Process response */
     value = lines[0];
@@ -961,6 +963,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     /* List the CPUID information */
     int ans = this->exec("list hostcpuids", &lines);
     if (ans != 0) return HVE_QUERY_ERROR;
+    if (lines.empty()) return HVE_EXTERNAL_ERROR;
     
     /* Process lines */
     for (vector<string>::iterator i = lines.begin(); i != lines.end(); i++) {
@@ -1013,6 +1016,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     /* List the system properties */
     ans = this->exec("list systemproperties", &lines);
     if (ans != 0) return HVE_QUERY_ERROR;
+    if (lines.empty()) return HVE_EXTERNAL_ERROR;
 
     /* Default limits */
     caps->max.cpus = 1;

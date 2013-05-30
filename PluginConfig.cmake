@@ -70,3 +70,4 @@ set(FBMAC_USE_INVALIDATINGCOREANIMATION 0)
 # Curl library for content fetching
 add_firebreath_library(curl)
 add_firebreath_library(openssl)
+

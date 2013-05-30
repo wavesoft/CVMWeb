@@ -1,0 +1,1 @@
+/usr/bin/cc   -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/example.dir/test/example.o  -o example  libz.1.2.8.dylib 

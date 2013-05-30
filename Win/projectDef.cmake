@@ -46,7 +46,7 @@ add_windows_plugin(${PROJECT_NAME} SOURCES)
 
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
-    ${PLUGIN_INTERNAL_DEPS}
+    ${PLUGIN_INTERNAL_DEPS} zlibstatic
     )
 
 set(WIX_HEAT_FLAGS

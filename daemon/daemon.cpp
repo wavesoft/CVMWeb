@@ -30,6 +30,7 @@
 #include "Hypervisor.h"
 #include "Virtualbox.h"
 #include "ThinIPC.h"
+#include "LocalConfig.h"
 #include "platform.h"
 
 #include "../DaemonCtl.h"
@@ -44,6 +45,7 @@ time_t                reloadTimer;
 int                   idleTime;
 bool                  isIdle = false;
 bool                  isAlive = true;
+LocalConfig         * config;
 
 /**
  * Switch the idle states of the VMs
@@ -172,6 +174,7 @@ void serverThread() {
                 idleTime = msg.readShort();
                 ans.writeShort(DIPC_ANS_OK);
                 ans.writeShort(idleTime);
+                config->setNum<int>( "idle-time", idleTime );
                 
             } else if (iAction == DIPC_GET_IDLETIME) { // Return the current idle time settings
                 ans.writeShort(DIPC_ANS_OK);
@@ -225,7 +228,9 @@ int main( int argc, char ** argv ) {
     thinIPCInitialize();
     
     /* Initialize arguments */
-    idleTime = 30;
+    config = new LocalConfig();
+    idleTime = config->getNumDef<int>( "idle-time", 30 );
+    config->setNum("idle-time", idleTime);
     
     /* Reset state */
     reloadTimer = time( NULL );
@@ -272,8 +277,9 @@ int main( int argc, char ** argv ) {
         
     }
     
-    /* Unlock lockfile */
+    /* Cleanup */
     daemonUnlock( lockInfo );
+    delete(config);
     
     /* Graceful cleanup */
     return 0;

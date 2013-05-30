@@ -45,5 +45,5 @@ add_definitions(${GTK3_CFLAGS_OTHER})
 
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
-    ${PLUGIN_INTERNAL_DEPS} ${GTK3_LIBRARIES} ${X11_LIBRARY} ${GTHREAD_LIBRARY}
+    ${PLUGIN_INTERNAL_DEPS} ${GTK3_LIBRARIES} ${X11_LIBRARY} ${GTHREAD_LIBRARY} zlibstatic
     )

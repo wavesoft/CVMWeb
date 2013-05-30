@@ -38,6 +38,10 @@ SET( SOURCES
 # depending on the platform
 include_platform()
 
+# Include z-lib
+set( EXTERN_ZLIB "extern/zlib-1.2.8" )
+add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
+
 #this will build a Chrome package
 #add_chrome_package(${PLUGIN_NAME}
 #	${FB_BIN_DIR}/${PLUGIN_NAME}/${CMAKE_CFG_INTDIR}/ 

@@ -7,6 +7,12 @@ set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
 set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
 set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
 
+# External libraries
+set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
+
+# Static build
+SET(BUILD_SHARED_LIBS OFF)
+
 # Check if we can use libCURL
 FIND_PACKAGE(CURL)
 IF(CURL_FOUND)
@@ -44,15 +50,19 @@ ENDIF(OPENSSL_FOUND)
 # Use FireBreath (already built) boost libraries
 ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
 INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
-if(UNIX)
-	file ( GLOB BOOST_LIBRARIES 
-		${FB_BOOST_LIB_DIR}/thread/*.a
-		${FB_BOOST_LIB_DIR}/system/*.a )
-else()
+if (WIN32)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
 		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
-endif()
+elseif(APPLE)
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+elseif(UNIX)
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/*.a
+		${FB_BOOST_LIB_DIR}/system/*.a )
+ENDIF(WIN32)
 IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 ENDIF()
@@ -69,6 +79,10 @@ elseif(UNIX)
 	include ( ${PROJECT_SOURCE_DIR}/Linux/platform.cmake )
 ENDIF(WIN32)
 
+# Build zlib statically from the resources
+add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
+set( LIBZ_LIBRARIES zlibstatic )
+
 # Sources
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/daemon.cpp 
@@ -79,6 +93,8 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Utilities.cpp
+	${PROJECT_SOURCE_DIR}/../Config.cpp
+	${PROJECT_SOURCE_DIR}/../gzstream.cpp
 	)
 
 # Platform-specific link details
@@ -91,6 +107,7 @@ elseif(UNIX)
 ENDIF(WIN32)
 
 # Libraries
-target_link_libraries (${PROJECT_NAME} ${CURL_LIBRARIES})
-target_link_libraries (${PROJECT_NAME} ${OPENSSL_LIBRARIES})
-target_link_libraries (${PROJECT_NAME} ${BOOST_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${CURL_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${OPENSSL_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${BOOST_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${LIBZ_LIBRARIES} )

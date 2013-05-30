@@ -89,6 +89,7 @@ template std::string ntos<long>( long &value );
  * + CernVM/
  * +-- WebAPI/
  *   +-- cache/
+ *   +-- config/
  *   +-- run/
  *
  */
@@ -107,6 +108,8 @@ std::string prepareAppDataPath() {
     _mkdir(subDir.c_str());
     subDir = homeDir + "/run";
     _mkdir(subDir.c_str());
+    subDir = homeDir + "/config";
+    _mkdir(subDir.c_str());
     #endif
     
     /* On Apple it goes on user's Application Support */
@@ -122,6 +125,8 @@ std::string prepareAppDataPath() {
     mkdir(subDir.c_str(), 0777);
     subDir = homeDir + "/run";
     mkdir(subDir.c_str(), 0777);
+    subDir = homeDir + "/config";
+    mkdir(subDir.c_str(), 0777);
     #endif
     
     /* On linux it goes on the .cernvm dotfolder in user's home dir */
@@ -136,6 +141,8 @@ std::string prepareAppDataPath() {
     subDir = homeDir + "/cache";
     mkdir(subDir.c_str(), 0777);
     subDir = homeDir + "/run";
+    mkdir(subDir.c_str(), 0777);
+    subDir = homeDir + "/config";
     mkdir(subDir.c_str(), 0777);
     #endif
     
@@ -266,6 +273,7 @@ void splitLines( string rawString, vector<string> * out ) {
 map<string, string> tokenize( vector<string> * lines, char delim ) {
     map<string, string> ans;
     string line, key, value;
+    if (lines->empty()) return ans;
     for (vector<string>::iterator i = lines->begin(); i != lines->end(); i++) {
         line = *i;
         if (line.find(delim) != string::npos) {
