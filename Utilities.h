@@ -60,6 +60,7 @@
 #include <sys/stat.h>
 #include <pwd.h>
 #include <stdio.h>
+#include <libgen.h>
 #endif
 
 // only for linux
@@ -94,6 +95,11 @@ std::string                                         getAppDataPath  ( );
  * Remove a trailing folder from the given path
  */
 std::string                                         stripComponent  ( std::string path );
+
+/**
+ * Cross-platform basename implementation
+ */
+std::string                                         getFilename     ( std::string path );
 
 /**
  * Download a string from the given URL
@@ -193,6 +199,11 @@ void                                                hexDump         (const char 
  * Allow only the given characters on the string specified
  */
 bool                                                isSanitized     ( std::string * check, const char * chars );
+
+/**
+ * Decompress a GZipped file from src and write it to dst
+ */
+int                                                 decompressFile  ( std::string filename, std::string output );
 
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */

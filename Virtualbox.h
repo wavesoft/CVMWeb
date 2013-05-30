@@ -42,7 +42,7 @@ public:
     virtual int             reset();
     virtual int             stop();
     virtual int             hibernate();
-    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion );
+    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
     virtual int             start( std::string userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
@@ -53,7 +53,7 @@ public:
     
     /* VirtualBox-specific functions */
     int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList );
-    int                     getMachineUUID( std::string mname, std::string * ans_uuid );
+    int                     getMachineUUID( std::string mname, std::string * ans_uuid, int flags );
     std::string             getHostOnlyAdapter  ();
     std::map<std::string, 
         std::string>        getMachineInfo      ();

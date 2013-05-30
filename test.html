@@ -140,6 +140,10 @@
 						_dis("session-disk", true);
 						_dis("session-ver", true);
 						_dis("session-open", true);					
+						_dis("session-url", true);
+						_dis("ctype-cvm", true);
+						_dis("ctype-disk", true);
+						_dis("ctype-64bit", true);
 						_sval("session-cpus", session.cpus);
 						_sval("session-ram", session.ram);
 						_sval("session-disk", session.disk);
@@ -191,6 +195,10 @@
 						_dis("session-disk", false);
 						_dis("session-ver", false);
 						_dis("session-open", false);
+						_dis("session-url", false);
+						_dis("ctype-cvm", false);
+						_dis("ctype-disk", false);
+						_dis("ctype-64bit", false);
 					});
 					session.addEventListener('close', function() { // Session Closed
 						_vis('tbl-run', false);
@@ -199,6 +207,10 @@
 						_dis("session-disk", false);
 						_dis("session-ver", false);
 						_dis("session-open", false);
+						_dis("session-url", false);
+						_dis("ctype-cvm", false);
+						_dis("ctype-disk", false);
+						_dis("ctype-64bit", false);
 						_txt( "state", "Session closed" );
 					});
 					session.addEventListener('closeError', function(msg, id) { // Close Error
@@ -276,14 +288,29 @@
 		//    requirements.
 		///////////////////////////////////////////////////
 		
-		function openSession( cpus, ram, disk, version ) {
-			var ans = session.open({
+		function openSession() {
+			var cpus = _val('session-cpus'), 
+				ram = _val('session-ram'), 
+				disk = _val('session-disk'), 
+				version = _val('session-ver'),
+				url = _val('session-url');
+			
+			// Prepare configuration hash based on user preferences
+			var config = {
 				'cpus': cpus,
 				'ram': ram,
 				'disk': disk,
-				'version': version
-			});
+			};
+			if (document.getElementById('ctype-disk').checked) {
+				config['diskURL'] = url;
+				config['cpu64bit'] = document.getElementById('ctype-64bit').checked;
+			} else {
+				config['version'] = version;
+			}
+			window.console.log(config);
 			
+			// Start session
+			var ans = session.open(config);
 			if (ans != 1) { // 1 means 'scheduled'
 				alert('Unable to open session. Error #'+ans+'!');
 			} else {
@@ -294,6 +321,10 @@
 				_dis("session-disk", true);
 				_dis("session-ver", true);
 				_dis("session-open", true);
+				_dis("session-url", true);
+				_dis("ctype-cvm", true);
+				_dis("ctype-disk", true);
+				_dis("ctype-64bit", true);
 				
 			}
 			
@@ -484,24 +515,34 @@
 				<td valign="top">
 					<table id="tbl-open" style="visibility: hidden">
 						<tr>
-							<td align="right">VCPUs:</td>
+							<td colspan="2" align="right">VCPUs:</td>
 							<td><input id="session-cpus" value="1" type="text" /></td>
 						</tr>
 						<tr>
-							<td align="right">RAM:</td>
+							<td colspan="2" align="right">RAM:</td>
 							<td><input id="session-ram" value="256" type="text" /> Mb</td>
 						</tr>
 						<tr>
-							<td align="right">Disk:</td>
+							<td colspan="2" align="right">Disk:</td>
 							<td><input id="session-disk" value="1024" type="text" /> Mb</td>
 						</tr>
 						<tr>
-							<td align="right">&mu;CernVM:</td>
+							<td><input type="radio" name="create-type" id="ctype-cvm" value="1" checked="checked" /></td>
+							<td align="right"><label for="ctype-cvm">&mu;CernVM:</label></td>
 							<td><input id="session-ver" value="1.4" type="text" /></td>
 						</tr>
 						<tr>
-							<td colspan="2" align="center">
-								<input type="button" value="Open Session" id="session-open" onclick="openSession(_val('session-cpus'), _val('session-ram'), _val('session-disk'), _val('session-ver'));" />
+							<td><input type="radio" name="create-type" id="ctype-disk" value="2" /></td>
+							<td align="right"><label for="ctype-disk">Disk URL:</label></td>
+							<td><input id="session-url" value="http://cernvm.cern.ch/releases/19/cernvm-boinc-2.7.1-2-1-x86.vdi.gz" type="text" /></td>
+						</tr>
+						<tr>
+							<td>&nbsp;</td>
+							<td colspan="2" align="left"><input type="checkbox" id="ctype-64bit" value="1"/> <label for="ctype-64bit">64-Bit OS</label></td>
+						</tr>
+						<tr>
+							<td colspan="3" align="center">
+								<input type="button" value="Open Session" id="session-open" onclick="openSession();" />
 							</td>
 						</tr>
 					</table>

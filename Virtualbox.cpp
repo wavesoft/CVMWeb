@@ -124,7 +124,7 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
 /**
  * Open new session
  */
-int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) { 
+int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) { 
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
@@ -143,7 +143,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
         
     /* (1) Create slot */
     if (this->onProgress!=NULL) (this->onProgress)(5, 100, "Allocating VM slot", this->cbObject);
-    ans = this->getMachineUUID( this->name, &uuid );
+    ans = this->getMachineUUID( this->name, &uuid, flags );
     if (ans != 0) {
         this->state = STATE_ERROR;
         return ans;
@@ -197,137 +197,245 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
     if (this->onProgress!=NULL) (this->onProgress)(20, 100, "Fetching machine info", this->cbObject);
     map<string, string> machineInfo = this->getMachineInfo();
 
-    /* Check for scratch disk */
-    if (machineInfo.find( SCRATCH_DSK ) == machineInfo.end()) {
-        
-        /* Create a hard disk for this VM */
-        string vmDisk = getTmpFile(".vdi");
+    /* ============================================================================= */
+    /*   MODE 1 : Regular Mode
+    /* ----------------------------------------------------------------------------- */
+    /*   In this mode the 'cvmVersion' variable contains the URL of a gzipped VMDK   */
+    /*   image. This image will be downloaded, extracted and placed on cache. Then   */
+    /*   it will be cloned using copy-on write mode on the user's VM directory.      */
+    /* ============================================================================= */
     
-        /* (4) Create disk */
-        args.str("");
-        args << "createhd "
-            << " --filename "   << "\"" << vmDisk << "\""
-            << " --size "       << disk;
-    
-        if (this->onProgress!=NULL) (this->onProgress)(25, 100, "Creating scratch disk", this->cbObject);
-        ans = this->wrapExec(args.str(), NULL);
-        cout << "Create HD=" << ans << "\n";
-        if (ans != 0) {
-            this->state = STATE_ERROR;
-            return HVE_MODIFY_ERROR;
-        }
-        
-        /* (4.b) VirtualBox < 4.0 needs openmedium */
-        if (this->host->verMajor < 4) {
-            args.str("");
-            args << "openmedium "
-                << " disk "   << "\"" << vmDisk << "\"";
-            if (this->onProgress!=NULL) (this->onProgress)(30, 100, "Importing disk", this->cbObject);
-            ans = this->wrapExec(args.str(), NULL);
-            cout << "Close medium=" << ans << "\n";
-            if (ans != 0) {
-                this->state = STATE_ERROR;
-                return HVE_MODIFY_ERROR;
-            }
-        }
-
-        /* (5) Attach disk to the SATA controller */
-        args.str("");
-        args << "storageattach "
-            << uuid
-            << " --storagectl " << SCRATCH_CONTROLLER
-            << " --port "       << SCRATCH_PORT
-            << " --device "     << SCRATCH_DEVICE
-            << " --type "       << "hdd"
-            << " --setuuid "    << "\"\"" 
-            << " --medium "     << "\"" << vmDisk << "\"";
-
-        if (this->onProgress!=NULL) (this->onProgress)(35, 100, "Attaching hard disk", this->cbObject);
-        ans = this->wrapExec(args.str(), NULL);
-        cout << "Storage Attach=" << ans << "\n";
-        if (ans != 0) {
-            this->state = STATE_ERROR;
-            return HVE_MODIFY_ERROR;
-        }
-        
-    }
-    
-    /* Check if the CernVM Version the machine is using is the one we need */
-    needsUpdate = true;
-    if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
-        
-        /* Get the filename of the iso */
-        getKV( machineInfo[ BOOT_DSK ], &kk, &kv, '(', 0 );
-        kk = kk.substr(0, kk.length()-1);
-        
-        /* Get the filename of the given version */
-        this->host->cernVMCached( cvmVersion, &kv );
-        
-        /* If they are the same, we are lucky */
-        if (kv.compare(kk) == 0) {
-            cout << "Same versions (" << kv << ")\n";
-            needsUpdate = false;
-        } else {
-            cout << "CernVM iso is different : " << kk << " / " << kv << "\n";
-            
-            /* Unmount previount iso */
-            args.str("");
-            args << "storageattach "
-                << uuid
-                << " --storagectl " << BOOT_CONTROLLER
-                << " --port "       << BOOT_PORT
-                << " --device "     << BOOT_DEVICE
-                << " --medium "     << "none";
-
-            if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Detachining previous CernVM ISO", this->cbObject);
-            ans = this->wrapExec(args.str(), NULL);
-            cout << "Detaching ISO=" << ans << "\n";
-            if (ans != 0) {
-                this->state = STATE_ERROR;
-                return HVE_MODIFY_ERROR;
-            }
-        }
-    
-    }
-    
-    /* Check if we need to update the CD-ROM attaching business */
-    if (needsUpdate) {
+    if ((flags & HVF_DEPLOY_REGULAR) != 0) {
         
         /**
          * Prepare download feedback
          */
         HVPROGRESS_FEEDBACK feedback;
         feedback.total = 100;
-        feedback.min = 40;
+        feedback.min = 20;
         feedback.max = 90;
         feedback.callback = this->onProgress;
         feedback.data = this->cbObject;
-        feedback.message = "Downloading CernVM";
-
-        /* Download CernVM */
-        if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Downloading CernVM", this->cbObject);
-        if (this->host->cernVMDownload( cvmVersion, &vmIso, &feedback ) != 0) {
+        feedback.message = "Downloading VM Disk";
+        
+        /* (3) Download the disk image specified by the URL */
+        string masterDisk;
+        ans = this->host->diskImageDownload( cvmVersion, &masterDisk, &feedback );
+        if (ans < HVE_OK) {
             this->state = STATE_ERROR;
-            return HVE_IO_ERROR;
+            return ans;
         }
 
-        /* (6) Attach boot CD-ROM to the controller */
-        args.str("");
-        args << "storageattach "
-            << uuid
-            << " --storagectl " << BOOT_CONTROLLER
-            << " --port "       << BOOT_PORT
-            << " --device "     << BOOT_DEVICE
-            << " --type "       << "dvddrive"
-            << " --medium "     << "\"" << vmIso << "\"";
-    
-        if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching CD-ROM", this->cbObject);
-        ans = this->wrapExec(args.str(), NULL);
-        cout << "Storage Attach (CernVM)=" << ans << "\n";
-        if (ans != 0) {
-            this->state = STATE_ERROR;
-            return HVE_MODIFY_ERROR;
-        }        
+        /* (4) Check if the disk actually has the image we need */
+        needsUpdate = true;
+        if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
+            
+            /* Get the filename of the iso */
+            getKV( machineInfo[ BOOT_DSK ], &kk, &kv, '(', 0 );
+            kk = kk.substr(0, kk.length()-1);
+            
+            /* If they are the same, we are lucky */
+            if (kk.compare( masterDisk ) == 0) {
+                cout << "Same disk (" << masterDisk << ")\n";
+                needsUpdate = false;
+                
+            } else {
+                cout << "Master disk is different : " << kk << " / " << masterDisk << "\n";
+
+                /* Unmount previount iso */
+                args.str("");
+                args << "storageattach "
+                    << uuid
+                    << " --storagectl " << BOOT_CONTROLLER
+                    << " --port "       << BOOT_PORT
+                    << " --device "     << BOOT_DEVICE
+                    << " --medium "     << "none";
+
+                if (this->onProgress!=NULL) (this->onProgress)(93, 100, "Detachining previous disk", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Detaching ISO=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_ERROR;
+                    return HVE_MODIFY_ERROR;
+                }
+                
+            }
+            
+        }
+        
+        /* If we must attach the disk, do it now */
+        if (needsUpdate) {
+            
+            /* Check Multiattach conditions */
+            
+            /* (5) Attach disk to the SATA controller */
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << BOOT_CONTROLLER
+                << " --port "       << BOOT_PORT
+                << " --device "     << BOOT_DEVICE
+                << " --type "       << "hdd"
+                << " --mtype "      << "multiattach"
+                << " --setuuid "    << "\"\"" 
+                << " --medium "     << "\"" << masterDisk << "\"";
+
+            if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching hard disk", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Storage Attach=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_ERROR;
+                return HVE_MODIFY_ERROR;
+            }
+            
+        }
+
+        
+    }
+
+    /* ============================================================================= */
+    /*   MODE 2 : CernVM-Micro Mode
+    /* ----------------------------------------------------------------------------- */
+    /*   In this mode a new blank, scratch disk is created. The 'cvmVersion'         */
+    /*   contains the version of the VM
+    /* ============================================================================= */
+    else {
+        
+        /* Check for scratch disk */
+        if (machineInfo.find( SCRATCH_DSK ) == machineInfo.end()) {
+
+            /* Create a hard disk for this VM */
+            string vmDisk = getTmpFile(".vdi");
+
+            /* (4) Create disk */
+            args.str("");
+            args << "createhd "
+                << " --filename "   << "\"" << vmDisk << "\""
+                << " --size "       << disk;
+
+            if (this->onProgress!=NULL) (this->onProgress)(25, 100, "Creating scratch disk", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Create HD=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_ERROR;
+                return HVE_MODIFY_ERROR;
+            }
+
+            /* (4.b) VirtualBox < 4.0 needs openmedium */
+            /*
+            if (this->host->verMajor < 4) {
+                args.str("");
+                args << "openmedium "
+                    << " disk "   << "\"" << vmDisk << "\"";
+                if (this->onProgress!=NULL) (this->onProgress)(30, 100, "Importing disk", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Close medium=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_ERROR;
+                    return HVE_MODIFY_ERROR;
+                }
+            }
+            */
+
+            /* (5) Attach disk to the SATA controller */
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << SCRATCH_CONTROLLER
+                << " --port "       << SCRATCH_PORT
+                << " --device "     << SCRATCH_DEVICE
+                << " --type "       << "hdd"
+                << " --setuuid "    << "\"\"" 
+                << " --medium "     << "\"" << vmDisk << "\"";
+
+            if (this->onProgress!=NULL) (this->onProgress)(35, 100, "Attaching hard disk", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Storage Attach=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_ERROR;
+                return HVE_MODIFY_ERROR;
+            }
+
+        }
+
+        /* Check if the CernVM Version the machine is using is the one we need */
+        needsUpdate = true;
+        if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
+
+            /* Get the filename of the iso */
+            getKV( machineInfo[ BOOT_DSK ], &kk, &kv, '(', 0 );
+            kk = kk.substr(0, kk.length()-1);
+
+            /* Get the filename of the given version */
+            this->host->cernVMCached( cvmVersion, &kv );
+
+            /* If they are the same, we are lucky */
+            if (kv.compare(kk) == 0) {
+                cout << "Same versions (" << kv << ")\n";
+                needsUpdate = false;
+            } else {
+                cout << "CernVM iso is different : " << kk << " / " << kv << "\n";
+
+                /* Unmount previount iso */
+                args.str("");
+                args << "storageattach "
+                    << uuid
+                    << " --storagectl " << BOOT_CONTROLLER
+                    << " --port "       << BOOT_PORT
+                    << " --device "     << BOOT_DEVICE
+                    << " --medium "     << "none";
+
+                if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Detachining previous CernVM ISO", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Detaching ISO=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_ERROR;
+                    return HVE_MODIFY_ERROR;
+                }
+            }
+
+        }
+
+        /* Check if we need to update the CD-ROM attaching business */
+        if (needsUpdate) {
+
+            /**
+             * Prepare download feedback
+             */
+            HVPROGRESS_FEEDBACK feedback;
+            feedback.total = 100;
+            feedback.min = 40;
+            feedback.max = 90;
+            feedback.callback = this->onProgress;
+            feedback.data = this->cbObject;
+            feedback.message = "Downloading CernVM";
+
+            /* Download CernVM */
+            if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Downloading CernVM", this->cbObject);
+            if (this->host->cernVMDownload( cvmVersion, &vmIso, &feedback ) != 0) {
+                this->state = STATE_ERROR;
+                return HVE_IO_ERROR;
+            }
+
+            /* (6) Attach boot CD-ROM to the controller */
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << BOOT_CONTROLLER
+                << " --port "       << BOOT_PORT
+                << " --device "     << BOOT_DEVICE
+                << " --type "       << "dvddrive"
+                << " --medium "     << "\"" << vmIso << "\"";
+
+            if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching CD-ROM", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Storage Attach (CernVM)=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_ERROR;
+                return HVE_MODIFY_ERROR;
+            }        
+        }
+        
     }
     
     /* Store web-secret on the guest properties */
@@ -588,7 +696,7 @@ int VBoxSession::close() {
 /**
  * Create or fetch the UUID of the VM with the given name
  */
-int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid ) {
+int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid, int flags ) {
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
@@ -615,11 +723,15 @@ int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid ) {
         }
     }
     
+    /* Check what kind of linux to create */
+    string osType = "Linux26";
+    if ((flags & HVF_SYSTEM_64BIT) != 0) osType="Linux26_64";
+    
     /* Not found, create VM */
     args.str("");
     args << "createvm"
         << " --name \"" << mname << "\""
-        << " --ostype Linux26_64"
+        << " --ostype " << osType
         << " --register";
     
     ans = this->wrapExec(args.str(), &lines);
@@ -949,6 +1061,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->daemonMinCap = 0;
     sess->daemonMaxCap = 100;
     sess->daemonFlags = 0;
+    sess->flags = 0;
     return sess;
 }
 
@@ -1069,6 +1182,14 @@ int Virtualbox::updateSession( HVSession * session ) {
         session->cpus = ston<int>( info["Number of CPUs"] );
     }
     
+    /* Check flags */
+    if (info.find("Guest OS") != info.end()) {
+        string guestOS = info["Guest OS"];
+        if (guestOS.find("64 bit") != string::npos) {
+            session->flags |= HVF_SYSTEM_64BIT;
+        }
+    }
+    
     /* Parse RDP info */
     if (info.find("VRDE") != info.end()) {
         string rdpInfo = info["VRDE"];
@@ -1112,8 +1233,15 @@ int Virtualbox::updateSession( HVSession * session ) {
         
         /* Extract CernVM Version from file */
         session->version = this->cernVMVersion( kk );
-        if (session->version.empty()) 
+        if (session->version.empty()) {
             session->version = DEFAULT_CERNVM_VERSION;
+            session->flags |= HVF_DEPLOY_REGULAR;
+            
+        } else {
+            session->version = getFilename( kk ); // Using regular deployment
+            session->flags |= HVF_DEPLOY_REGULAR;
+            
+        }
     }
     
     /* Parse disk size */

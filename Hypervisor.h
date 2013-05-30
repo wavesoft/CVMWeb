@@ -28,6 +28,7 @@
 #define HV_VIRTUALBOX           1
 
 /* Error messages */
+#define HVE_ALREADY_EXISTS      2
 #define HVE_SCHEDULED           1
 #define HVE_OK                  0
 #define HVE_CREATE_ERROR        -1
@@ -54,6 +55,10 @@
 #define STATE_STARTED           4
 #define STATE_ERROR             5
 #define STATE_PAUSED            6
+
+/* Virtual machine session flags */
+#define HVF_SYSTEM_64BIT        1       // The system is 64-bit instead of 32-bit
+#define HVF_DEPLOY_REGULAR      2       // Use regular deployment (HDD) instead of micro-iso
 
 /* Default CernVM Version */
 #define DEFAULT_CERNVM_VERSION  "1.4"
@@ -82,6 +87,12 @@ public:
         this->state = 0;
         this->internalID = 0;
         this->cbObject = NULL;
+        this->uuid = "";
+        this->ip = "";
+        this->key = "";
+        this->name = "";
+        
+        this->flags = 0;
         
     };
     
@@ -98,6 +109,8 @@ public:
     int                     apiPort;
     std::string             version;
     
+    int                     flags;
+    
     bool                    daemonControlled;
     int                     daemonMinCap;
     int                     daemonMaxCap;
@@ -111,7 +124,7 @@ public:
     virtual int             reset();
     virtual int             stop();
     virtual int             hibernate();
-    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion );
+    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
     virtual int             start( std::string userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
@@ -197,28 +210,29 @@ public:
         
     /* Session management commands */
     std::vector<HVSession*> sessions;
-    HVSession *             sessionLocate   ( std::string uuid );
-    HVSession *             sessionOpen     ( std::string name, std::string key );
-    HVSession *             sessionGet      ( int id );
-    int                     sessionFree     ( int id );
-    int                     sessionValidate ( std::string name, std::string key );
+    HVSession *             sessionLocate       ( std::string uuid );
+    HVSession *             sessionOpen         ( std::string name, std::string key );
+    HVSession *             sessionGet          ( int id );
+    int                     sessionFree         ( int id );
+    int                     sessionValidate     ( std::string name, std::string key );
 
     /* Overridable functions */
-    virtual int             loadSessions    ( );
-    virtual int             updateSession   ( HVSession * session );
-    virtual HVSession *     allocateSession ( std::string name, std::string key );
-    virtual int             freeSession     ( HVSession * sess );
-    virtual int             registerSession ( HVSession * sess );
-    virtual int             getUsage        ( HVINFO_RES * usage);
-    virtual int             getCapabilities ( HVINFO_CAPS * caps );
+    virtual int             loadSessions        ( );
+    virtual int             updateSession       ( HVSession * session );
+    virtual HVSession *     allocateSession     ( std::string name, std::string key );
+    virtual int             freeSession         ( HVSession * sess );
+    virtual int             registerSession     ( HVSession * sess );
+    virtual int             getUsage            ( HVINFO_RES * usage);
+    virtual int             getCapabilities     ( HVINFO_CAPS * caps );
     
     /* Tool functions */
-    int                     exec            ( std::string args, std::vector<std::string> * stdoutList );
-    void                    detectVersion   ( );
-    int                     cernVMDownload  ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
-    int                     cernVMCached    ( std::string version, std::string * filename );
-    std::string             cernVMVersion   ( std::string filename );
-    int                     buildContextISO ( std::string userData, std::string * filename );
+    int                     exec                ( std::string args, std::vector<std::string> * stdoutList );
+    void                    detectVersion       ( );
+    int                     cernVMDownload      ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
+    int                     cernVMCached        ( std::string version, std::string * filename );
+    std::string             cernVMVersion       ( std::string filename );
+    int                     diskImageDownload   ( std::string url, std::string * filename, HVPROGRESS_FEEDBACK * fb );
+    int                     buildContextISO     ( std::string userData, std::string * filename );
 
     /* Check if we need to start or stop the daemon */
     int                     checkDaemonNeed ();

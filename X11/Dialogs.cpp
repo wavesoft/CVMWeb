@@ -38,7 +38,7 @@ void CVMInitializeDialogs()
     
     // Initialize GTK thread-safety
     g_thread_init(NULL);
-    //gdk_threads_init();
+    gdk_threads_init();
 }
 
 gboolean display_dialog( gpointer user_data )
@@ -75,7 +75,9 @@ bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std
 
     // Thread-safe GTK init
     g_idle_add( display_dialog, &dialog_data );
+    GDK_THREADS_ENTER();
     gtk_main();
+    GDK_THREADS_LEAVE();
 
     return (dialog_data.result == GTK_RESPONSE_YES);
 }

@@ -231,17 +231,43 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
     int ram = 256;
     int disk = 1024;
     int ans = 0;
+    int flags = 0;
     std::string ver = DEFAULT_CERNVM_VERSION;
     if (o != NULL) {
         if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
         if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
         if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
-        if (o->HasProperty("version")) {
+        
+        // If we use 'disk' field instead of 'version', we instruct the plugin to 
+        // use the classic, disk-based installation.
+        if (o->HasProperty("diskURL")) {
+            ver = o->GetProperty("diskURL").convert_cast<std::string>();
+            flags |= HVF_DEPLOY_REGULAR;
+            
+            // Check for 64bit image
+            bool is64bit = false;
+            if (o->HasProperty("cpu64bit")) {
+                try {
+                    is64bit = o->GetProperty("cpu64bit").convert_cast<bool>();
+                } catch ( const FB::bad_variant_cast &) {
+                    is64bit = false;
+                }
+            }
+            if (is64bit)
+                flags |= HVF_SYSTEM_64BIT;
+            
+        } else if (o->HasProperty("version")) {
             ver = o->GetProperty("version").convert_cast<std::string>();
             if (!isSanitized(&ver, "01234567890.")) ver=DEFAULT_CERNVM_VERSION;
+            flags |= HVF_SYSTEM_64BIT; // Micro is currently only 64-bit
+            
+        } else {
+            ver = DEFAULT_CERNVM_VERSION;
+            flags |= HVF_SYSTEM_64BIT; // Micro is currently only 64-bit
+
         }
     }
-    ans = this->session->open( cpus, ram, disk, ver);
+    ans = this->session->open( cpus, ram, disk, ver, flags );
     if (ans == 0) {
         this->fire_open();
     } else {

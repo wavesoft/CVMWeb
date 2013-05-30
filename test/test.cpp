@@ -21,8 +21,7 @@ void logDebug( std::string line, void * o ) {
 
 int main( int argc, char ** argv ) {
     
-    std::string test = "1.31a";
-    std::cout << isSanitized( &test, "01234567890." ) << std::endl;
+    std::cout << getFilename( "http://www.wna.gr/test.jpeg" ) << std::endl;
     
     return 0;
 }

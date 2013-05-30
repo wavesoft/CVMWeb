@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <sstream>
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -30,9 +29,13 @@
 #include <cmath>
 #include <cctype>
 #include <cassert>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 #include <openssl/sha.h>
 
+#include "gzstream.h"
 #include "Utilities.h"
 #include "Hypervisor.h"
 
@@ -163,6 +166,43 @@ std::string stripComponent( std::string path ) {
     
     /* Keep only path */
     return path.substr(0, iPos);
+}
+
+/**
+ * Cross-platform implementation of basename
+ */
+std::string getFilename ( std::string path ) {
+    std::string ans = "";
+    #ifndef _WIN32
+    
+        // Copy path to char * because dirname might modify it
+        char * srcDirname = (char *) malloc( path.length() + 1 );
+        path.copy( srcDirname, path.length(), 0 );
+        srcDirname[ path.length() ] = '\0';
+        
+        // Do the conversion
+        char * dirname = ::dirname( srcDirname );
+        ans = dirname;
+        
+        // Release pointer
+        free( srcDirname );
+        
+    #else
+    
+        char fname[_MAX_FNAME];
+        char ext[_MAX_EXT];
+        _splitpath_s(
+                path.c_str(),
+                NULL, 0,
+                NULL, 0,
+                &fname, _MAX_FNAME,
+                &ext, _MAX_EXT
+            );
+        ans += fname;
+        ans += ext;
+        
+    #endif
+    return ans;
 }
 
 /**
@@ -795,6 +835,59 @@ bool isSanitized( std::string * check, const char * chars ) {
     }
     return true;
 }
+
+/**
+ * Decompress a GZipped file from src and write it to dst
+ */
+int decompressFile( std::string src, std::string dst ) {
+
+    // check alternate way of opening file
+    igzstream    in2;
+    in2.open( src.c_str() );
+    if ( ! in2.good()) {
+        CVMWA_LOG("Error", "Opening gz-file `" << src << "' failed.");
+	    return HVE_NOT_FOUND;
+    }
+    in2.close();
+    if ( ! in2.good()) {
+        CVMWA_LOG("Error", "Closing gz-file `" << src << "' failed.");
+	    return HVE_NOT_FOUND;
+    }
+    
+    // now use the shorter way with the constructor to open the same file
+    igzstream in(  src.c_str() );
+    if ( ! in.good()) {
+        CVMWA_LOG("Error", " Opening file `" << srd << "' failed.");
+	    return HVE_NOT_FOUND;
+    }
+    std::ofstream  out( dst.c_str() );
+    if ( ! out.good()) {
+        CVMWA_LOG("Error", " Opening file `" << dst << "' failed.");
+	    return HVE_NOT_FOUND;
+    }
+    
+    // Decompress
+    char c;
+    while ( in.get(c))
+	    out << c;
+    in.close();
+    out.close();
+    
+    // Check if everything went as expected
+    if ( ! in.eof()) {
+        CVMWA_LOG("Error", " Reading file `" << src << "' failed.");
+	    return EXIT_FAILURE;
+    }
+    if ( ! out.good()) {
+        CVMWA_LOG("Error", " Writing file `" << dst << "' failed.");
+	    return EXIT_FAILURE;
+    }
+    
+    // OK!
+    return HVE_OK;
+    
+}
+
 
 #ifdef __linux__
 

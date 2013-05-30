@@ -1,9 +1,32 @@
 cmake_minimum_required (VERSION 2.6)
-project (CVMTest)
+project ( test )
 include_directories( .. )
 
 # Find FireBreath libs dir
 set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
+set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
+set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
+
+# External libraries
+set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
+
+# Static build
+SET(BUILD_SHARED_LIBS OFF)
+
+# Add definitions depending on build type
+if (WIN32)
+	IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(/D "DEBUG")   
+	ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(/D "NDEBUG")
+	ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+else(WIN32)
+	IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(-DDEBUG)   
+	ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+	  ADD_DEFINITIONS(-DNDEBUG)
+	ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+endif(WIN32)
 
 # Check if we can use libCURL
 FIND_PACKAGE(CURL)
@@ -39,31 +62,46 @@ else()
 	endif()
 ENDIF(OPENSSL_FOUND)
 
-# Static build
+# Use FireBreath (already built) boost libraries
+ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
+INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
 if (WIN32)
-	set (CMAKE_EXE_LINKER_FLAGS -static)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -MTd")
-	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -MT")
-endif()
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+elseif(APPLE)
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+elseif(UNIX)
+	file ( GLOB BOOST_LIBRARIES 
+		${FB_BOOST_LIB_DIR}/thread/*.a
+		${FB_BOOST_LIB_DIR}/system/*.a )
+ENDIF(WIN32)
+IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
+	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
+ENDIF()
+
+# Build zlib statically from the resources
+add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
+set( LIBZ_LIBRARIES zlibstatic )
 
 # Sources
-add_executable(CVMTest 
+add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/test.cpp 
+	${PLATFORM_SOURCES}
+	${PROJECT_SOURCE_DIR}/../DaemonCtl.cpp
 	${PROJECT_SOURCE_DIR}/../Hypervisor.cpp
 	${PROJECT_SOURCE_DIR}/../Virtualbox.cpp
 	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
-	${PROJECT_SOURCE_DIR}/../DaemonCtl.cpp
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Utilities.cpp
-	${PROJECT_SOURCE_DIR}/../CVMWebCrypto.cpp
+	${PROJECT_SOURCE_DIR}/../LocalConfig.cpp
+	${PROJECT_SOURCE_DIR}/../gzstream.cpp
 	)
 
-# Windows libraries
-if (WIN32)
-	target_link_libraries (CVMTest ws2_32.lib)
-	target_link_libraries (CVMTest wsock32.lib)
-endif()
-
 # Libraries
-target_link_libraries (CVMTest ${CURL_LIBRARIES})
-target_link_libraries (CVMTest ${OPENSSL_LIBRARIES})
+target_link_libraries ( ${PROJECT_NAME} ${CURL_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${OPENSSL_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${BOOST_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${LIBZ_LIBRARIES} )

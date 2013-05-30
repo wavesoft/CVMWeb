@@ -47,7 +47,7 @@ int HVSession::resume()                                             { return HVE
 int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
 int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion ) 
+int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
 int HVSession::start( std::string userData )                        { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
@@ -179,6 +179,73 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, HVP
         return 0;
     } else {
         return downloadFile(sURL, sOutput, fb);
+    }
+};
+
+/**
+ * Download the specified generic, compressed disk image
+ */
+int Hypervisor::diskImageDownload( std::string url, std::string * filename, HVPROGRESS_FEEDBACK * fb ) {
+    string sURL = url;
+    int res;
+    
+    // Calculate the SHA256 checksum of the URL
+    string sChecksum = "";
+    sha256_buffer( url, &sChecksum );
+    
+    // Use the checksum as index
+    string sGZOutput = this->dirDataCache + "/disk-" + sChecksum + ".vdi.gz";
+    string sOutput = this->dirDataCache + "/disk-" + sChecksum + ".vdi";
+
+    // Check if we have the uncompressed image in place
+    if (file_exists(sOutput)) {
+        *filename = sOutput;
+        return HVE_ALREADY_EXISTS;
+
+    // Try again if we failed/aborted the image decompression
+    } else if (file_exists(sGZOutput)) {
+        
+        // Notify progress
+        if ((fb != NULL) && (fb->callback != NULL)) fb->callback( 100, 100, "Extracting compressed disk", fb->data );
+        res = decompressFile( sGZOutput, sOutput );
+        if (res != HVE_OK) 
+            return res;
+        
+        // Delete sGZOutput if sOutput is there
+        if (file_exists(sOutput)) {
+            remove( sGZOutput.c_str() );
+        } else {
+            return HVE_EXTERNAL_ERROR;
+        }
+        
+        // We got the filename
+        *filename = sOutput;
+        return HVE_OK;
+        
+    // Nothing is there, download it now
+    } else {
+        
+        // Download the file to sGZOutput
+        res = downloadFile(sURL, sGZOutput, fb);
+        if (res != HVE_OK) return res;
+        
+        // Decompress
+        if ((fb != NULL) && (fb->callback != NULL)) fb->callback( 100, 100, "Extracting compressed disk", fb->data );
+        res = decompressFile( sGZOutput, sOutput );
+        if (res != HVE_OK) 
+            return res;
+        
+        // Delete sGZOutput if sOutput is there
+        if (file_exists(sOutput)) {
+            remove( sGZOutput.c_str() );
+        } else {
+            return HVE_EXTERNAL_ERROR;
+        }
+        
+        // We got the filename
+        *filename = sOutput;
+        return HVE_OK;
+        
     }
 };
 

@@ -195,7 +195,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         
         /* Notify user that a new session will open */
         if (ans == 0) {
-            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine. Do you want to allow it?";
+            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine! If you were not prompted for such action by the website please reject this request. Do you want to continue?";
             if (!this->confirm(msg)) {
                 
                 /* Manage throttling */
