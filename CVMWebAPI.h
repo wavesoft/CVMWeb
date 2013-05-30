@@ -64,7 +64,9 @@ public:
         m_plugin(plugin), m_host(host)
     {
         registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
-        registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::getIdleDaemon));
+        registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::requestDaemonAccess));
+        registerMethod("requestControlAccess",make_method(this, &CVMWebAPI::requestControlAccess));
+        
         registerMethod("authenticate",        make_method(this, &CVMWebAPI::authenticate));
         registerMethod("installHypervisor",   make_method(this, &CVMWebAPI::installHV));
 
@@ -112,7 +114,8 @@ public:
 
     // Methods
     FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
-    FB::variant getIdleDaemon();
+    FB::variant requestDaemonAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
+    FB::variant requestControlAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     std::string getDomainName();
     std::string toString();
     int         authenticate( const std::string& key );
@@ -131,6 +134,8 @@ private:
     CVMWebWeakPtr       m_plugin;
     FB::BrowserHostPtr  m_host;
     int                 m_authType;
+
+    bool                isDomainPriviledged();
 
     // Cryptography class
 //    CVMWebCrypto        * crypto;

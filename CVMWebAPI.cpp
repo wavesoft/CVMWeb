@@ -34,6 +34,7 @@
 #include "CVMWebAPI.h"
 #include "CVMWebAPISession.h"
 #include "CVMWebAPIDaemon.h"
+#include "CVMWebLocalConfig.h"
 
 #include "Dialogs.h"
 
@@ -114,6 +115,17 @@ std::string CVMWebAPI::getDomainName() {
     FB::URI loc = FB::URI::fromString(m_host->getDOMWindow()->getLocation());
     return loc.domain;
 };
+
+/**
+ * Check if the current domain is priviledged
+ */
+bool CVMWebAPI::isDomainPriviledged() {
+    std::string domain = this->getDomainName();
+    
+    /* Domain is empty only when we see the plugin from a file:// URL
+     * (And yes, even localhost is not considered priviledged) */
+    return domain.empty();
+}
 
 /**
  * Create and return a session object. 
@@ -292,14 +304,39 @@ bool CVMWebAPI::confirm( std::string msg ) {
 }
 
 /**
- * Get a singleton to the idle daemon
+ * Get a access to the idle daemon
  */
-FB::variant CVMWebAPI::getIdleDaemon( ) {
+FB::variant CVMWebAPI::requestDaemonAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
         return CVME_UNSUPPORTED;
     } else {
-        return boost::make_shared<CVMWebAPIDaemon>(p, m_host);
+        if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of(
+            boost::make_shared<CVMWebAPIDaemon>(p, m_host)
+        ));
+        return HVE_SCHEDULED;
+    }
+}
+
+/**
+ * Get a access to the control daemon
+ */
+FB::variant CVMWebAPI::requestControlAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        return CVME_UNSUPPORTED;
+    } else {
+        if (!isDomainPriviledged()) {
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+            return CVME_ACCESS_DENIED;
+        } else {
+            if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of(
+                boost::make_shared<CVMWebLocalConfig>(p, m_host)
+            ));
+            return HVE_SCHEDULED;
+        }
     }
 }
 
