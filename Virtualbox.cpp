@@ -164,6 +164,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     while (isPortOpen( "127.0.0.1", this->rdpPort ))
         this->rdpPort = (rand() % 0xFBFF) + 1024;
 
+    /* Pick the boot medium depending on the mount type */
+    string bootMedium = "dvd";
+    if ((flags & HVF_DEPLOY_REGULAR) != 0) bootMedium = "disk";
+    
     /* (2) Set parameters */
     args.str("");
     args << "modifyvm "
@@ -177,8 +181,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         << " --vrdeaddress "            << "127.0.0.1"
         << " --vrdeauthtype "           << "null"
         << " --vrdeport "               << rdpPort
-        << " --boot1 "                  << "dvd" 
-        << " --boot2 "                  << "none" 
+        << " --boot1 "                  << bootMedium
+        << " --boot2 "                  << "none"
         << " --boot3 "                  << "none" 
         << " --boot4 "                  << "none"
         << " --nic1 "                   << "nat"
@@ -198,7 +202,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     map<string, string> machineInfo = this->getMachineInfo();
 
     /* ============================================================================= */
-    /*   MODE 1 : Regular Mode
+    /*   MODE 1 : Regular Mode                                                       */
     /* ----------------------------------------------------------------------------- */
     /*   In this mode the 'cvmVersion' variable contains the URL of a gzipped VMDK   */
     /*   image. This image will be downloaded, extracted and placed on cache. Then   */
@@ -225,7 +229,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             this->state = STATE_ERROR;
             return ans;
         }
-
+        
         /* (4) Check if the disk actually has the image we need */
         needsUpdate = true;
         if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
@@ -266,7 +270,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         /* If we must attach the disk, do it now */
         if (needsUpdate) {
             
-            /* Check Multiattach conditions */
+            
             
             /* (5) Attach disk to the SATA controller */
             args.str("");
@@ -277,7 +281,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --device "     << BOOT_DEVICE
                 << " --type "       << "hdd"
                 << " --mtype "      << "multiattach"
-                << " --setuuid "    << "\"\"" 
                 << " --medium "     << "\"" << masterDisk << "\"";
 
             if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching hard disk", this->cbObject);
@@ -294,10 +297,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     }
 
     /* ============================================================================= */
-    /*   MODE 2 : CernVM-Micro Mode
+    /*   MODE 2 : CernVM-Micro Mode                                                  */
     /* ----------------------------------------------------------------------------- */
     /*   In this mode a new blank, scratch disk is created. The 'cvmVersion'         */
-    /*   contains the version of the VM
+    /*   contains the version of the VM to be downloaded.                            */
     /* ============================================================================= */
     else {
         
@@ -1149,6 +1152,23 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     return HVE_OK;
     
 };
+
+/**
+ * Get a list of mediums managed by VirtualBox
+ */
+std::vector< std::map< std::string, std::string > > Virtualbox::loadDisks() {
+    vector<string> lines;
+    std::vector< std::map< std::string, std::string > > resMap;
+
+    /* List the running VMs in the system */
+    int ans = this->exec("list hdds", &lines);
+    if (ans != 0) return resMap;
+    if (lines.empty()) return resMap;
+
+    /* Tokenize lists */
+    resMap = tokenizeList( &lines, ':' );
+    return resMap;
+}
 
 /**
  * Update session information from VirtualBox

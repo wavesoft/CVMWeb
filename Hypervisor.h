@@ -91,7 +91,7 @@ public:
         this->ip = "";
         this->key = "";
         this->name = "";
-        
+        this->apiPort = DEFAULT_API_PORT;
         this->flags = 0;
         
     };
@@ -211,7 +211,7 @@ public:
     /* Session management commands */
     std::vector<HVSession*> sessions;
     HVSession *             sessionLocate       ( std::string uuid );
-    HVSession *             sessionOpen         ( std::string name, std::string key );
+    HVSession *             sessionOpen         ( const std::string & name, const std::string & key );
     HVSession *             sessionGet          ( int id );
     int                     sessionFree         ( int id );
     int                     sessionValidate     ( std::string name, std::string key );

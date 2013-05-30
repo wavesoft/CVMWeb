@@ -195,7 +195,15 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         
         /* Notify user that a new session will open */
         if (ans == 0) {
-            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine! If you were not prompted for such action by the website please reject this request. Do you want to continue?";
+
+            // Newline-specific split
+            #ifdef _WIN32
+            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine! If you were not prompted for such action by the website please reject this request.\r\n\r\nDo you want to continue?";
+            #else
+            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine! If you were not prompted for such action by the website please reject this request.\n\nDo you want to continue?";
+            #endif
+
+            // Prompt user
             if (!this->confirm(msg)) {
                 
                 /* Manage throttling */

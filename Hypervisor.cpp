@@ -198,8 +198,8 @@ int Hypervisor::diskImageDownload( std::string url, std::string * filename, HVPR
     string sOutput = this->dirDataCache + "/disk-" + sChecksum + ".vdi";
 
     // Check if we have the uncompressed image in place
+    *filename = sOutput;
     if (file_exists(sOutput)) {
-        *filename = sOutput;
         return HVE_ALREADY_EXISTS;
 
     // Try again if we failed/aborted the image decompression
@@ -219,7 +219,6 @@ int Hypervisor::diskImageDownload( std::string url, std::string * filename, HVPR
         }
         
         // We got the filename
-        *filename = sOutput;
         return HVE_OK;
         
     // Nothing is there, download it now
@@ -243,7 +242,6 @@ int Hypervisor::diskImageDownload( std::string url, std::string * filename, HVPR
         }
         
         // We got the filename
-        *filename = sOutput;
         return HVE_OK;
         
     }
@@ -368,7 +366,7 @@ HVSession * Hypervisor::sessionLocate( std::string uuid ) {
 /**
  * Open or reuse a hypervisor session
  */
-HVSession * Hypervisor::sessionOpen( std::string name, std::string key ) { 
+HVSession * Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
     
     /* Check for running sessions with the given credentials */
     std::cout << "Checking sessions (" << this->sessions.size() << ")\n";

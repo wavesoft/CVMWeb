@@ -181,7 +181,7 @@ std::string getFilename ( std::string path ) {
         srcDirname[ path.length() ] = '\0';
         
         // Do the conversion
-        char * dirname = ::dirname( srcDirname );
+        char * dirname = ::basename( srcDirname );
         ans = dirname;
         
         // Release pointer
@@ -857,7 +857,7 @@ int decompressFile( std::string src, std::string dst ) {
     // now use the shorter way with the constructor to open the same file
     igzstream in(  src.c_str() );
     if ( ! in.good()) {
-        CVMWA_LOG("Error", " Opening file `" << srd << "' failed.");
+        CVMWA_LOG("Error", " Opening file `" << src << "' failed.");
 	    return HVE_NOT_FOUND;
     }
     std::ofstream  out( dst.c_str() );

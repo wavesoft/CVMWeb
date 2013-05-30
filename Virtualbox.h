@@ -75,6 +75,7 @@ public:
     std::map<std::string, 
         std::string>        getMachineInfo      ( std::string uuid );
     std::string             getProperty         ( std::string uuid, std::string name );
+    std::vector< std::map< std::string, std::string > > loadDisks();
 
     /* Overloads */
     virtual int             loadSessions        ( );
