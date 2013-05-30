@@ -231,7 +231,7 @@ int daemonStart( std::string path_to_bin ) {
         int pid = fork();
         if (pid==0) {
             setsid();
-            std::cout << "[daemonStart::child] Running " << file << std::endl;
+            CVMWA_LOG("Daemon", "Running " << file );
             execl( file, file, (char*) 0 );
             return 0;
         } else {

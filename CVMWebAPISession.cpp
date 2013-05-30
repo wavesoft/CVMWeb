@@ -199,7 +199,7 @@ int CVMWebAPISession::hibernate(){
         this->fire_apiUnavailable();
     }
 
-    boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_hibernate, this ));
     return HVE_SCHEDULED;
 }
 

@@ -50,20 +50,25 @@
 				_txt("hv", "Using " + core.hypervisorName + " v"+ core.hypervisorVersion +" (WebAPI v" + core.version + ")");
 				
 				// Request access on the daemon service
-				daemon = core.requestDaemonAccess();
-				_txt("daemon-bin", daemon.path);
-				
-				// Periodically poll the daemon status
-				setInterval(function() {
-					_txt("daemon-live", daemon.isRunning ? "Yes" : "No");
-					if (daemon.isRunning) {
-						_txt("daemon-sysidle", daemon.isSystemIdle ? "Yes" : "No");
-						_txt('daemon-idle', daemon.idleTime);
-					} else {
-						_txt("daemon-sysidle", "---");
-						_txt('daemon-idle', "---");
-					}
-				}, 1000);
+				core.requestDaemonAccess(function(daemonInst) {
+					daemon = daemonInst;
+					_txt("daemon-bin", daemon.path);
+
+					// Periodically poll the daemon status
+					setInterval(function() {
+						_txt("daemon-live", daemon.isRunning ? "Yes" : "No");
+						if (daemon.isRunning) {
+							_txt("daemon-sysidle", daemon.isSystemIdle ? "Yes" : "No");
+							_txt('daemon-idle', daemon.idleTime);
+						} else {
+							_txt("daemon-sysidle", "---");
+							_txt('daemon-idle', "---");
+						}
+					}, 1000);
+
+				}, function(errorCode) {
+					
+				});
 			}
 		};
 		
@@ -76,7 +81,11 @@
 				document.location.reload(true);
 			});
 			core.addEventListener('installError', function(err, id) { // Installation failed
-				alert('Unable to install: '+err+'!');
+				if (id == 1) { // Automatic installation failed
+					alert("We cannot complete the installation automatically! Follow the on-screen instructions in order to install the hypervisor manually.");
+				} else {
+					alert('Unable to install: '+err+'!');
+				}
 			});
 			core.addEventListener('installProgress', function(step, total, msg) { // Installation progress events
 				var perc = Math.round( 100 * step / total );
@@ -88,7 +97,7 @@
 			var ans = core.installHypervisor();
 			if (ans == -8) {
 				_txt("state", "You already have a hypervisor!");
-			} else {
+			} else if (ans != 1) { // (1=scheduled for asynchronous run)
 				_txt("state", "Installation error #" + ans);
 			}
 		}

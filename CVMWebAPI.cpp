@@ -68,6 +68,7 @@ void __fwProgress( int step, int total, std::string msg, void * ptr ) {
  */
 bool CVMWebAPI::hasHypervisor() {
     CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return false;
     return (p->hv->type != 0);
 };
 
