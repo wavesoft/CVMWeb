@@ -351,7 +351,7 @@ int CVMWebAPISession::get_state() {
     return this->session->state;
 }
 
-int get_flags() {
+int CVMWebAPISession::get_flags() {
     return this->session->flags;
 }
 

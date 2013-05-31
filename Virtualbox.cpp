@@ -530,7 +530,6 @@ int VBoxSession::start( std::string userData ) {
     if (machineInfo.find( "State" ) != machineInfo.end()) {
         if (machineInfo["State"].find("saved") != string::npos) {
             inSavedState = true;
-            break;
         }
     }
     

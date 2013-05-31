@@ -151,6 +151,7 @@
 						
 						// Update the common values
 						_txt('session-rdp', session.rdpURL);
+						document.getElementById('session-rdp').href = 'rdp://' + session.rdpURL;
 						_sval('daemon-min-cap', session.daemonMinCap );
 						_sval('daemon-max-cap', session.daemonMaxCap );
 						document.getElementById('daemon-enable').checked = session.daemonControlled;
@@ -175,6 +176,7 @@
 						
 						// Update the common values
 						_txt('session-rdp', session.rdpURL);
+						document.getElementById('session-rdp').href = 'rdp://' + session.rdpURL;
 						_sval('daemon-min-cap', session.daemonMinCap );
 						_sval('daemon-max-cap', session.daemonMaxCap );
 						document.getElementById('daemon-enable').checked = session.daemonControlled;
@@ -219,6 +221,7 @@
 					session.addEventListener('start', function() { // Started
 						_txt( "state", "Session started" );
 						_txt('session-rdp', session.rdpURL);
+						document.getElementById('session-rdp').href = 'rdp://' + session.rdpURL;
 					});
 					session.addEventListener('startError', function(msg, id) { // Start Error
 						_txt( "state", "Error while starting (" + msg + ")" );
@@ -304,6 +307,7 @@
 			if (document.getElementById('ctype-disk').checked) {
 				config['diskURL'] = url;
 				config['cpu64bit'] = document.getElementById('ctype-64bit').checked;
+				config['flags'] = 4; // Install guest additions
 			} else {
 				config['version'] = version;
 			}
@@ -560,11 +564,11 @@ services=httpd
 						</tr>
 						<tr>
 							<td align="right">RDP URL:</td>
-							<td><span id="session-rdp">--</span></td>
+							<td><a href="javascript:;" id="session-rdp">--</a></td>
 						</tr>
 						<tr>
 							<td align="right">API URL:</td>
-							<td><a target="_blank" href="javascript:;" id="session-api">--</span></td>
+							<td><a target="_blank" href="javascript:;" id="session-api">--</a></td>
 						</tr>
 						<tr>
 							<td colspan="2" align="center">
