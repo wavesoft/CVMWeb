@@ -33,6 +33,7 @@
 #include "DaemonCtl.h"
 
 #include "contextiso.h"
+#include "floppyIO.h"
 
 using namespace std;
 
@@ -143,6 +144,23 @@ int Hypervisor::buildContextISO ( std::string userData, std::string * filename )
     } else {
         return HVE_IO_ERROR;
     }
+};
+
+/**
+ * Use FloppyIO to create a configuration disk for this VM
+ */
+int Hypervisor::buildFloppyIO ( std::string userData, std::string * filename ) {
+    ofstream isoFile;
+    string floppy = getTmpFile(".img");
+    
+    /* Write data (don't wait for sync) */
+    FloppyIO * fio = new FloppyIO( floppy.c_str() );
+    fio->send( userData );
+    delete fio;
+    
+    /* Store the filename */
+    *filename = floppy;
+    return HVE_OK;
 };
 
 /**

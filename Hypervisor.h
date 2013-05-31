@@ -235,7 +235,8 @@ public:
     std::string             cernVMVersion       ( std::string filename );
     int                     diskImageDownload   ( std::string url, std::string * filename, HVPROGRESS_FEEDBACK * fb );
     int                     buildContextISO     ( std::string userData, std::string * filename );
-
+    int                     buildFloppyIO       ( std::string userData, std::string * filename );
+        
     /* Check if we need to start or stop the daemon */
     int                     checkDaemonNeed ();
     

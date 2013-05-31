@@ -196,7 +196,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         if (ans == 0) {
 
             // Newline-specific split
-            std::string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine! This could be dangerous if the website is not trusted!." _EOL _EOL "Do you want to continue?";
+            std::string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine! Accept only requests from websites that you trust!." _EOL _EOL "Do you want to continue?";
 
             // Prompt user
             if (!this->confirm(msg)) {

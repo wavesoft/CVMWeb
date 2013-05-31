@@ -53,6 +53,13 @@ using namespace std;
 #define GUESTADD_PORT       "2"
 #define GUESTADD_DEVICE     "0"
 
+// Where the floppyIO floppy is placed
+#define FLOPPYIO_ENUM_NAME  "Storage Controller Name (2)"
+    // ^^ The first controller is IDE, second is SATA, third is Floppy
+#define FLOPPYIO_CONTROLLER "Floppy"
+#define FLOPPYIO_PORT       "0"
+#define FLOPPYIO_DEVICE     "0"
+
 /** =========================================== **\
                    Tool Functions
 \** =========================================== **/
@@ -62,6 +69,7 @@ using namespace std;
 #define SCRATCH_DSK         SCRATCH_CONTROLLER " (" SCRATCH_PORT ", " SCRATCH_DEVICE ")"
 #define CONTEXT_DSK         CONTEXT_CONTROLLER " (" CONTEXT_PORT ", " CONTEXT_DEVICE ")"
 #define GUESTADD_DSK        GUESTADD_CONTROLLER " (" GUESTADD_PORT ", " GUESTADD_DEVICE ")"
+#define FLOPPYIO_DSK        FLOPPYIO_CONTROLLER " (" FLOPPYIO_PORT ", " FLOPPYIO_DEVICE ")"
 
 /**
  * Extract the mac address of the VM from the NIC line definition
@@ -513,7 +521,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
  * Start VM with the given
  */
 int VBoxSession::start( std::string userData ) { 
-    string vmContextISO, kk, kv;
+    string vmContextDsk, kk, kv;
     ostringstream args;
     int ans;
 
@@ -535,75 +543,157 @@ int VBoxSession::start( std::string userData ) {
     
     /* Touch context ISO only if we have user-data and the VM is not hibernated */
     if (!userData.empty() && !inSavedState) {
-    
-        /* Detach & Delete previous context ISO */
-        if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
         
-            /* Get the filename of the iso */
-            getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
-            kk = kk.substr(0, kk.length()-1);
+        /* Check if we are using FloppyIO instead of contextualization CD */
+        if ((this->flags & HVF_FLOPPY_IO) != 0) {
+            
+            /* ========================== */
+            /*  CONTEXTUALIZATION FLOPPY  */
+            /* ========================== */
+            
+            /* Detach & Delete previous context ISO */
+            if (machineInfo.find( FLOPPYIO_DSK ) != machineInfo.end()) {
+        
+                /* Get the filename of the iso */
+                getKV( machineInfo[ FLOPPYIO_DSK ], &kk, &kv, '(', 0 );
+                kk = kk.substr(0, kk.length()-1);
 
-            cout << "Detaching " << kk << "\n";
+                cout << "Detaching " << kk << "\n";
 
-            /* Detach iso */
+                /* Detach floppy */
+                args.str("");
+                args << "storageattach "
+                    << uuid
+                    << " --storagectl " << FLOPPYIO_CONTROLLER
+                    << " --port "       << FLOPPYIO_PORT
+                    << " --device "     << FLOPPYIO_DEVICE
+                    << " --medium "     << "none";
+
+                if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching configuration floppy", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Storage Attach (floppyIO)=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_OPEN;
+                    return HVE_MODIFY_ERROR;
+                }
+        
+                /* Unregister/delete floppy */
+                args.str("");
+                args << "closemedium floppy "
+                    << "\"" << kk << "\"";
+
+                if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing configuration floppy", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Closemedium (floppyIO)=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_OPEN;
+                    return HVE_MODIFY_ERROR;
+                }
+        
+                /* Delete actual file */
+                if (this->onProgress!=NULL) (this->onProgress)(3, 7, "Removing configuration floppy", this->cbObject);
+                remove( kk.c_str() );
+        
+            }
+    
+            /* Create Context floppy */
+            if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building configuration floppy", this->cbObject);
+            if (this->host->buildFloppyIO( userData, &vmContextDsk ) != 0) 
+                return HVE_CREATE_ERROR;
+
+            /* Attach context Floppy to the floppy controller */
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << FLOPPYIO_CONTROLLER
+                << " --port "       << FLOPPYIO_PORT
+                << " --device "     << FLOPPYIO_DEVICE
+                << " --type "       << "fdd"
+                << " --medium "     << "\"" << vmContextDsk << "\"";
+
+            if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching configuration floppy", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "StorageAttach (floppyIO)=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_OPEN;
+                return HVE_MODIFY_ERROR;
+            }
+            
+        } else {
+
+            /* ========================== */
+            /*  CONTEXTUALIZATION CD-ROM  */
+            /* ========================== */
+
+            /* Detach & Delete previous context ISO */
+            if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
+        
+                /* Get the filename of the iso */
+                getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
+                kk = kk.substr(0, kk.length()-1);
+
+                cout << "Detaching " << kk << "\n";
+
+                /* Detach iso */
+                args.str("");
+                args << "storageattach "
+                    << uuid
+                    << " --storagectl " << CONTEXT_CONTROLLER
+                    << " --port "       << CONTEXT_PORT
+                    << " --device "     << CONTEXT_DEVICE
+                    << " --medium "     << "none";
+
+                if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Storage Attach (context)=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_OPEN;
+                    return HVE_MODIFY_ERROR;
+                }
+        
+                /* Unregister/delete iso */
+                args.str("");
+                args << "closemedium dvd "
+                    << "\"" << kk << "\"";
+
+                if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing contextualization CD-ROM", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Closemedium (context)=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_OPEN;
+                    return HVE_MODIFY_ERROR;
+                }
+        
+                /* Delete actual file */
+                if (this->onProgress!=NULL) (this->onProgress)(3, 7, "Removing contextualization CD-ROM", this->cbObject);
+                remove( kk.c_str() );
+        
+            }
+    
+            /* Create Context ISO */
+            if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building contextualization CD-ROM", this->cbObject);
+            if (this->host->buildContextISO( userData, &vmContextDsk ) != 0) 
+                return HVE_CREATE_ERROR;
+
+            /* Attach context CD-ROM to the IDE controller */
             args.str("");
             args << "storageattach "
                 << uuid
                 << " --storagectl " << CONTEXT_CONTROLLER
                 << " --port "       << CONTEXT_PORT
                 << " --device "     << CONTEXT_DEVICE
-                << " --medium "     << "none";
+                << " --type "       << "dvddrive"
+                << " --medium "     << "\"" << vmContextDsk << "\"";
 
-            if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "Storage Attach (context)=" << ans << "\n";
+            cout << "StorageAttach (context)=" << ans << "\n";
             if (ans != 0) {
                 this->state = STATE_OPEN;
                 return HVE_MODIFY_ERROR;
             }
-        
-            /* Unregister/delete iso */
-            args.str("");
-            args << "closemedium dvd "
-                << "\"" << kk << "\"";
-
-            if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing contextualization CD-ROM", this->cbObject);
-            ans = this->wrapExec(args.str(), NULL);
-            cout << "Closemedium (context)=" << ans << "\n";
-            if (ans != 0) {
-                this->state = STATE_OPEN;
-                return HVE_MODIFY_ERROR;
-            }
-        
-            /* Delete actual file */
-            if (this->onProgress!=NULL) (this->onProgress)(3, 7, "Removing contextualization CD-ROM", this->cbObject);
-            remove( kk.c_str() );
-        
+            
         }
-    
-        /* Create Context ISO */
-        if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building contextualization CD-ROM", this->cbObject);
-        if (this->host->buildContextISO( userData, &vmContextISO ) != 0) 
-            return HVE_CREATE_ERROR;
-
-        /* Attach context CD-ROM to the IDE controller */
-        args.str("");
-        args << "storageattach "
-            << uuid
-            << " --storagectl " << CONTEXT_CONTROLLER
-            << " --port "       << CONTEXT_PORT
-            << " --device "     << CONTEXT_DEVICE
-            << " --type "       << "dvddrive"
-            << " --medium "     << "\"" << vmContextISO << "\"";
-
-        if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
-        ans = this->wrapExec(args.str(), NULL);
-        cout << "StorageAttach (context)=" << ans << "\n";
-        if (ans != 0) {
-            this->state = STATE_OPEN;
-            return HVE_MODIFY_ERROR;
-        }
-    
     }
     
     /* Start VM */
@@ -821,6 +911,18 @@ int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid, int 
     
     ans = this->wrapExec(args.str(), NULL);
     if (ans != 0) return HVE_MODIFY_ERROR;
+    
+    /* (3c) If we are using floppyIO, include a floppy controller */
+    if ((flags & HVF_FLOPPY_IO) != 0) {
+        args.str("");
+        args << "storagectl "
+            << uuid
+            << " --name "       << FLOPPYIO_CONTROLLER
+            << " --add "        << "floppy";
+
+        ans = this->wrapExec(args.str(), NULL);
+        if (ans != 0) return HVE_MODIFY_ERROR;
+    }
     
     /* OK */
     *ans_uuid = "{" + uuid + "}";
@@ -1243,6 +1345,9 @@ int Virtualbox::updateSession( HVSession * session ) {
     /* Collect details */
     map<string, string> info = this->getMachineInfo( uuid );
     
+    /* Reset flags */
+    session->flags = 0;
+    
     /* Check state */
     if (info.find("State") != info.end()) {
         string state = info["State"];
@@ -1316,6 +1421,24 @@ int Virtualbox::updateSession( HVSession * session ) {
             session->version = getFilename( kk );
             session->flags |= HVF_DEPLOYMENT_HDD;
         }
+    }
+    
+    /* Check if there are guest additions mounted and update flags */
+    if (info.find( GUESTADD_DSK ) != info.end()) {
+        
+        /* Get the filename of the iso */
+        getKV( info[ GUESTADD_DSK ], &kk, &kv, '(', 0 );
+        kk = kk.substr(0, kk.length()-1);
+        
+        /* Check if we have the guest additions disk */
+        if ( kk.compare(this->hvGuestAdditions) == 0 ) 
+            session->flags |= HVF_GUEST_ADDITIONS;
+        
+    }
+    
+    /* Check if we have floppy adapter. If we do, it means we are using floppyIO -> updateFlags */
+    if (info.find( FLOPPYIO_ENUM_NAME ) != info.end()) {
+        session->flags |= HVF_FLOPPY_IO;
     }
     
     /* Parse disk size */

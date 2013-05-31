@@ -144,6 +144,8 @@
 						_dis("ctype-cvm", true);
 						_dis("ctype-disk", true);
 						_dis("ctype-64bit", true);
+						_dis("ctype-floppyio", true);
+						_dis("ctype-guestadd", true);
 						_sval("session-cpus", session.cpus);
 						_sval("session-ram", session.ram);
 						_sval("session-disk", session.disk);
@@ -168,6 +170,12 @@
 						_txt( "state", "Set your requirements and press 'Open Session'" );
 
 					}
+
+               // Update checkboxes with the VM flags
+               document.getElementById('ctype-64bit').checked = ((session.flags & 1) != 0);
+               document.getElementById('ctype-disk').checked = ((session.flags & 2) != 0);
+               document.getElementById('ctype-guestadd').checked = ((session.flags & 4) != 0);
+               document.getElementById('ctype-floppyio').checked = ((session.flags & 8) != 0);
 
 					// Bind event listeners 
 					session.addEventListener('open', function() { // Session Opened
@@ -201,6 +209,8 @@
 						_dis("ctype-cvm", false);
 						_dis("ctype-disk", false);
 						_dis("ctype-64bit", false);
+						_dis("ctype-floppyio", false);
+						_dis("ctype-guestadd", false);
 					});
 					session.addEventListener('close', function() { // Session Closed
 						_vis('tbl-run', false);
@@ -213,6 +223,8 @@
 						_dis("ctype-cvm", false);
 						_dis("ctype-disk", false);
 						_dis("ctype-64bit", false);
+						_dis("ctype-floppyio", false);
+						_dis("ctype-guestadd", false);
 						_txt( "state", "Session closed" );
 					});
 					session.addEventListener('closeError', function(msg, id) { // Close Error
@@ -310,8 +322,14 @@
 			};
 			if (document.getElementById('ctype-disk').checked) {
 				config['diskURL'] = url;
-				config['cpu64bit'] = document.getElementById('ctype-64bit').checked;
-				config['flags'] = 4; // Install guest additions
+
+            // Build flags
+				var flags = 0;
+				if (document.getElementById('ctype-64bit').checked) flags |= 1; // HVF_SYSTEM_64BIT
+				if (document.getElementById('ctype-guestadd').checked) flags |= 4; // HVF_GUEST_ADDITIONS
+				if (document.getElementById('ctype-floppyio').checked) flags |= 8; // HVF_FLOPPY_IO
+				config['flags'] = flags;
+				
 			} else {
 				config['version'] = version;
 			}
@@ -333,6 +351,8 @@
 				_dis("ctype-cvm", true);
 				_dis("ctype-disk", true);
 				_dis("ctype-64bit", true);
+				_dis("ctype-floppyio", true);
+				_dis("ctype-guestadd", true);
 				
 			}
 			
@@ -547,6 +567,14 @@
 						<tr>
 							<td>&nbsp;</td>
 							<td colspan="2" align="left"><input type="checkbox" id="ctype-64bit" value="1"/> <label for="ctype-64bit">64-Bit OS</label></td>
+						</tr>
+						<tr>
+							<td>&nbsp;</td>
+							<td colspan="2" align="left"><input type="checkbox" id="ctype-floppyio" value="1"/> <label for="ctype-floppyio">Use FloppyIO</label></td>
+						</tr>
+						<tr>
+							<td>&nbsp;</td>
+							<td colspan="2" align="left"><input type="checkbox" id="ctype-guestadd" value="1"/> <label for="ctype-guestadd">Install GuestAdditions</label></td>
 						</tr>
 						<tr>
 							<td colspan="3" align="center">

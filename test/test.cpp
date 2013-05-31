@@ -21,7 +21,11 @@ void logDebug( std::string line, void * o ) {
 
 int main( int argc, char ** argv ) {
     
-    std::cout << getFilename( "/Users/icharala/Library/Application Support/CernVM/WebAPI/cache/disk-5a6df716cd360c13f6ec7cfff3314b218462f3e627027a0d1a57d2d9ff7aab2b.vdi" ) << std::endl;
+    Hypervisor * hv = detectHypervisor();
+    
+    std::string file = "";
+    hv->buildFloppyIO( "This is some text" , &file );
+    std::cout << "File is at " << file << std::endl;
     
     return 0;
 }
