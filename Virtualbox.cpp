@@ -233,10 +233,11 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         
         /* (3) Download the disk image specified by the URL */
         string masterDisk;
+        if (this->onProgress!=NULL) (this->onProgress)(20, 110, "Downloading VM Disk", this->cbObject);
         ans = this->host->diskImageDownload( cvmVersion, &masterDisk, &feedback );
         if (ans < HVE_OK) {
             this->state = STATE_ERROR;
-            return ans;
+            return HVE_IO_ERROR;
         }
         
         /* Store the source URL */

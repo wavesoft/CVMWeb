@@ -279,7 +279,12 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
     ans = this->session->open( cpus, ram, disk, ver, flags );
     if (ans == 0) {
         this->fire_open();
+        
     } else {
+        
+        // Close session in case of a problem
+        this->session->close();
+        
         this->fire_openError(hypervisorErrorStr(ans), ans);
         this->fire_error(hypervisorErrorStr(ans), ans, "open");
     }
