@@ -278,6 +278,10 @@
 						document.getElementById('session-api').href = 'javascript:;';
 					});
 
+               // Every once in a while do a session update()
+               setInterval( function() {
+                  session.update();
+               }, 10000);
 					
 				}, handleError);
 			
