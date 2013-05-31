@@ -148,6 +148,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     this->cpus = cpus;
     this->memory = memory;
     this->executionCap = 100;
+    this->flags = flags;
         
     /* (1) Create slot */
     if (this->onProgress!=NULL) (this->onProgress)(5, 110, "Allocating VM slot", this->cbObject);

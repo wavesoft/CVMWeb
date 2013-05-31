@@ -36,7 +36,7 @@
 			core = document.getElementById('cvmweb'); 
 			if (core.hypervisorName === undefined) {
 				_txt("hv", "Unable to load CernVM WebAPI Plugin!");
-				_txt("state", "Please make sure you have installed the CernVM WebAPI Plugin</a>");
+				_txt("state", "Please make sure you have installed the CernVM WebAPI Plugin! For firefox click <a href=\"res/cvmwebapi-1.1.3.xpi\">here</a>");
 				_dis("session-name", true);
 				_dis("session-key", true);
 				_dis("session-request", true);
@@ -336,6 +336,7 @@
 			window.console.log(config);
 			
 			// Start session
+			window.console.log("Oppening using hash ", config);
 			var ans = session.open(config);
 			if (ans != 1) { // 1 means 'scheduled'
 				alert('Unable to open session. Error #'+ans+'!');
