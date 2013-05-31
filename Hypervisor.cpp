@@ -777,7 +777,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         }
 
         /* (1) If we have xdg-open, use it to prompt the user using the system's default GUI */
-		if (cbProgress!=NULL) (cbProgress)(94, 100, "Prompting user for the installation process", cbData);
+		if (cbProgress!=NULL) (cbProgress)(94, 100, "Installing hypervisor", cbData);
         if (linuxInfo.hasXDGOpen) {
             string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
             res = system( cmdline.c_str() );
@@ -789,6 +789,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         
             /* TODO: Currently we don't do it, but we must wait until the package is installed
              *       and then do hypervisor probing again. */
+     		if (cbProgress!=NULL) (cbProgress)(100, 100, "Passing control to the user", cbData);
             return HVE_SCHEDULED;
         
         /* (2) If we have GKSudo, do directly dpkg/yum install */
@@ -808,7 +809,11 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     			remove( tmpHypervisorInstall.c_str() );
     			return HVE_EXTERNAL_ERROR;
     		}
-        
+
+            /* Cleanup */
+    		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
+        	remove( tmpHypervisorInstall.c_str() );
+    	
         /* (3) Otherwise create a bash script and prompt the user */
         } else {
             
