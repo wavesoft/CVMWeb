@@ -56,7 +56,7 @@ std::string CVMWebLocalConfig::getDomainName() {
 /**
  * Check if the current domain is priviledged
  */
-bool CVMWebLocalConfig::isDomainPriviledged() {
+bool CVMWebLocalConfig::isDomainPrivileged() {
     std::string domain = this->getDomainName();
     
     /* Domain is empty only when we see the plugin from a file:// URL

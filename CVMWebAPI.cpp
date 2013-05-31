@@ -120,7 +120,7 @@ std::string CVMWebAPI::getDomainName() {
 /**
  * Check if the current domain is priviledged
  */
-bool CVMWebAPI::isDomainPriviledged() {
+bool CVMWebAPI::isDomainPrivileged() {
     std::string domain = this->getDomainName();
     
     /* Domain is empty only when we see the plugin from a file:// URL
@@ -196,11 +196,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         if (ans == 0) {
 
             // Newline-specific split
-            #ifdef _WIN32
-            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine! If you were not prompted for such action by the website please reject this request.\r\n\r\nDo you want to continue?";
-            #else
-            std::string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine! If you were not prompted for such action by the website please reject this request.\n\nDo you want to continue?";
-            #endif
+            std::string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine! This could be dangerous if the website is not trusted!." _EOL _EOL "Do you want to continue?";
 
             // Prompt user
             if (!this->confirm(msg)) {
@@ -314,7 +310,6 @@ bool CVMWebAPI::confirm( std::string msg ) {
 
     #endif
     
-    
 }
 
 /**
@@ -342,7 +337,7 @@ FB::variant CVMWebAPI::requestControlAccess( const FB::JSObjectPtr &successCb, c
         if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
         return CVME_UNSUPPORTED;
     } else {
-        if (!isDomainPriviledged()) {
+        if (!isDomainPrivileged()) {
             if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
             return CVME_ACCESS_DENIED;
         } else {

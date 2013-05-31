@@ -71,6 +71,13 @@
 #if defined(__APPLE__) && defined(__MACH__)
 #endif
 
+// String constants of EOL
+#ifdef _WIN32
+#define _EOL "\r\n"
+#else
+#define _EOL "\n"
+#endif
+
 /**
  * Progress feedback structure
  */

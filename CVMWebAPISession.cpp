@@ -238,11 +238,20 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
         if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
         if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
         
+        // Check for flags
+        if (o->HasProperty("flags")) {
+            try {
+                flags = o->GetProperty("flags").convert_cast<int>();
+            } catch ( const FB::bad_variant_cast &) {
+                flags = 0;
+            }
+        }
+        
         // If we use 'disk' field instead of 'version', we instruct the plugin to 
         // use the classic, disk-based installation.
         if (o->HasProperty("diskURL")) {
             ver = o->GetProperty("diskURL").convert_cast<std::string>();
-            flags |= HVF_DEPLOY_REGULAR;
+            flags |= HVF_DEPLOYMENT_HDD;
             
             // Check for 64bit image
             bool is64bit = false;
@@ -340,6 +349,10 @@ int CVMWebAPISession::get_memory() {
 
 int CVMWebAPISession::get_state() {
     return this->session->state;
+}
+
+int get_flags() {
+    return this->session->flags;
 }
 
 std::string CVMWebAPISession::get_ip() {

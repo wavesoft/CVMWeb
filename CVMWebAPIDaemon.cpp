@@ -66,7 +66,7 @@ std::string CVMWebAPIDaemon::getDomainName() {
 /**
  * Check if the current domain is priviledged
  */
-bool CVMWebAPIDaemon::isDomainPriviledged() {
+bool CVMWebAPIDaemon::isDomainPrivileged() {
     std::string domain = this->getDomainName();
     
     /* Domain is empty only when we see the plugin from a file:// URL
@@ -85,7 +85,7 @@ std::string CVMWebAPIDaemon::toString() {
  * Get the path of the daemon process
  */
 std::string CVMWebAPIDaemon::getDaemonBin() {
-    if (!isDomainPriviledged()) return "";
+    if (!isDomainPrivileged()) return "";
     
     /* Get daemon bin from the plugin */
     CVMWebPtr p = this->getPlugin();
@@ -109,7 +109,7 @@ bool CVMWebAPIDaemon::getIsRunning() {
 int CVMWebAPIDaemon::start() {
 
     /* Ensure the website is allowed to do so */
-    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+    if (!isDomainPrivileged()) return HVE_NOT_ALLOWED;
     
     /* Check if it's running */
     if (getIsRunning()) return HVE_OK;
@@ -126,7 +126,7 @@ int CVMWebAPIDaemon::start() {
 int CVMWebAPIDaemon::stop() {
 
     /* Ensure the website is allowed to do so */
-    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+    if (!isDomainPrivileged()) return HVE_NOT_ALLOWED;
     return daemonStop();
     
 }
@@ -145,7 +145,7 @@ FB::variant CVMWebAPIDaemon::getIdleTime() {
 void CVMWebAPIDaemon::setIdleTime( short int idleTime ) {
 
     /* Ensure the website is allowed to do so */
-    if (!isDomainPriviledged()) return;
+    if (!isDomainPrivileged()) return;
 
     daemonSet( DIPC_SET_IDLETIME, idleTime );
 }
@@ -161,7 +161,7 @@ bool CVMWebAPIDaemon::getIsIdle( ) {
 short int CVMWebAPIDaemon::set( short int var, short int value ) {
 
     /* Ensure the website is allowed to do so */
-    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+    if (!isDomainPrivileged()) return HVE_NOT_ALLOWED;
 
     return daemonSet( var, value );
 }
@@ -169,7 +169,7 @@ short int CVMWebAPIDaemon::set( short int var, short int value ) {
 short int CVMWebAPIDaemon::get( short int var ) {
 
     /* Ensure the website is allowed to do so */
-    if (!isDomainPriviledged()) return HVE_NOT_ALLOWED;
+    if (!isDomainPrivileged()) return HVE_NOT_ALLOWED;
 
     return daemonGet( var );
 }

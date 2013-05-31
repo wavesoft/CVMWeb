@@ -142,7 +142,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     this->executionCap = 100;
         
     /* (1) Create slot */
-    if (this->onProgress!=NULL) (this->onProgress)(5, 100, "Allocating VM slot", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(5, 110, "Allocating VM slot", this->cbObject);
     ans = this->getMachineUUID( this->name, &uuid, flags );
     if (ans != 0) {
         this->state = STATE_ERROR;
@@ -152,7 +152,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     }
     
     /* Detect the host-only adapter */
-    if (this->onProgress!=NULL) (this->onProgress)(10, 100, "Setting up local network", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(10, 110, "Setting up local network", this->cbObject);
     ifHO = this->getHostOnlyAdapter();
     if (ifHO.empty()) {
         this->state = STATE_ERROR;
@@ -166,7 +166,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
     /* Pick the boot medium depending on the mount type */
     string bootMedium = "dvd";
-    if ((flags & HVF_DEPLOY_REGULAR) != 0) bootMedium = "disk";
+    if ((flags & HVF_DEPLOYMENT_HDD) != 0) bootMedium = "disk";
     
     /* (2) Set parameters */
     args.str("");
@@ -189,7 +189,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         << " --natdnshostresolver1 "    << "on"
         << " --nic2 "                   << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
     
-    if (this->onProgress!=NULL) (this->onProgress)(15, 100, "Setting up VM", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(15, 110, "Setting up VM", this->cbObject);
     ans = this->wrapExec(args.str(), NULL);
     cout << "Modify VM=" << ans << "\n";
     if (ans != 0) {
@@ -198,7 +198,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     }
 
     /* Fetch information to validate disks */
-    if (this->onProgress!=NULL) (this->onProgress)(20, 100, "Fetching machine info", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(20, 110, "Fetching machine info", this->cbObject);
     map<string, string> machineInfo = this->getMachineInfo();
 
     /* ============================================================================= */
@@ -209,13 +209,13 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     /*   it will be cloned using copy-on write mode on the user's VM directory.      */
     /* ============================================================================= */
     
-    if ((flags & HVF_DEPLOY_REGULAR) != 0) {
+    if ((flags & HVF_DEPLOYMENT_HDD) != 0) {
         
         /**
          * Prepare download feedback
          */
         HVPROGRESS_FEEDBACK feedback;
-        feedback.total = 100;
+        feedback.total = 110;
         feedback.min = 20;
         feedback.max = 90;
         feedback.callback = this->onProgress;
@@ -230,7 +230,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             return ans;
         }
         
-        /* (4) Check if the disk actually has the image we need */
+        /* Store the source URL */
+        this->setProperty("/CVMWeb/diskURL", cvmVersion);
+        
+        /* (4) Check if the VM actually has the image we need */
         needsUpdate = true;
         if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
             
@@ -255,7 +258,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                     << " --device "     << BOOT_DEVICE
                     << " --medium "     << "none";
 
-                if (this->onProgress!=NULL) (this->onProgress)(93, 100, "Detachining previous disk", this->cbObject);
+                if (this->onProgress!=NULL) (this->onProgress)(93, 110, "Detachining previous disk", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
                 cout << "Detaching ISO=" << ans << "\n";
                 if (ans != 0) {
@@ -270,8 +273,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         /* If we must attach the disk, do it now */
         if (needsUpdate) {
             
-            
-            
             /* (5) Attach disk to the SATA controller */
             args.str("");
             args << "storageattach "
@@ -283,7 +284,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --mtype "      << "multiattach"
                 << " --medium "     << "\"" << masterDisk << "\"";
 
-            if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching hard disk", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(95, 110, "Attaching hard disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
             cout << "Storage Attach=" << ans << "\n";
             if (ans != 0) {
@@ -316,29 +317,13 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --filename "   << "\"" << vmDisk << "\""
                 << " --size "       << disk;
 
-            if (this->onProgress!=NULL) (this->onProgress)(25, 100, "Creating scratch disk", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(25, 110, "Creating scratch disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
             cout << "Create HD=" << ans << "\n";
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_MODIFY_ERROR;
             }
-
-            /* (4.b) VirtualBox < 4.0 needs openmedium */
-            /*
-            if (this->host->verMajor < 4) {
-                args.str("");
-                args << "openmedium "
-                    << " disk "   << "\"" << vmDisk << "\"";
-                if (this->onProgress!=NULL) (this->onProgress)(30, 100, "Importing disk", this->cbObject);
-                ans = this->wrapExec(args.str(), NULL);
-                cout << "Close medium=" << ans << "\n";
-                if (ans != 0) {
-                    this->state = STATE_ERROR;
-                    return HVE_MODIFY_ERROR;
-                }
-            }
-            */
 
             /* (5) Attach disk to the SATA controller */
             args.str("");
@@ -351,7 +336,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --setuuid "    << "\"\"" 
                 << " --medium "     << "\"" << vmDisk << "\"";
 
-            if (this->onProgress!=NULL) (this->onProgress)(35, 100, "Attaching hard disk", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(35, 110, "Attaching hard disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
             cout << "Storage Attach=" << ans << "\n";
             if (ans != 0) {
@@ -388,7 +373,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                     << " --device "     << BOOT_DEVICE
                     << " --medium "     << "none";
 
-                if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Detachining previous CernVM ISO", this->cbObject);
+                if (this->onProgress!=NULL) (this->onProgress)(40, 110, "Detachining previous CernVM ISO", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
                 cout << "Detaching ISO=" << ans << "\n";
                 if (ans != 0) {
@@ -406,7 +391,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
              * Prepare download feedback
              */
             HVPROGRESS_FEEDBACK feedback;
-            feedback.total = 100;
+            feedback.total = 110;
             feedback.min = 40;
             feedback.max = 90;
             feedback.callback = this->onProgress;
@@ -414,7 +399,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             feedback.message = "Downloading CernVM";
 
             /* Download CernVM */
-            if (this->onProgress!=NULL) (this->onProgress)(40, 100, "Downloading CernVM", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(40, 110, "Downloading CernVM", this->cbObject);
             if (this->host->cernVMDownload( cvmVersion, &vmIso, &feedback ) != 0) {
                 this->state = STATE_ERROR;
                 return HVE_IO_ERROR;
@@ -430,7 +415,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --type "       << "dvddrive"
                 << " --medium "     << "\"" << vmIso << "\"";
 
-            if (this->onProgress!=NULL) (this->onProgress)(95, 100, "Attaching CD-ROM", this->cbObject);
+            if (this->onProgress!=NULL) (this->onProgress)(95, 110, "Attaching CD-ROM", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
             cout << "Storage Attach (CernVM)=" << ans << "\n";
             if (ans != 0) {
@@ -441,6 +426,71 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         
     }
     
+    /* Check if we should attach guest additions */
+    #ifdef GUESTADD_USE
+    if ( ((flags & HVF_GUEST_ADDITIONS) != 0) && !this->host->hvGuestAdditions.empty() ) {
+        
+        /* Check if they are already mounted the guest additions */
+        needsUpdate = true;
+        if (machineInfo.find( GUESTADD_DSK ) != machineInfo.end()) {
+
+            /* Get the filename of the iso */
+            getKV( machineInfo[ GUESTADD_DSK ], &kk, &kv, '(', 0 );
+            kk = kk.substr(0, kk.length()-1);
+
+            /* If they are the same, we are lucky */
+            if (this->host->hvGuestAdditions.compare(kk) == 0) {
+                cout << "Same file (" << this->host->hvGuestAdditions << ")\n";
+                needsUpdate = false;
+                
+            } else {
+                cout << "Guest additions ISO is different : " << kk << " / " << this->host->hvGuestAdditions << "\n";
+
+                /* Unmount previount iso */
+                args.str("");
+                args << "storageattach "
+                    << uuid
+                    << " --storagectl " << GUESTADD_CONTROLLER
+                    << " --port "       << GUESTADD_PORT
+                    << " --device "     << GUESTADD_DEVICE
+                    << " --medium "     << "none";
+
+                if (this->onProgress!=NULL) (this->onProgress)(100, 110, "Detachining previous GuestAdditions ISO", this->cbObject);
+                ans = this->wrapExec(args.str(), NULL);
+                cout << "Detaching ISO=" << ans << "\n";
+                if (ans != 0) {
+                    this->state = STATE_ERROR;
+                    return HVE_MODIFY_ERROR;
+                }
+            }
+
+        }
+
+        /* Check if we need to update the CD-ROM attaching business */
+        if (needsUpdate) {
+
+            /* (6) Attach boot CD-ROM to the controller */
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << GUESTADD_CONTROLLER
+                << " --port "       << GUESTADD_PORT
+                << " --device "     << GUESTADD_DEVICE
+                << " --type "       << "dvddrive"
+                << " --medium "     << "\"" << this->host->hvGuestAdditions << "\"";
+
+            if (this->onProgress!=NULL) (this->onProgress)(105, 110, "Attaching GuestAdditions CD-ROM", this->cbObject);
+            ans = this->wrapExec(args.str(), NULL);
+            cout << "Storage Attach (GuestAdditions)=" << ans << "\n";
+            if (ans != 0) {
+                this->state = STATE_ERROR;
+                return HVE_MODIFY_ERROR;
+            }
+        }
+
+    }
+    #endif
+    
     /* Store web-secret on the guest properties */
     this->setProperty("/CVMWeb/secret", this->key);
     this->setProperty("/CVMWeb/daemon/controlled", (this->daemonControlled ? "1" : "0"));
@@ -449,7 +499,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(this->daemonFlags));
 
     /* Last callbacks */
-    if (this->onProgress!=NULL) (this->onProgress)(100, 100, "Completed", this->cbObject);
+    if (this->onProgress!=NULL) (this->onProgress)(110, 110, "Completed", this->cbObject);
 
     /* Notify OPEN state change */
     this->state = STATE_OPEN;
@@ -475,8 +525,17 @@ int VBoxSession::start( std::string userData ) {
     /* Fetch information to validate disks */
     map<string, string> machineInfo = this->getMachineInfo();
     
-    /* Touch context ISO only if we have user-data */
-    if (!userData.empty()) {
+    /* Check if vm is in saved state */
+    bool inSavedState = false;
+    if (machineInfo.find( "State" ) != machineInfo.end()) {
+        if (machineInfo["State"].find("saved") != string::npos) {
+            inSavedState = true;
+            break;
+        }
+    }
+    
+    /* Touch context ISO only if we have user-data and the VM is not hibernated */
+    if (!userData.empty() && !inSavedState) {
     
         /* Detach & Delete previous context ISO */
         if (machineInfo.find( CONTEXT_DSK ) != machineInfo.end()) {
@@ -1253,14 +1312,10 @@ int Virtualbox::updateSession( HVSession * session ) {
         
         /* Extract CernVM Version from file */
         session->version = this->cernVMVersion( kk );
-        if (session->version.empty()) {
-            session->version = DEFAULT_CERNVM_VERSION;
-            session->flags |= HVF_DEPLOY_REGULAR;
-            
-        } else {
-            session->version = getFilename( kk ); // Using regular deployment
-            session->flags |= HVF_DEPLOY_REGULAR;
-            
+        if (session->version.empty()) { 
+            // (If we could not find a version number it's a disk-deployment)
+            session->version = getFilename( kk );
+            session->flags |= HVF_DEPLOYMENT_HDD;
         }
     }
     

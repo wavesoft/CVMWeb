@@ -135,7 +135,7 @@ private:
     FB::BrowserHostPtr  m_host;
     int                 m_authType;
 
-    bool                isDomainPriviledged();
+    bool                isDomainPrivileged();
 
     // Cryptography class
 //    CVMWebCrypto        * crypto;

@@ -60,6 +60,7 @@ public:
         registerProperty("ip",                  make_property(this, &CVMWebAPISession::get_ip));
         registerProperty("cpus",                make_property(this, &CVMWebAPISession::get_cpus));
         registerProperty("state",               make_property(this, &CVMWebAPISession::get_state));
+        registerProperty("flags",               make_property(this, &CVMWebAPISession::get_flags));
         registerProperty("ram",                 make_property(this, &CVMWebAPISession::get_memory));
         registerProperty("disk",                make_property(this, &CVMWebAPISession::get_disk));
         registerProperty("version",             make_property(this, &CVMWebAPISession::get_version));
@@ -162,6 +163,7 @@ public:
     int get_memory();
     int get_disk();
     int get_state();
+    int get_flags();
     int get_daemonMinCap();
     int get_daemonMaxCap();
     int get_daemonFlags();

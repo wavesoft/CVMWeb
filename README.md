@@ -209,12 +209,18 @@ You can learn more about the daemon if you check the README.md in the daemon/ fo
 ## Checking the daemon from javascript
 
 If you want to monitor the status of the daemon you have to request a daemon access. To do so, use the *requestDaemonAccess()* function
-on the core object:
+on the core object. Like all the request* functions, it's asynchronous and accepts two callbacks as parameters: The failure callback and the
+success callback.
 
 	var o = document.getElementById('cvmweb'),
-		daemon = o.requestDaemonAccess();
+		daemon = o.requestDaemonAccess(
+			function(daemon) {
+				// Successfully obtained daemon controlling instance
+			}, function(errno) {
+				// Unable to obtain a daemon controlling instance
+			});
 
-The function will either return a *CVMWebAPIDaemon* instance or an numeric error code if something went wrong.
+The function will either return 1 (HVE_SCHEDULED) or a negative error code if something went wrong.
 
 If the website is not in a privileged domain you can only access the following properties:
 
@@ -228,6 +234,8 @@ If you are in a privileged domain you get additionally the following:
  * **.path** (Read-only) : The location of the daemon, as detected by the plugin
  * **.start()** : Manually start the daemon
  * **.stop()** : Manually stop the daemon
+
+If you try to access the functions from a non-privileged domain they will always return *HVE_NOT_ALLOWED (-10)*.
 
 ## Opting-in for daemon management
 
@@ -270,9 +278,9 @@ The *.daemonFlags* is a bitmask integer that defines how the daemon will control
 It is very important to note that this is an NPAPI plugin, and therefore not protected by any browser sandbox! It can directly access your entire system!
 
 Extra care was taken to minimize the parameters that the user can specify and that can reach a system exec() command. 
-Only the **openSession()** function is currently passing (sanitized) integer arguments to the VBoxManage command. 
+Only the **open()** function is currently passing (sanitized) integer arguments to the VBoxManage command. 
 
-In addition and in order to protect the user from unauthorized VM initiations a system-modal dialog will be appeared every time a website calls the **openSession()** function.
+In addition and in order to protect the user from unauthorized VM initiations a system-modal dialog will be appeared every time a website calls the **open()** function.
 If the user rejects the session initiation twice within 5 seconds, no further dialogs will be displayed and all the requests will be rejected.
 
 There is no other (known) vulnerabilities that an attacker can exploit, but be aware!

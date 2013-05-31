@@ -53,7 +53,7 @@ private:
     FB::BrowserHostPtr      m_host;
 
     std::string             getDomainName();
-    bool                    isDomainPriviledged();
+    bool                    isDomainPrivileged();
 
 };
 
