@@ -15,6 +15,12 @@ file (GLOB PLATFORM RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 
 SOURCE_GROUP(X11 FILES ${PLATFORM})
 
+# Add option for browser confirm
+option(BROWSER_CONFIRM "Use the insecure browser alert() function instead of the platform's native API")
+if (BROWSER_CONFIRM)
+	add_definitions(-DBROWSER_CONFIRM)
+endif(BROWSER_CONFIRM)
+
 # use this to add preprocessor definitions
 add_definitions(
 )
