@@ -298,7 +298,7 @@ bool CVMWebAPI::confirm( std::string msg ) {
             FB::variant f = obj->GetProperty("confirm");
             FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
             std::string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<std::string>();
-            if (fType.find("native") == std::npos)
+            if (fType.find("native") == std::string::npos)
                 return false;
         
             // Invoke alert with some text
