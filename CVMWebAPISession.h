@@ -30,6 +30,7 @@
 #include "BrowserHost.h"
 #include "CVMWeb.h"
 #include "Hypervisor.h"
+#include "Utilities.h"
 
 #ifndef H_CVMWebAPISession
 #define H_CVMWebAPISession
@@ -43,7 +44,6 @@ public:
     CVMWebAPISession(const CVMWebPtr& plugin, const FB::BrowserHostPtr& host, HVSession * session) :
         m_plugin(plugin), m_host(host)
     {
-
         registerMethod("start",                 make_method(this, &CVMWebAPISession::start));
         registerMethod("open",                  make_method(this, &CVMWebAPISession::open));
         registerMethod("pause",                 make_method(this, &CVMWebAPISession::pause));
@@ -103,15 +103,7 @@ public:
             this->session->onStart = &CVMWebAPISession::onStart;
             this->session->onClose = &CVMWebAPISession::onClose;
             
-            /* Check if the api URL is alive */
-            if (this->session->state == STATE_STARTED) {
-                if (this->session->isAPIAlive()) {
-                    this->isAlive = true;
-                }
-            }
-            
         }
-        
     }
 
     virtual ~CVMWebAPISession() {};

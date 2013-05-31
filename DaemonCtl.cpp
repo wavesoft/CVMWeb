@@ -224,8 +224,9 @@ int daemonStart( std::string path_to_bin ) {
     #else
         
         // Use a local pointer for the fork
-        char * file = (char *) malloc( path_to_bin.length() );
+        static char file[4096];
         path_to_bin.copy( file, path_to_bin.length(), 0 );
+        file[path_to_bin.length()] = '\0';
         
         // Fork and start
         int pid = fork();

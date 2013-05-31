@@ -281,5 +281,7 @@ inline long getMillis() {
 #else
 #define CVMWA_LOG(...) ;
 #endif
+#define WTF_LOG(sth) \
+     std::cerr << "[WTF][" << __func__ << "](" << __FILE__ << ":" << __LINE__ << ") " << sth << std::endl;
 
 #endif /* end of include guard: UTILITIES_H_JA64LPSF */

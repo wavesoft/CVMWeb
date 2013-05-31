@@ -75,9 +75,7 @@ bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std
 
     // Thread-safe GTK init
     g_idle_add( display_dialog, &dialog_data );
-    GDK_THREADS_ENTER();
     gtk_main();
-    GDK_THREADS_LEAVE();
 
     return (dialog_data.result == GTK_RESPONSE_YES);
 }

@@ -155,7 +155,6 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
     
     /* Fetch domain info once again */
     std::string domain = this->getDomainName();
-    bool localDomain = domain.empty();
 
     /*
     // Try to update authorized keystore if it's in an invalid state
@@ -230,6 +229,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         } else if (ans == 2) {
             if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
             return;
+            
         }
         
         /* Open session */
@@ -240,9 +240,8 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         }
         
         /* Call success callback */
-        if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of(
-                boost::make_shared<CVMWebAPISession>(p, m_host, session)
-            ));
+        boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session);
+        if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of( pSession ));
         
         /* Check if we need a daemon for our current services */
         p->hv->checkDaemonNeed();
@@ -284,31 +283,37 @@ int CVMWebAPI::installHV( ) {
  */
 bool CVMWebAPI::confirm( std::string msg ) {
     
-    CVMWebPtr p = this->getPlugin();
-    return CVMConfirmDialog( m_host, p->GetWindow(), msg );
-
-    #ifdef _WIN32
-    // Retrieve a reference to the DOM Window
-    FB::DOM::WindowPtr window = m_host->getDOMWindow();
+    #ifdef BROWSER_CONFIRM
     
-    // Check if the DOM Window has an alert property
-    if (window && window->getJSObject()->HasProperty("window")) {
+        // Retrieve a reference to the DOM Window
+        FB::DOM::WindowPtr window = m_host->getDOMWindow();
+    
+        // Check if the DOM Window has an alert property
+        if (window && window->getJSObject()->HasProperty("window")) {
         
-        // Create a reference to alert
-        FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr>("window");
+            // Create a reference to alert
+            FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr>("window");
         
-        // Make sure the function is valid native function and not a hack 
-        FB::variant f = obj->GetProperty("confirm");
-        FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
-        std::string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<std::string>();
-        obj->Invoke("alert", FB::variant_list_of( fType ));
+            // Make sure the function is valid native function and not a hack 
+            FB::variant f = obj->GetProperty("confirm");
+            FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
+            std::string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<std::string>();
+            if (fType.find("native") == std::npos)
+                return false;
         
-        // Invoke alert with some text
-        return obj->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
-    } else {
-        return false;
-    }
+            // Invoke alert with some text
+            return obj->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
+        } else {
+            return false;
+        }
+
+    #else
+    
+        CVMWebPtr p = this->getPlugin();
+        return CVMConfirmDialog( m_host, p->GetWindow(), msg );
+
     #endif
+    
     
 }
 
