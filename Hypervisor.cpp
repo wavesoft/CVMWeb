@@ -559,8 +559,18 @@ Hypervisor * detectHypervisor() {
             hv->hvRoot = p + "/bin";
             hv->hvBinary = bin;
             ((Virtualbox*)hv)->hvGuestAdditions = "";
-            bin = p + "/VBoxGuestAdditions.iso";
-            if (file_exists(bin)) {
+            
+            // (1) Check for additions on XXX/share/virtualbox [/usr, /usr/local]
+            bin = p + "/share/virtualbox/VBoxGuestAdditions.iso";
+            if (!file_exists(bin)) {
+
+                // (2) Check for additions on XXX/additions [/opt/VirtualBox]
+                bin = p + "/additions/VBoxGuestAdditions.iso";
+                if (file_exists(bin)) {
+                    ((Virtualbox*)hv)->hvGuestAdditions = bin;
+                }
+
+            } else {
                 ((Virtualbox*)hv)->hvGuestAdditions = bin;
             }
             hv->detectVersion();
