@@ -34,7 +34,7 @@ bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std
         GetActiveWindow(),
         (LPCSTR)message.c_str(),
         (LPCSTR)"CernVM Web API",
-        MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2 | MB_TASKMODAL | MB_TOPMOST
+        MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2 | MB_SYSTEMMODAL | MB_TOPMOST
     );
     
     /* Return value */

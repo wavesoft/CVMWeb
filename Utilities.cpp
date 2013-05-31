@@ -195,8 +195,8 @@ std::string getFilename ( std::string path ) {
                 path.c_str(),
                 NULL, 0,
                 NULL, 0,
-                &fname, _MAX_FNAME,
-                &ext, _MAX_EXT
+                fname, _MAX_FNAME,
+                ext, _MAX_EXT
             );
         ans += fname;
         ans += ext;
@@ -571,9 +571,11 @@ int sha256_bin( string buffer, unsigned char * hash ) {
    using ::std::string;
    using ::std::numeric_limits;
 
+   /*
    if (bindata.size() > (numeric_limits<string::size_type>::max() / 4u) * 3u) {
       throw ::std::length_error("Converting too large a string to base64.");
    }
+   */
 
    const ::std::size_t binlen = bindata.size();
    // Use = signs so the end is properly padded.
