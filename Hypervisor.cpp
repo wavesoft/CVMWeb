@@ -667,6 +667,10 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         cout << "ERROR: No installer program data found\n";
         return HVE_EXTERNAL_ERROR;
     }
+    if (data.find( "extpack" ) == data.end()) {
+        cout << "ERROR: No extensions package URL found\n";
+        return HVE_EXTERNAL_ERROR;
+    }
     
     #ifdef __linux__
     // Pick an extension and installation type based on the installer= parameter
