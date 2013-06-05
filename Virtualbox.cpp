@@ -95,6 +95,16 @@ std::string extractMac( std::string nicInfo ) {
     }
 };
 
+/**
+ * Replace the last part of the given IP
+ */
+std::string changeUpperIP( std::string baseIP, int value ) {
+    int iDot = baseIP.find_last_of(".");
+    if (iDot == string::npos) return "";
+    return baseIP.substr(0, iDot) + "." + ntos<int>(value);
+};
+
+
 /** =========================================== **\
             VBoxSession Implementation
 \** =========================================== **/
@@ -1038,7 +1048,8 @@ std::string VBoxSession::getHostOnlyAdapter() {
 
     vector<string> lines;
     vector< map<string, string> > ifs;
-    string ifName;
+    vector< map<string, string> > dhcps;
+    string ifName = "", vboxName;
     
     /* Check if we already have host-only interfaces */
     int ans = this->wrapExec("list hostonlyifs", &lines);
@@ -1056,23 +1067,100 @@ std::string VBoxSession::getHostOnlyAdapter() {
         /* Still couldn't pick anything? Error! */
         if (lines.size() == 0) return "";
     }
-    
-    /* Process interfaces */
     ifs = tokenizeList( &lines, ':' );
+    
+    /* Dump the DHCP server states */
+    ans = this->wrapExec("list dhcpservers", &lines);
+    if (ans != 0) return "";
+    dhcps = tokenizeList( &lines, ':' );
+    
+    /* The name of the first network found and a flag
+       to check if we were able to find a DHCP server */
+    bool    foundDHCPServer = false,
+            foundDisabledDHCP = false;
+    string  foundIface      = "",
+            foundBaseIP     = "",
+            foundVBoxName   = "",
+            foundMask       = "";
+
+    /* Process interfaces */
     for (vector< map<string, string> >::iterator i = ifs.begin(); i != ifs.end(); i++) {
         map<string, string> iface = *i;
+
+        /* Ensure proper environment */
+        if (iface.find("Name") == iface.end()) continue;
+        if (iface.find("VBoxNetworkName") == iface.end()) continue;
+        if (iface.find("IPAddress") == iface.end()) continue;
+        if (iface.find("NetworkMask") == iface.end()) continue;
+        
+        /* Fetch interface info */
         ifName = iface["Name"];
-        /*
-        if (iface["DHCP"].compare("Disabled")) {
-            ans = this->wrapExec("VBoxManage dhcpserver modify --ifname "+ifName+" --enable", NULL);
-            if (ans != 0) return NULL;
+        vboxName = iface["VBoxNetworkName"];
+        
+        /* Check if we have DHCP enabled on this interface */
+        bool hasDHCP = false;
+        for (vector< map<string, string> >::iterator i = dhcps.begin(); i != dhcps.end(); i++) {
+            map<string, string> dhcp = *i;
+            if (dhcp.find("NetworkName") == dhcp.end()) continue;
+            if (dhcp.find("Enabled") == dhcp.end()) continue;
+            
+            /* The network has a DHCP server, check if it's running */
+            if (vboxName.compare(dhcp["NetworkName"])) {
+                if (dhcp["Enabled"].compare("yes") == 0) {
+                    hasDHCP = true;
+                    break;
+                } else {
+                    
+                    /* Check if we can enable the server */
+                    ans = this->wrapExec("dhcpserver modify --ifname " + ifName + " --enable", NULL);
+                    if (ans == 0) {
+                        hasDHCP = true;
+                        break;
+                    }
+                    
+                }
+            }
         }
-        */
-        break;
+        
+        /* Keep the information of the first interface found */
+        if (foundIface.empty()) {
+            foundIface = ifName;
+            foundVBoxName = vboxName;
+            foundBaseIP = iface["IPAddress"];
+            foundMask = iface["NetworkMask"];
+        }
+        
+        /* If we found DHCP we are done */
+        if (hasDHCP) {
+            foundDHCPServer = true;
+            break;
+        }
+        
+    }
+    
+    /* If there was no DHCP server, create one */
+    if (!foundDHCPServer) {
+        
+        /* Prepare IP addresses */
+        string ipServer = changeUpperIP( foundBaseIP, 100 );
+        string ipMin = changeUpperIP( foundBaseIP, 101 );
+        string ipMax = changeUpperIP( foundBaseIP, 254 );
+        
+        /* Add and start server */
+        ans = this->wrapExec(
+            "dhcpserver add --ifname " + foundIface + 
+            " --ip " + ipServer +
+            " --netmask " + foundMask +
+            " --lowerip " + ipMin +
+            " --upperip " + ipMax +
+            " --enable"
+             , NULL);
+        if (ans != 0) return "";
+        
     }
     
     /* Got my interface */
-    return ifName;
+    return foundIface;
 };
 
 /**
