@@ -17,7 +17,7 @@ sub get_js_list {
         readdir (DIR);
 
     return
-        grep { (/\.js$/) && (! -l $_) }
+        grep { (/\.js$/) && (!/init\.js/) && (! -l $_) }
         map { -d $_ ? get_js_list ($_) : $_ }
         @files;
 }
@@ -35,7 +35,16 @@ sub read_file {
 # Concat everything
 my @files = 
 my $buffer = "";
-$buffer .= read_file( $_ ) foreach (get_js_list('src'));
+foreach (get_js_list('src')) {
+    print "Collecting $_...";
+    $buffer .= read_file( $_ );
+    print "ok\n";
+}
+
+# Last part is the init script
+print "Collecting src/init.js...";
+$buffer .= read_file( "src/init.js" );
+print "ok\n";
 
 # Enclose it into a function and dump it into the final file
 open  DUMP_FILE, ">~tmp-dump.js";
@@ -45,7 +54,13 @@ print DUMP_FILE "})(window);\n";
 close DUMP_FILE;
 
 # Compress
+print "Compressing...";
 `java -jar bin/yuicompressor-2.4.8.jar -o cvmwebapi-1.0.js ~tmp-dump.js`;
+if ($? == 0) {
+    print "ok\n";
+} else {
+    print "failed\n";
+}
 
 # Remove temp file
 unlink "~tmp-dump.js";
