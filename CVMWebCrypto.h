@@ -21,6 +21,12 @@
 #ifndef CRYPTO_H_41EFXAZS
 #define CRYPTO_H_41EFXAZS
 
+#include "JSObject.h"
+#include "variant.h"
+#include "variant_list.h"
+#include "DOM/Document.h"
+#include "global/config.h"
+
 #include "Utilities.h"
 #include "Hypervisor.h"
 

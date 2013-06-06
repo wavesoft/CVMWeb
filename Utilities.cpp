@@ -893,20 +893,27 @@ int decompressFile( std::string src, std::string dst ) {
 /**
  * Encode the given string for URL
  */
-std::string urlEncode ( std::string url ) {
+std::string urlEncode ( const std::string &s ) {
 
-    CURL *curl;
-    curl = curl_easy_init();
-    if (curl) {
-        char * urlRes = curl_easy_escape( curl, url.c_str(), url.length() );
-        string urlAns = urlRes;
-        curl_free( urlRes );
-        curl_easy_cleanup(curl);
-        return urlAns;
-    } else {
-        return "";
+    //RFC 3986 section 2.3 Unreserved Characters (January 2005)
+    const std::string unreserved = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
+
+    std::string escaped="";
+    for(size_t i=0; i<s.length(); i++)
+    {
+        if (unreserved.find_first_of(s[i]) != std::string::npos)
+        {
+            escaped.push_back(s[i]);
+        }
+        else
+        {
+            escaped.append("%");
+            char buf[3];
+            sprintf(buf, "%.2X", s[i]);
+            escaped.append(buf);
+        }
     }
-
+    return escaped;
 }
 
 #ifdef __linux__

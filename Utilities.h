@@ -216,7 +216,7 @@ int                                                 decompressFile  ( std::strin
 /**
  * Encode the given string for URL
  */
-std::string                                         urlEncode       ( std::string url );
+std::string                                         urlEncode       ( const std::string& url );
 
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */

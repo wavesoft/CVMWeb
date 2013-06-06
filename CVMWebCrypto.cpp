@@ -117,7 +117,7 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
 /**
  * Use the domain's key to decrypt the given data
  */
- int CVMWebCrypto::validateDomainData ( std::string domain, std::string signature, const unsigned char * pData, const int pDataLen ) {
+ int CVMWebCrypto::validateDomainData ( std::string domain, std::string signature, const unsigned char * data, const int dataLen ) {
 
     // Check if domain does not exist
     if (!isDomainValid(domain)) return HVE_NOT_FOUND;
@@ -136,8 +136,9 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
 
     // Validate signature
     EVP_MD_CTX ctx;
+    EVP_MD_CTX_init(&ctx);
     EVP_VerifyInit( &ctx, EVP_sha512());
-    EVP_VerifyUpdate( &ctx, pData, pDataLen );
+    EVP_VerifyUpdate( &ctx, data, dataLen );
     int ans = EVP_VerifyFinal( &ctx, (unsigned char *) sigData.c_str(), sigData.length(), domainKey );
     if (ans != 1) return HVE_NOT_VALIDATED;
     
@@ -157,9 +158,9 @@ bool CVMWebCrypto::isDomainValid ( std::string domain ) {
 /**
  * Generate a unique, cryptographically strong salt
  */
-std::string generateSalt() {
+std::string CVMWebCrypto::generateSalt() {
     const unsigned char SALT_SIZE = 64;
-    const char saltChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+";
+    const char saltChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
     unsigned char randValue[SALT_SIZE];
     std::string saltData = "";
     
@@ -179,7 +180,7 @@ std::string generateSalt() {
 int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB::VariantMap& data ) {
     
     /* Populate checksum buffer */
-    string checksumBuffer = "";
+    stringstream checksumBuf;
     string dataSignature = "";
     for (FB::VariantMap::iterator it=data.begin(); it!=data.end(); ++it) {
         string key = (*it).first;
@@ -187,11 +188,11 @@ int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB:
         toLowerCase( key );
         if (key.compare("signature") != 0) {
             if (value.is_of_type<string>()) {
-                checksumBuffer += key + "=" + urlEncode( value.cast<string>() ) + "\n";
+                checksumBuf << key << "=" << urlEncode( value.cast<string>() ) << "\n";
             } else if (value.is_of_type<int>()) {
-                checksumBuffer += key + "=" + ston<int>( value.cast<int>() ) + "\n";
+                checksumBuf <<key << "=" << value.cast<int>() << "\n";
             } else if (value.is_of_type<long>()) {
-                checksumBuffer += key + "=" + ston<long>( value.cast<long>() ) + "\n";
+                checksumBuf << key << "="  << value.cast<long>() << "\n";
             }
         } else {
             // Store signature and skip it from the checksum
@@ -200,13 +201,20 @@ int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB:
     }
     
     /* Append salt to the data */
-    checksumBuffer += salt;
+    checksumBuf << salt;
     
-    /* Calculate the binary SHA256 checksum */
-    unsigned char binaryHash[SHA256_DIGEST_LENGTH];
-    sha256_bin( checksumBuffer, binaryHash );
-    
+    /* Check for invalid signature */
+    if (dataSignature.empty()) return HVE_USAGE_ERROR;
+
+    /* Extract pointers */
+    string strHash = checksumBuf.str();
+    std::cout <<  "Going to validate buffer: '" << strHash << "' with signature '" << dataSignature << "'" << std::endl;
+
     /* Validate signature */
-    return validateDomainData( domain, dataSignature, binaryHash, SHA256_DIGEST_LENGTH );
+    return validateDomainData( domain, dataSignature, (const unsigned char * ) strHash.c_str(), strHash.length() );
     
 }
+
+/*
+core.requestSafeSession( "http://localhost/temp/sign.php", function(s){window.session=s;console.log("OK!");}, function(e){console.error("Error "+e);})
+*/

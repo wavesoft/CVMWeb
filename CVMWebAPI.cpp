@@ -60,14 +60,12 @@ void __fwProgress( int step, int total, std::string msg, void * ptr ) {
  * specified.
  */
 std::string CVMWebAPI::calculateHostID( std::string& domain ) {
-    CVMWebPtr p = this->getPlugin();
-    if (p->hv == NULL) return "";
     
     /* Fetch/Generate user UUID */
-    string machineID = p->config->get("local-id");
+    string machineID = this->config.get("local-id");
     if (machineID.empty()) {
         machineID = this->crypto->generateSalt();
-        p->config->set("local-id", machineID);
+        this->config.set("local-id", machineID);
     }
     
     /* Create a checksum of the user ID + domain and use this as HostID */
@@ -166,13 +164,15 @@ bool CVMWebAPI::isDomainPrivileged() {
 /**
  * Check the status of the given session
  */
-FB::variant CVMWebAPI::checkSession( const FB::variant& vmName, const FB::variant& vmSecret ) {
+FB::variant CVMWebAPI::checkSession( const FB::variant& vm, const FB::variant& secret ) {
     
     /* Check for invalid plugin */
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) return CVME_UNSUPPORTED;
     
     /* Try to open the session */
+    string vmName = vm.convert_cast<string>();
+    string vmSecret = secret.convert_cast<string>();
     int ans = p->hv->sessionValidate( vmName, vmSecret );
     return ans;
     
@@ -245,7 +245,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     /* Put salt and user-specific ID in the URL */
     std::string salt = this->crypto->generateSalt();
     std::string glueChar = "&";
-    if (newURL.find("?") == string::npos) glueChar = "?";
+    if (sURL.find("?") == string::npos) glueChar = "?";
     std::string newURL = 
         sURL + glueChar + 
         "cvm_salt=" + salt + "&" +
@@ -254,10 +254,13 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     /* Download data from URL */
     std::string jsonString;
     int res = downloadText( newURL, &jsonString );
-    if (res < 0) return res;
+    if (res < 0) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( res ));
+        return;
+    }
     
     /* Try to parse the data */
-    FB::variant jsonData = jsonToVariantValue( jsonString );
+    FB::variant jsonData = FB::jsonToVariantValue( jsonString );
     if (!jsonData.is_of_type<FB::VariantMap>()) {
         if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
         return;
@@ -266,7 +269,10 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     /* Validate signature */
     FB::VariantMap jsonHash = jsonData.cast<FB::VariantMap>();
     res = this->crypto->signatureValidate( domain, salt, jsonHash );
-    if (res < 0) return res;
+    if (res < 0) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( res ));
+        return;
+    }
     
     /* Open/Resume session */
     
@@ -300,7 +306,7 @@ FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant&
 void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant& secret, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
     
     /* Fetch domain info once again */
-    std::string domain = this->getDomainName();
+    string domain = this->getDomainName();
 
     /*
     // Try to update authorized keystore if it's in an invalid state
@@ -332,8 +338,8 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
     } else {
 
         /* Fetch info */
-        std::string vmName = vm.convert_cast<std::string>();
-        std::string vmSecret = secret.convert_cast<std::string>();
+        string vmName = vm.convert_cast<string>();
+        string vmSecret = secret.convert_cast<string>();
         
         /* Try to open the session */
         int ans = p->hv->sessionValidate( vmName, vmSecret );
@@ -342,7 +348,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         if (ans == 0) {
 
             // Newline-specific split
-            std::string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine! Accept only requests from websites that you trust!." _EOL _EOL "Do you want to continue?";
+            string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine! Accept only requests from websites that you trust!." _EOL _EOL "Do you want to continue?";
 
             // Prompt user
             if (!this->confirm(msg)) {
@@ -439,8 +445,8 @@ bool CVMWebAPI::confirm( std::string msg ) {
             // Make sure the function is valid native function and not a hack 
             FB::variant f = obj->GetProperty("confirm");
             FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
-            std::string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<std::string>();
-            if (fType.find("native") == std::string::npos)
+            string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
+            if (fType.find("native") == string::npos)
                 return false;
         
             // Invoke alert with some text
