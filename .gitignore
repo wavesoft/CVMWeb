@@ -1,10 +1,11 @@
 *.DS_Store
 *.o
+*.swp
+*.un~
 test/test
 test/build
 daemon/daemon
 daemon/build
 test/code.txt
+js/cvmwebapi-*
 err.txt
-*.swp
-*.un~
