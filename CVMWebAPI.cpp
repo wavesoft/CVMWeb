@@ -129,6 +129,21 @@ bool CVMWebAPI::isDomainPrivileged() {
 }
 
 /**
+ * Check the status of the given session
+ */
+FB::variant checkSession( const FB::variant& vmName, const FB::variant& vmSecret ) {
+    
+    /* Check for invalid plugin */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return CVME_UNSUPPORTED;
+    
+    /* Try to open the session */
+    int ans = p->hv->sessionValidate( vmName, vmSecret );
+    return ans;
+    
+}
+
+/**
  * Create and return a session object. 
  */
 FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant& secret, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {

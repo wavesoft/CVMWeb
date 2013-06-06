@@ -63,6 +63,8 @@ public:
     CVMWebAPI(const CVMWebPtr& plugin, const FB::BrowserHostPtr& host) :
         m_plugin(plugin), m_host(host)
     {
+
+        registerMethod("checkSession",        make_method(this, &CVMWebAPI::checkSession));
         registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
         registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::requestDaemonAccess));
         registerMethod("requestControlAccess",make_method(this, &CVMWebAPI::requestControlAccess));
@@ -113,6 +115,7 @@ public:
     void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
 
     // Methods
+    FB::variant checkSession( const FB::variant& vm, const FB::variant& code );
     FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     FB::variant requestDaemonAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     FB::variant requestControlAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );

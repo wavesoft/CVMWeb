@@ -147,3 +147,21 @@ bool CVMWebCrypto::isDomainValid ( std::string domain ) {
     return (domainKeys.find(domain) != domainKeys.end());
 }
 
+/**
+ * Load the domain's public key from the store and reset signature buffer
+ */
+int signBegin ( std::string domain ) {
+    signatureData = "";
+}
+
+/**
+ * Update signature information with the given key and data
+ */
+int singUpdate ( std::string key,  std::string data ) {
+    if (!signatureData.empty()) signatureData += ",";
+    signatureData += key + "=" + data;
+}
+
+int singValidate ( std::string signature ) {
+    
+}

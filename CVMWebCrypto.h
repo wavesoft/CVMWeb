@@ -63,6 +63,13 @@ public:
     bool    isDomainValid               ( std::string domain );
 
     /**
+     * Signature validation functions
+     */
+    int     signBegin                   ( std::string domain );
+    int     singUpdate                  ( std::string key,  std::string data );
+    int     singValidate                ( std::string signature );
+
+    /**
      * Denotes that the class is valid and ready for use
      */
     bool    valid;
@@ -78,6 +85,11 @@ private:
      * Domain-keydata mapping
      */
     std::map< std::string, std::string > domainKeys;
+    
+    /**
+     * Signature calculation properties
+     */
+    std::string signatureData;
 
 };
 
