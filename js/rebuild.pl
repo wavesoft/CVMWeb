@@ -39,7 +39,7 @@ $buffer .= read_file( $_ ) foreach (get_js_list('src'));
 
 # Enclose it into a function and dump it into the final file
 open  DUMP_FILE, ">~tmp-dump.js";
-print DUMP_FILE "(function(global) {\n";
+print DUMP_FILE "(function(GLOBAL) {\n";
 print DUMP_FILE $buffer."\n";
 print DUMP_FILE "})(window);\n";
 close DUMP_FILE;
