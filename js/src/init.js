@@ -10,5 +10,5 @@
 * (I can't use jQuery because it's supposed to be a non-dependant library)
 */
 window.addEventListener('load', function(e) {
-    alert( CVM.hasPlugin() );
+
 });

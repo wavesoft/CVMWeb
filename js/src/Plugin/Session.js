@@ -1,0 +1,4 @@
+
+CVM.Session = function() {
+    
+};
