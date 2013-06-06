@@ -29,6 +29,7 @@
 #include <openssl/err.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 
 /**
  * Cryptographic and validation routines for CernVM Web API
@@ -55,7 +56,7 @@ public:
     /**
      * Verify the authenticity of the contextualization information received form the given domain
      */
-    int     validateDomainData          ( std::string domain, std::string data, std::string signature );
+    int     validateDomainData          ( std::string domain, std::string signature, const unsigned char * pData, const int pDataLen );
 
     /**
      * Check if the given domain name is listed in the authorized domain keys
@@ -65,9 +66,12 @@ public:
     /**
      * Signature validation functions
      */
-    int     signBegin                   ( std::string domain );
-    int     singUpdate                  ( std::string key,  std::string data );
-    int     singValidate                ( std::string signature );
+    int     signatureValidate           ( std::string& domain, std::string& salt, FB::VariantMap& data  );
+
+    /**
+     * Generate a unique salt
+     */
+    std::string generateSalt            ( );
 
     /**
      * Denotes that the class is valid and ready for use

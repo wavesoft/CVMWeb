@@ -38,6 +38,49 @@
 
 #include "Dialogs.h"
 
+#include "json/json.h"
+#include "fbjson.h"
+
+using namespace std;
+
+/** =========================================== **\
+                   Tool Functions
+\** =========================================== **/
+
+/**
+ * Forward progress events
+ */
+void __fwProgress( int step, int total, std::string msg, void * ptr ) {
+    CVMWebAPI * self = (CVMWebAPI * ) ptr;
+    self->fire_installProgress( step, total, msg );
+}
+
+/**
+ * Calculate the domain ID using user's unique ID plus the domain name
+ * specified.
+ */
+std::string CVMWebAPI::calculateHostID( std::string& domain ) {
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return "";
+    
+    /* Fetch/Generate user UUID */
+    string machineID = p->config->get("local-id");
+    if (machineID.empty()) {
+        machineID = this->crypto->generateSalt();
+        p->config->set("local-id", machineID);
+    }
+    
+    /* Create a checksum of the user ID + domain and use this as HostID */
+    string checksum = "";
+    sha256_buffer( machineID + "|" + domain, &checksum );
+    return checksum;
+}
+
+
+/** =========================================== **\
+                 Plugin Functions
+\** =========================================== **/
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWebPtr CVMWebAPI::getPlugin()
 ///
@@ -53,14 +96,6 @@ CVMWebPtr CVMWebAPI::getPlugin()
         throw FB::script_error("The plugin is invalid");
     }
     return plugin;
-}
-
-/**
- * Forward progress events
- */
-void __fwProgress( int step, int total, std::string msg, void * ptr ) {
-    CVMWebAPI * self = (CVMWebAPI * ) ptr;
-    self->fire_installProgress( step, total, msg );
 }
 
 /**
@@ -131,7 +166,7 @@ bool CVMWebAPI::isDomainPrivileged() {
 /**
  * Check the status of the given session
  */
-FB::variant checkSession( const FB::variant& vmName, const FB::variant& vmSecret ) {
+FB::variant CVMWebAPI::checkSession( const FB::variant& vmName, const FB::variant& vmSecret ) {
     
     /* Check for invalid plugin */
     CVMWebPtr p = this->getPlugin();
@@ -142,6 +177,102 @@ FB::variant checkSession( const FB::variant& vmName, const FB::variant& vmSecret
     return ans;
     
 }
+
+/**
+ * Request a new session using the safe URL
+ */
+FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+    
+    /* Block requests when reached throttled state */
+    if (this->throttleBlock) return CVME_ACCESS_DENIED;
+    
+    /* Check for invalid plugin */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return CVME_UNSUPPORTED;
+    
+    /* Schedule thread exec */
+    boost::thread t(boost::bind(&CVMWebAPI::requestSafeSession_thread,
+         this, vmcpURL, successCb, failureCb));
+
+    /* Scheduled for creation */
+    return HVE_SCHEDULED;
+        
+}
+
+/**
+ * The thread of requesting new session
+ */
+void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+
+    /* Handle request */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        return;
+    }
+
+    /* Fetch domain info */
+    std::string domain = this->getDomainName();
+
+    /* Try to update authorized keystore if it's in an invalid state */
+    if (!isDomainPrivileged()) {
+        
+        // Trigger update
+        if (!this->crypto->valid)
+            this->crypto->updateAuthorizedKeystore();
+
+        // Still invalid? Something's wrong
+        if (!this->crypto->valid) {
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
+            return;
+        }
+
+        // Block requests from untrusted domains
+        if (!this->crypto->isDomainValid(domain)) {
+            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
+            return;
+        }
+        
+    }
+    
+    /* Validate arguments */
+    std::string sURL = vmcpURL.convert_cast<std::string>();
+    if (sURL.empty()) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+        return;
+    }
+    
+    /* Put salt and user-specific ID in the URL */
+    std::string salt = this->crypto->generateSalt();
+    std::string glueChar = "&";
+    if (newURL.find("?") == string::npos) glueChar = "?";
+    std::string newURL = 
+        sURL + glueChar + 
+        "cvm_salt=" + salt + "&" +
+        "cvm_hostid=" + this->calculateHostID( domain );
+    
+    /* Download data from URL */
+    std::string jsonString;
+    int res = downloadText( newURL, &jsonString );
+    if (res < 0) return res;
+    
+    /* Try to parse the data */
+    FB::variant jsonData = jsonToVariantValue( jsonString );
+    if (!jsonData.is_of_type<FB::VariantMap>()) {
+        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
+        return;
+    }
+    
+    /* Validate signature */
+    FB::VariantMap jsonHash = jsonData.cast<FB::VariantMap>();
+    res = this->crypto->signatureValidate( domain, salt, jsonHash );
+    if (res < 0) return res;
+    
+    /* Open/Resume session */
+    
+    
+}
+
 
 /**
  * Create and return a session object. 

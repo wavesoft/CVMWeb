@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <algorithm>
 #include <iterator>
 #include <vector>
 #include <limits>
@@ -890,6 +889,25 @@ int decompressFile( std::string src, std::string dst ) {
     
 }
 
+
+/**
+ * Encode the given string for URL
+ */
+std::string urlEncode ( std::string url ) {
+
+    CURL *curl;
+    curl = curl_easy_init();
+    if (curl) {
+        char * urlRes = curl_easy_escape( curl, url.c_str(), url.length() );
+        string urlAns = urlRes;
+        curl_free( urlRes );
+        curl_easy_cleanup(curl);
+        return urlAns;
+    } else {
+        return "";
+    }
+
+}
 
 #ifdef __linux__
 

@@ -30,8 +30,9 @@
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
 
+#include "LocalConfig.h"
 #include "CVMWeb.h"
-//#include "CVMWebCrypto.h"
+#include "CVMWebCrypto.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI
@@ -68,6 +69,7 @@ public:
         registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
         registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::requestDaemonAccess));
         registerMethod("requestControlAccess",make_method(this, &CVMWebAPI::requestControlAccess));
+        registerMethod("requestSafeSession",  make_method(this, &CVMWebAPI::requestSafeSession));
         
         registerMethod("authenticate",        make_method(this, &CVMWebAPI::authenticate));
         registerMethod("installHypervisor",   make_method(this, &CVMWebAPI::installHV));
@@ -88,7 +90,7 @@ public:
         this->throttleBlock = false;
         
         // Create crypto instance
-        //crypto = new CVMWebCrypto();
+        crypto = new CVMWebCrypto();
         
     }
 
@@ -100,7 +102,7 @@ public:
     ///         the plugin is released.
     ///////////////////////////////////////////////////////////////////////////////
     virtual ~CVMWebAPI() {
-        //delete crypto;
+        delete crypto;
     };
 
     CVMWebPtr getPlugin();
@@ -113,10 +115,12 @@ public:
     // Threads
     void thread_install( );
     void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
+    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
 
     // Methods
     FB::variant checkSession( const FB::variant& vm, const FB::variant& code );
     FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
+    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     FB::variant requestDaemonAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     FB::variant requestControlAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
     std::string getDomainName();
@@ -133,7 +137,11 @@ public:
     // Forward proxy to browser's confirm
     bool        confirm( std::string );
     
+    // Common configuration class
+    LocalConfig         config;    
+    
 private:
+    
     CVMWebWeakPtr       m_plugin;
     FB::BrowserHostPtr  m_host;
     int                 m_authType;
@@ -141,12 +149,14 @@ private:
     bool                isDomainPrivileged();
 
     // Cryptography class
-//    CVMWebCrypto        * crypto;
+    CVMWebCrypto        * crypto;
 
     // Throttling protection
     long                throttleTimestamp;
     int                 throttleDenies;
     bool                throttleBlock;
+    
+    std::string         calculateHostID( std::string& domain );
     
 };
 

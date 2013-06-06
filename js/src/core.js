@@ -43,8 +43,15 @@ var CVM = GLOBAL.CVM = {
     
     /**
      * Request session
+     *
+     * @param configURL     Specifies the location for the configuration information to use for creating the new VM
+     * @param callback      The function to call if everything went as expected and the session is up and running
+     * @param errorCallback [Optional] A callback that will be called if an error occured while requesting the session
+     *
+     * Note: Check 
+     * 
      */
-    requetSession: function( config, callback ) {
+    requetSession: function( configURL, callback ) {
         var plugin = getPlugin();
         if (!plugin) return false;
         if (!config) return false;

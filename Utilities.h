@@ -24,6 +24,7 @@
 /**
  * Global includes
  */
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -212,6 +213,11 @@ bool                                                isSanitized     ( std::strin
  */
 int                                                 decompressFile  ( std::string filename, std::string output );
 
+/**
+ * Encode the given string for URL
+ */
+std::string                                         urlEncode       ( std::string url );
+
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
 /* ======================================================== */
@@ -278,6 +284,11 @@ inline long getMillis() {
     return GetTickCount() / 1000;
     #endif
 }
+
+/**
+ * Convert to lowercase the given string
+ */
+#define toLowerCase(x)  std::transform( x.begin(), x.end(), x.begin(), ::tolower)
 
 /**
  * Debug macro
