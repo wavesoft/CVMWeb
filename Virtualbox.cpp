@@ -210,7 +210,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     
     if (this->onProgress!=NULL) (this->onProgress)(15, 110, "Setting up VM", this->cbObject);
     ans = this->wrapExec(args.str(), NULL);
-    cout << "Modify VM=" << ans << "\n";
+    CVMWA_LOG( "Info", "Modify VM=" << ans  );
     if (ans != 0) {
         this->state = STATE_ERROR;
         return HVE_MODIFY_ERROR;
@@ -263,11 +263,11 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             
             /* If they are the same, we are lucky */
             if (kk.compare( masterDisk ) == 0) {
-                cout << "Same disk (" << masterDisk << ")\n";
+                CVMWA_LOG( "Info", "Same disk (" << masterDisk << ")" );
                 needsUpdate = false;
                 
             } else {
-                cout << "Master disk is different : " << kk << " / " << masterDisk << "\n";
+                CVMWA_LOG( "Info", "Master disk is different : " << kk << " / " << masterDisk  );
 
                 /* Unmount previount iso */
                 args.str("");
@@ -280,7 +280,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
                 if (this->onProgress!=NULL) (this->onProgress)(93, 110, "Detachining previous disk", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Detaching ISO=" << ans << "\n";
+                CVMWA_LOG( "Info", "Detaching ISO=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
                     return HVE_MODIFY_ERROR;
@@ -306,7 +306,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             if (this->onProgress!=NULL) (this->onProgress)(95, 110, "Attaching hard disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "Storage Attach=" << ans << "\n";
+            CVMWA_LOG( "Info", "Storage Attach=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_MODIFY_ERROR;
@@ -339,7 +339,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             if (this->onProgress!=NULL) (this->onProgress)(25, 110, "Creating scratch disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "Create HD=" << ans << "\n";
+            CVMWA_LOG( "Info", "Create HD=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_MODIFY_ERROR;
@@ -358,7 +358,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             if (this->onProgress!=NULL) (this->onProgress)(35, 110, "Attaching hard disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "Storage Attach=" << ans << "\n";
+            CVMWA_LOG( "Info", "Storage Attach=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_MODIFY_ERROR;
@@ -379,10 +379,10 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             /* If they are the same, we are lucky */
             if (kv.compare(kk) == 0) {
-                cout << "Same versions (" << kv << ")\n";
+                CVMWA_LOG( "Info", "Same versions (" << kv << ")" );
                 needsUpdate = false;
             } else {
-                cout << "CernVM iso is different : " << kk << " / " << kv << "\n";
+                CVMWA_LOG( "Info", "CernVM iso is different : " << kk << " / " << kv  );
 
                 /* Unmount previount iso */
                 args.str("");
@@ -395,7 +395,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
                 if (this->onProgress!=NULL) (this->onProgress)(40, 110, "Detachining previous CernVM ISO", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Detaching ISO=" << ans << "\n";
+                CVMWA_LOG( "Info", "Detaching ISO=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
                     return HVE_MODIFY_ERROR;
@@ -437,7 +437,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             if (this->onProgress!=NULL) (this->onProgress)(95, 110, "Attaching CD-ROM", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "Storage Attach (CernVM)=" << ans << "\n";
+            CVMWA_LOG( "Info", "Storage Attach (CernVM)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_MODIFY_ERROR;
@@ -460,11 +460,11 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             /* If they are the same, we are lucky */
             if (this->host->hvGuestAdditions.compare(kk) == 0) {
-                cout << "Same file (" << this->host->hvGuestAdditions << ")\n";
+                CVMWA_LOG( "Info", "Same file (" << this->host->hvGuestAdditions << ")" );
                 needsUpdate = false;
                 
             } else {
-                cout << "Guest additions ISO is different : " << kk << " / " << this->host->hvGuestAdditions << "\n";
+                CVMWA_LOG( "Info", "Guest additions ISO is different : " << kk << " / " << this->host->hvGuestAdditions  );
 
                 /* Unmount previount iso */
                 args.str("");
@@ -477,7 +477,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
                 if (this->onProgress!=NULL) (this->onProgress)(100, 110, "Detachining previous GuestAdditions ISO", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Detaching ISO=" << ans << "\n";
+                CVMWA_LOG( "Info", "Detaching ISO=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
                     return HVE_MODIFY_ERROR;
@@ -501,7 +501,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             if (this->onProgress!=NULL) (this->onProgress)(105, 110, "Attaching GuestAdditions CD-ROM", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "Storage Attach (GuestAdditions)=" << ans << "\n";
+            CVMWA_LOG( "Info", "Storage Attach (GuestAdditions)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_MODIFY_ERROR;
@@ -542,7 +542,7 @@ int VBoxSession::start( std::string uData ) {
         userData = uData;
 
     /* Validate state */
-    cout << "0 (" << this->state << ")\n";
+    CVMWA_LOG( "Info", "0 (" << this->state << ")" );
     if (this->state != STATE_OPEN) return HVE_INVALID_STATE;
     this->state = STATE_STARTING;
 
@@ -574,7 +574,7 @@ int VBoxSession::start( std::string uData ) {
                 getKV( machineInfo[ FLOPPYIO_DSK ], &kk, &kv, '(', 0 );
                 kk = kk.substr(0, kk.length()-1);
 
-                cout << "Detaching " << kk << "\n";
+                CVMWA_LOG( "Info", "Detaching " << kk  );
 
                 /* Detach floppy */
                 args.str("");
@@ -587,7 +587,7 @@ int VBoxSession::start( std::string uData ) {
 
                 if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching configuration floppy", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Storage Attach (floppyIO)=" << ans << "\n";
+                CVMWA_LOG( "Info", "Storage Attach (floppyIO)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
                     return HVE_MODIFY_ERROR;
@@ -600,7 +600,7 @@ int VBoxSession::start( std::string uData ) {
 
                 if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing configuration floppy", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Closemedium (floppyIO)=" << ans << "\n";
+                CVMWA_LOG( "Info", "Closemedium (floppyIO)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
                     return HVE_MODIFY_ERROR;
@@ -629,7 +629,7 @@ int VBoxSession::start( std::string uData ) {
 
             if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching configuration floppy", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "StorageAttach (floppyIO)=" << ans << "\n";
+            CVMWA_LOG( "Info", "StorageAttach (floppyIO)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_OPEN;
                 return HVE_MODIFY_ERROR;
@@ -648,7 +648,7 @@ int VBoxSession::start( std::string uData ) {
                 getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
                 kk = kk.substr(0, kk.length()-1);
 
-                cout << "Detaching " << kk << "\n";
+                CVMWA_LOG( "Info", "Detaching " << kk  );
 
                 /* Detach iso */
                 args.str("");
@@ -661,7 +661,7 @@ int VBoxSession::start( std::string uData ) {
 
                 if (this->onProgress!=NULL) (this->onProgress)(1, 7, "Detaching contextualization CD-ROM", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Storage Attach (context)=" << ans << "\n";
+                CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
                     return HVE_MODIFY_ERROR;
@@ -674,7 +674,7 @@ int VBoxSession::start( std::string uData ) {
 
                 if (this->onProgress!=NULL) (this->onProgress)(2, 7, "Closing contextualization CD-ROM", this->cbObject);
                 ans = this->wrapExec(args.str(), NULL);
-                cout << "Closemedium (context)=" << ans << "\n";
+                CVMWA_LOG( "Info", "Closemedium (context)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
                     return HVE_MODIFY_ERROR;
@@ -703,7 +703,7 @@ int VBoxSession::start( std::string uData ) {
 
             if (this->onProgress!=NULL) (this->onProgress)(5, 7, "Attaching contextualization CD-ROM", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
-            cout << "StorageAttach (context)=" << ans << "\n";
+            CVMWA_LOG( "Info", "StorageAttach (context)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_OPEN;
                 return HVE_MODIFY_ERROR;
@@ -715,7 +715,7 @@ int VBoxSession::start( std::string uData ) {
     /* Start VM */
     if (this->onProgress!=NULL) (this->onProgress)(6, 7, "Starting VM", this->cbObject);
     ans = this->wrapExec("startvm " + this->uuid + " --type headless", NULL);
-    cout << "Start VM=" << ans << "\n";
+    CVMWA_LOG( "Info", "Start VM=" << ans  );
     if (ans != 0) {
         this->state = STATE_OPEN;
         return HVE_MODIFY_ERROR;
@@ -761,7 +761,7 @@ int VBoxSession::close() {
             
             if (this->onProgress!=NULL) (this->onProgress)(2, 10, "Discarding saved VM state", this->cbObject);
             ans = this->wrapExec("discardstate " + this->uuid, NULL);
-            cout << "Discarded VM state=" << ans << "\n";
+            CVMWA_LOG( "Info", "Discarded VM state=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
                 return HVE_CONTROL_ERROR;
@@ -777,7 +777,7 @@ int VBoxSession::close() {
         getKV( machineInfo[ CONTEXT_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
-        cout << "Detaching " << kk << "\n";
+        CVMWA_LOG( "Info", "Detaching " << kk  );
 
         /* Detach iso */
         args.str("");
@@ -790,7 +790,7 @@ int VBoxSession::close() {
 
         if (this->onProgress!=NULL) (this->onProgress)(3, 10, "Detaching contextualization CD-ROM", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
-        cout << "Storage Attach (context)=" << ans << "\n";
+        CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
         /* Unregister/delete iso */
@@ -800,7 +800,7 @@ int VBoxSession::close() {
 
         if (this->onProgress!=NULL) (this->onProgress)(4, 10, "Closing contextualization CD-ROM", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
-        cout << "Closemedium (context)=" << ans << "\n";
+        CVMWA_LOG( "Info", "Closemedium (context)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
         /* Delete actual file */
@@ -816,7 +816,7 @@ int VBoxSession::close() {
         getKV( machineInfo[ SCRATCH_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
 
-        cout << "Detaching " << kk << "\n";
+        CVMWA_LOG( "Info", "Detaching " << kk  );
 
         /* Detach iso */
         args.str("");
@@ -829,7 +829,7 @@ int VBoxSession::close() {
 
         if (this->onProgress!=NULL) (this->onProgress)(6, 10, "Detaching data disk", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
-        cout << "Storage Attach (context)=" << ans << "\n";
+        CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
         /* Unregister/delete iso */
@@ -839,7 +839,7 @@ int VBoxSession::close() {
 
         if (this->onProgress!=NULL) (this->onProgress)(7, 10, "Closing data disk medium", this->cbObject);
         ans = this->wrapExec(args.str(), NULL);
-        cout << "Closemedium (disk)=" << ans << "\n";
+        CVMWA_LOG( "Info", "Closemedium (disk)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
         /* Delete actual file */
@@ -851,7 +851,7 @@ int VBoxSession::close() {
     /* Unregister and delete VM */
     if (this->onProgress!=NULL) (this->onProgress)(9, 10, "Deleting VM", this->cbObject);
     ans = this->wrapExec("unregistervm " + this->uuid + " --delete", NULL);
-    cout << "Unregister VM=" << ans << "\n";
+    CVMWA_LOG( "Info", "Unregister VM=" << ans  );
     if (ans != 0) {
         this->state = STATE_ERROR;
         return HVE_CONTROL_ERROR;
@@ -1625,7 +1625,7 @@ int Virtualbox::loadSessions() {
             updateSession( session );
 
             /* Register this session */
-            cout << "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state << "\n";
+            CVMWA_LOG( "Info", "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state  );
             this->registerSession(session);
 
         }

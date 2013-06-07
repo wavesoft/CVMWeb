@@ -15,14 +15,22 @@ sub get_js_list {
     opendir (DIR, $path)
         or die "Unable to open $path: $!";
 
+    # List files in dir
     my @files =
         map { $path . '/' . $_ }
         grep { !/^\.{1,2}$/ }
         readdir (DIR);
-
+    
+    # Start from deeper directories
+    my @dirs = grep { -d $_ } @files;
+    foreach ( @dirs ) {
+        print "File: $_\n";
+        @files = ( @files, get_js_list ($_) );
+    }
+    
+    # Keep only the javascript files
     return
         grep { (/\.js$/) && (!/init\.js/) && (! -l $_) }
-        map { -d $_ ? get_js_list ($_) : $_ }
         @files;
 }
 

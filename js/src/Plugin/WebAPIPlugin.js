@@ -2,9 +2,22 @@
 /**
  * Developer-friendly wrapper for the session object
  */
-_NS_.WebAPIPlugin = function( plugin_ref ) {
+_NS_.WebAPIPlugin = function( plugin_ref, daemon_ref ) {
+    _NS_.EventDispatcher.call(this); // Superclass constructor
     this.__plugin = plugin_ref;
+    this.__daemon = daemon_ref;
+    
+    // Connect plugin properties with this object properties using getters/setters
+    Object.defineProperties(this, {
+        "domain": { get: function () { return this.__plugin.domain; } }
+    });
+    
 };
+
+/**
+ * Subclass event dispatcher
+ */
+_NS_.WebAPIPlugin.prototype = Object.create( _NS_.EventDispatcher.prototype );
 
     
 /**
@@ -44,7 +57,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
             // Register some temporary event handlers
             var f_open = function() {
                 session.removeEventListener( 'open', f_open );
-                cbOK( new _NS_.WebAPISession(session) );
+                cbOK( new _NS_.WebAPISession( this.__plugin, this.__daemon, session ) );
             };
             var f_error = function( code ) {
                 session.removeEventListener( 'error', f_error );
@@ -59,7 +72,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
         } else {
             
             // Session is already open, notify caller
-            cbOK( new _NS_.WebAPISession(session) );
+            cbOK( new _NS_.WebAPISession( this.__plugin, this.__daemon, session ) );
             
         }
         

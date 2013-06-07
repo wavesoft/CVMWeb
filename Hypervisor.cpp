@@ -387,10 +387,10 @@ HVSession * Hypervisor::sessionLocate( std::string uuid ) {
 HVSession * Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
     
     /* Check for running sessions with the given credentials */
-    std::cout << "Checking sessions (" << this->sessions.size() << ")\n";
+    CVMWA_LOG( "Info", "Checking sessions (" << this->sessions.size() << ")");
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        std::cout << "Checking session name=" << sess->name << ", key=" << sess->key << ", uuid=" << sess->uuid << ", state=" << sess->state << "\n";
+        CVMWA_LOG( "Info", "Checking session name=" << sess->name << ", key=" << sess->key << ", uuid=" << sess->uuid << ", state=" << sess->state  );
         
         if (sess->name.compare(name) == 0) {
             if (sess->key.compare(key) == 0) { /* Check secret key */
@@ -417,7 +417,7 @@ HVSession * Hypervisor::sessionOpen( const std::string & name, const std::string
 int Hypervisor::registerSession( HVSession * sess ) {
     sess->internalID = this->sessionID++;
     this->sessions.push_back(sess);
-    std::cout << "Updated sessions (" << this->sessions.size() << ")\n";
+    CVMWA_LOG( "Info", "Updated sessions (" << this->sessions.size()  );
     return 0;
 }
 
@@ -450,7 +450,7 @@ HVSession * Hypervisor::sessionGet( int id ) {
 /* Check if we need to start or stop the daemon */
 int Hypervisor::checkDaemonNeed() {
     
-    std::cout << "[checkDaemonNeed] Checking daemon needs" << std::endl;
+    CVMWA_LOG( "checkDaemonNeed", "Checking daemon needs" );
     
     // If we haven't specified where the daemon is, we cannot do much
     if (daemonBinPath.empty()) return HVE_NOT_SUPPORTED;
@@ -459,7 +459,7 @@ int Hypervisor::checkDaemonNeed() {
     bool daemonNeeded = false;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        std::cout << "[checkDaemonNeed] Session " << sess->uuid << ", daemonControlled=" << sess->daemonControlled << ", state=" << sess->state << std::endl;
+        CVMWA_LOG( "checkDaemonNeed", "Session " << sess->uuid << ", daemonControlled=" << sess->daemonControlled << ", state=" << sess->state );
         if ( sess->daemonControlled && ((sess->state == STATE_OPEN) || (sess->state == STATE_STARTED) || (sess->state == STATE_PAUSED)) ) {
             daemonNeeded = true;
             break;
@@ -468,13 +468,13 @@ int Hypervisor::checkDaemonNeed() {
     
     // Check if the daemon state is valid
     bool daemonState = isDaemonRunning();
-    std::cout << "[checkDaemonNeed] Daemon is " << daemonState << ", daemonNeed is " << daemonNeeded << std::endl;
+    CVMWA_LOG( "checkDaemonNeed", "Daemon is " << daemonState << ", daemonNeed is " << daemonNeeded );
     if (daemonNeeded != daemonState) {
         if (daemonNeeded) {
-            std::cout << "[checkDaemonNeed] Starting daemon" << std::endl;
+            CVMWA_LOG( "checkDaemonNeed", "Starting daemon" );
             return daemonStart( daemonBinPath ); /* START the daemon */
         } else {
-            std::cout << "[checkDaemonNeed] Stopping daemon" << std::endl;
+            CVMWA_LOG( "checkDaemonNeed", "Stopping daemon" );
             return daemonStop(); /* KILL the daemon */
         }
     }
@@ -602,7 +602,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      * Contact the information point
      */
     string requestBuf;
-    cout << "INFO: Fetching data\n";
+    CVMWA_LOG( "Info", "Fetching data" );
     if (cbProgress!=NULL) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system", cbData);
     int res = downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
     if ( res != HVE_OK ) return res;
@@ -646,9 +646,9 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     string kChecksum = kDownloadUrl + "-sha256";
     string kInstallerName = kDownloadUrl + "-installer";
 	
-    std::cout << "Download URL key = '" << kDownloadUrl << "'" << std::endl;
-    std::cout << "Checksum key = '" << kChecksum << "'" << std::endl;
-    std::cout << "Installer key = '" << kInstallerName << "'" << std::endl;
+    CVMWA_LOG( "Info", "Download URL key = '" << kDownloadUrl << "'"  );
+    CVMWA_LOG( "Info", "Checksum key = '" << kChecksum << "'"  );
+    CVMWA_LOG( "Info", "Installer key = '" << kInstallerName << "'"  );
 	
     #endif
     
@@ -656,19 +656,19 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      * Verify that the keys we are looking for exist
      */
     if (data.find( kDownloadUrl ) == data.end()) {
-        cout << "ERROR: No download URL data found\n";
+        CVMWA_LOG( "Error", "ERROR: No download URL data found" );
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( kChecksum ) == data.end()) {
-        cout << "ERROR: No checksum data found\n";
+        CVMWA_LOG( "Error", "ERROR: No checksum data found" );
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( kInstallerName ) == data.end()) {
-        cout << "ERROR: No installer program data found\n";
+        CVMWA_LOG( "Error", "ERROR: No installer program data found" );
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( "extpack" ) == data.end()) {
-        cout << "ERROR: No extensions package URL found\n";
+        CVMWA_LOG( "Error", "ERROR: No extensions package URL found" );
         return HVE_EXTERNAL_ERROR;
     }
     
@@ -701,9 +701,9 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     string tmpHypervisorInstall = getTmpFile( kFileExt );
     if (cbProgress!=NULL) (cbProgress)(2, 100, "Downloading hypervisor", cbData);
-    cout << "INFO: Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall << "\n";
+    CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
     res = downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
-    cout << "    : Got " << res << "\n";
+    CVMWA_LOG( "Info", "    : Got " << res  );
     if ( res != HVE_OK ) return res;
     
     /**
@@ -712,7 +712,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     string checksum;
     sha256_file( tmpHypervisorInstall, &checksum );
     if (cbProgress!=NULL) (cbProgress)(90, 100, "Validating download", cbData);
-    cout << "INFO: File checksum " << checksum << " <-> " << data[kChecksum] << "\n";
+    CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kChecksum]  );
     if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
     
     /**
@@ -720,7 +720,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     #if defined(__APPLE__) && defined(__MACH__)
 
-		cout << "INFO: Attaching\n";
+		CVMWA_LOG( "Info", "Attaching" );
 		if (cbProgress!=NULL) (cbProgress)(94, 100, "Mounting hypervisor DMG disk", cbData);
 		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
 		if (res != 0) {
@@ -731,18 +731,18 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 		string dskDev, dskVolume, extra;
 		getKV( infoLine, &dskDev, &extra, ' ', 0);
 		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
-		cout << "Got disk '" << dskDev << "', volume: '" << dskVolume << "'\n";
+		CVMWA_LOG( "Info", "Got disk '" << dskDev << "', volume: '" << dskVolume  );
     
 		if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
-		cout << "INFO: Installing using " << dskVolume << "/" << data[kInstallerName] << "\n";
+		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
 		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
 		if (res != 0) {
-			cout << "INFO: Detaching\n";
+			CVMWA_LOG( "Info", "Detaching" );
 			res = sysExec("hdiutil detach " + dskDev, NULL);
 			remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}
-		cout << "INFO: Detaching\n";
+		CVMWA_LOG( "Info", "Detaching" );
 		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
 		res = sysExec("hdiutil detach " + dskDev, NULL);
 		remove( tmpHypervisorInstall.c_str() );
@@ -751,7 +751,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 
 		/* Start installer */
 		if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
-		cout << "INFO: Starting installer\n";
+		CVMWA_LOG( "Info", "Starting installer" );
 
 		/* CreateProcess does not work because we need elevated permissions,
 		 * use the classic ShellExecute to run the installer... */
@@ -843,7 +843,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     Hypervisor * hv = detectHypervisor();
     if (hv == NULL) {
-        cout << "ERROR: Could not install hypervisor!\n";
+        CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
         return HVE_NOT_VALIDATED;
     };
     

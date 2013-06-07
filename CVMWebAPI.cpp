@@ -221,9 +221,8 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     /* Try to update authorized keystore if it's in an invalid state */
     if (!isDomainPrivileged()) {
         
-        // Trigger update
-        if (!p->crypto->valid)
-            p->crypto->updateAuthorizedKeystore();
+        // Trigger update in the keystore (if it's nessecary)
+        p->crypto->updateAuthorizedKeystore();
 
         // Still invalid? Something's wrong
         if (!p->crypto->valid) {

@@ -45,7 +45,16 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail ) {
             cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
         } else {
             console.log("Using CernVM WebAPI " + __pluginSingleton.version);
-            cbOK( new _NS_.WebAPIPlugin(__pluginSingleton) ); 
+            
+            // Request daemon access in order to be able to do status probing
+            __pluginSingleton.requestDaemonAccess(
+                function(daemon) {
+                    cbOK( new _NS_.WebAPIPlugin( __pluginSingleton, daemon ) ); 
+                },function(error) {
+                    cbFail( "Unable to obtain daemon access: " + error_string(error), error );
+                }
+            );
+            
         }
         
     };
