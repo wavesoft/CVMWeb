@@ -4,6 +4,16 @@
       <script type="text/javascript" src="cvmwebapi-1.0.js"></script>
       <script type="text/javascript">
       
+      var error_handler = function(msg, code) { alert("Error #" + code + " occurred: " + msg); };
+      CVM.startCVMWebAPI(function(plugin) {
+
+         // Request session
+         plugin.requestSession("http://localhost/temp/sign.php", function(session) {
+            alert("Got session: " + session);
+         }, error_handler)
+         
+      }, error_handler);
+      
       </script>
    </head>
    <body>

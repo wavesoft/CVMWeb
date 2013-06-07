@@ -3,6 +3,10 @@ use strict;
 use warnings;
 use Data::Dumper;
 
+# The namespace of the plugin
+my $NS = "CVM";
+my $VERSION = "1.0";
+
 # Accepts one argument: the full path to a directory.
 # Returns: A list of files that reside in that path.
 sub get_js_list {
@@ -48,14 +52,14 @@ print "ok\n";
 
 # Enclose it into a function and dump it into the final file
 open  DUMP_FILE, ">~tmp-dump.js";
-print DUMP_FILE "(function(GLOBAL) {\n";
+print DUMP_FILE "window.$NS={'version':'$VERSION'};(function(_NS_) {\n";
 print DUMP_FILE $buffer."\n";
-print DUMP_FILE "})(window);\n";
+print DUMP_FILE "})(window.$NS);\n";
 close DUMP_FILE;
 
 # Compress
 print "Compressing...";
-`java -jar bin/yuicompressor-2.4.8.jar -o cvmwebapi-1.0.js ~tmp-dump.js`;
+`java -jar bin/yuicompressor-2.4.8.jar -o cvmwebapi-$VERSION.js ~tmp-dump.js`;
 if ($? == 0) {
     print "ok\n";
 } else {

@@ -334,6 +334,9 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     /* Call success callback */
     boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session);
     if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
+        
+    /* Check if we need a daemon for our current services */
+    p->hv->checkDaemonNeed();
     
 }
 

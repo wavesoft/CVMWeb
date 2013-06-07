@@ -226,15 +226,15 @@ int CVMWebAPISession::open( const FB::variant& o ){
     return HVE_SCHEDULED;
 }
 
-void CVMWebAPISession::thread_open( const FB::variant& oUserData  ){
+void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     int cpus = this->session->cpus;
     int ram = this->session->memory;
     int disk = this->session->disk;
     int flags = this->session->flags;
     std::string ver = this->session->version;
     int ans = 0;
-    if (oUserData.is_of_type<FB::JSObjectPtr>()) {
-        FB::JSObjectPtr o = oUserData.cast<FB::JSObjectPtr>();
+    if (oConfigHash.is_of_type<FB::JSObjectPtr>()) {
+        FB::JSObjectPtr o = oConfigHash.cast<FB::JSObjectPtr>();
         
         if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
         if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
