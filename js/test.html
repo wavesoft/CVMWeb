@@ -4,6 +4,14 @@
       <script type="text/javascript" src="cvmwebapi-1.0.js"></script>
       <script type="text/javascript">
       
+      // Custom confirmation function
+      var confirm_callback = null;
+      var custom_confirm = function(message, callback) {
+         confirm_callback = callback;
+         document.getElementById('msg').innerHTML = message;
+      };
+      CVM.setConfirmFunction(custom_confirm);
+      
       // Generic handler for errors thrown in the process
       var error_handler = function(msg, code) { alert("[Error #" + code + "] " + msg); };
       
@@ -33,5 +41,10 @@
       </script>
    </head>
    <body>
+      <div style="border: solid 1px black">
+         <div id="msg">No message</div>
+         <input type="button" onclick="confirm_callback(true)" value="Yes" />
+         <input type="button" onclick="confirm_callback(false)" value="No" />
+      </div>
    </body>
 </html>

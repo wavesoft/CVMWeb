@@ -12,7 +12,22 @@ var __pluginSingleton = null,
  * the .setConfirmFunction( ).
  */
 var confirmFunction = function( message, callback ) { callback( window.confirm(message) ); };
-_NS_.setConfirmFunction = function( customFunction ) { confirmFunction = customFunction; };
+_NS_.setConfirmFunction = function( customFunction ) {
+    
+    // Small script that will forward callback messages from
+    // the user's function only once! 
+    var messagePending = false;
+    confirmFunction = function(message, callback) {
+        messagePending = true;
+        customFunction( message, function(response) {
+            if (messagePending) {
+                messagePending = false;
+                callback(response);
+            }
+        });
+    };
+    
+};
 
 /**
  * Global function to initialize the plugin and callback when ready
