@@ -44,7 +44,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
             // Register some temporary event handlers
             var f_open = function() {
                 session.removeEventListener( 'open', f_open );
-                cbOK( session );
+                cbOK( new _NS_.WebAPISession(session) );
             };
             var f_error = function( code ) {
                 session.removeEventListener( 'error', f_error );
@@ -59,7 +59,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
         } else {
             
             // Session is already open, notify caller
-            cbOK( session );
+            cbOK( new _NS_.WebAPISession(session) );
             
         }
         
