@@ -418,7 +418,7 @@ int Hypervisor::registerSession( HVSession * sess ) {
     sess->internalID = this->sessionID++;
     this->sessions.push_back(sess);
     CVMWA_LOG( "Info", "Updated sessions (" << this->sessions.size()  );
-    return 0;
+    return HVE_OK;
 }
 
 /**
@@ -430,7 +430,7 @@ int Hypervisor::sessionFree( int id ) {
         if (sess->internalID == id) {
             this->sessions.erase(i);
             delete sess;
-            return 0;
+            return HVE_OK;
         }
     }
     return HVE_NOT_FOUND;

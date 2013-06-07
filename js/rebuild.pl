@@ -30,7 +30,7 @@ sub get_js_list {
     
     # Keep only the javascript files
     return
-        grep { (/\.js$/) && (!/init\.js/) && (! -l $_) }
+        grep { (/\.js$/) && (!/Init\.js/) && (! -l $_) }
         @files;
 }
 
@@ -54,8 +54,8 @@ foreach (get_js_list('src')) {
 }
 
 # Last part is the init script
-print "Collecting src/init.js...";
-$buffer .= read_file( "src/init.js" );
+print "Collecting src/Init.js...";
+$buffer .= read_file( "src/Init.js" );
 print "ok\n";
 
 # Enclose it into a function and dump it into the final file

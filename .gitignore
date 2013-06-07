@@ -8,4 +8,5 @@ daemon/daemon
 daemon/build
 test/code.txt
 js/cvmwebapi-*
+js/publish.sh
 err.txt

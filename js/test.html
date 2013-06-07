@@ -6,6 +6,8 @@
       
       var error_handler = function(msg, code) { alert("[Error #" + code + "] " + msg); };
       CVM.startCVMWebAPI(function(plugin) {
+         
+         window.plugin = plugin;
 
          // Request session
          plugin.requestSession("http://localhost/temp/sign.php", function(session) {

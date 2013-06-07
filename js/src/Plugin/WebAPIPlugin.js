@@ -48,23 +48,26 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
     if ((cbFail) && (typeof(cbFail) != "function")) return false;
     
     // Request safe session (Using a VMCP URL)
-    this.__plugin.requestSafeSession( configURL, function(session) {
+    this.__plugin.requestSafeSession( configURL, (function(session) {
         cSession = session;
         
         // Open session if it's closed
         if ((session.state == STATE_CLOSED) || (session.state == STATE_ERROR)) {
             
             // Register some temporary event handlers
-            var f_open = function() {
+            var once = true;
+            var f_open = (function() {
+                if (once) { once=false } else { return };
                 session.removeEventListener( 'open', f_open );
                 cbOK( new _NS_.WebAPISession( this.__plugin, this.__daemon, session ) );
-            };
-            var f_error = function( code ) {
+            }).bind(this);
+            var f_error = (function( code ) {
+                if (once) { once=false } else { return };
                 session.removeEventListener( 'error', f_error );
                 if (cbFail) cbFail( "Could not open session: " + error_string(code) + ".", code )
-            };
-            session.addEventListener('open', f_open, f_error);
-            session.addEventListener('openError', cb_open);
+            }).bind(this);
+            session.addEventListener('open', f_open);
+            session.addEventListener('openError', f_error);
             
             // Open session
             session.open();
@@ -76,8 +79,8 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
             
         }
         
-    }, function(code) {
-        console.log("RequestSession Error #" + code);
+    }).bind(this), function(code) {
+        console.error("RequestSession Error #" + code);
         if (cbFail) cbFail( "Could not request session: " + error_string(code) + ".", code );
     });
     

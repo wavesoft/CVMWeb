@@ -91,7 +91,7 @@ int cryptoInitialize(void) {
     // Enable multi-threading
     mutex_buf = (pthread_mutex_t*) malloc(CRYPTO_num_locks(  ) * sizeof(MUTEX_TYPE));
     if (!mutex_buf) {
-        CVMWA_LOG( "[Crypto]", "Unable to allocate MUTEX!" );
+        CVMWA_LOG( "Crypto", "Unable to allocate MUTEX!" );
         return 0;
     }
     for (i = 0;  i < CRYPTO_num_locks(  );  i++)
@@ -109,7 +109,7 @@ int cryptoInitialize(void) {
     // Load key into memory
     cvmPublicKey = d2i_PUBKEY( NULL, &CVMWAPI_PUBKEY_DER, CVMWAPI_PUBKEY_DER_SIZE );
     if (cvmPublicKey == NULL) {
-        CVMWA_LOG( "[Crypto]", "Unable to load public key!" );
+        CVMWA_LOG( "Crypto", "Unable to load public key!" );
         return 0;
     }
      
@@ -213,6 +213,7 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
 
     // Don't do this frequently
     if (valid && (lastUpdateTimestamp - currTime < CRYPTO_FREQUENT_THRESSHOLD)) {
+        CVMWA_LOG("Crypto", "Last call to updateAuthorizedKeystore was suciffiently recent.");
         return 0;
     }
     valid = false;
@@ -227,7 +228,7 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
         if (storeTime != keystoreTimestamp) {
             if (validateSignature( localKeystore, localKeystoreSig )) {
                 // Crypto store is still valid (sombody touched it)
-                CVMWA_LOG( "[Crypto]", "Store timestamp changed but is still valid" );
+                CVMWA_LOG( "Crypto", "Store timestamp changed but is still valid" );
                 return 0;
             }
         } else {
@@ -235,7 +236,7 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
             // Check if we are still within the thresshold
             if (currTime - storeTime < CRYPTO_STORE_VALIDITY) {
                 // We are still within it's validity time
-                CVMWA_LOG( "[Crypto]", "Store still valid" );
+                CVMWA_LOG( "Crypto", "Store still valid" );
                 return 0;
             }
             
@@ -243,22 +244,22 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
     }
     
     // Download the authorized keystore
-    CVMWA_LOG( "[Crypto]", "Downloading updated keystore" );
+    CVMWA_LOG( "Crypto", "Downloading updated keystore" );
     int res = downloadFile( CRYPTO_URL_STORE, localKeystore, NULL );
     if ( res != HVE_OK ) return res;
 
     // Download the keystore signature
-    CVMWA_LOG( "[Crypto]", "Downloading store signature" );
+    CVMWA_LOG( "Crypto", "Downloading store signature" );
     res = downloadFile( CRYPTO_URL_SIGNATURE, localKeystoreSig, NULL );
     if ( res != HVE_OK ) return res;
     
     // Validate files
-    CVMWA_LOG( "[Crypto]", "Validating signature" );
+    CVMWA_LOG( "Crypto", "Validating signature" );
     if (!validateSignature( localKeystore, localKeystoreSig ))
         return HVE_NOT_VALIDATED;
     
     // Everything looks good, read the key map
-    CVMWA_LOG( "[Crypto]", "Loading keystore map" );
+    CVMWA_LOG( "Crypto", "Loading keystore map" );
     config.loadMap( "domainkeys", &domainKeys );
 
     // Update the timestamp of the keystore
@@ -276,14 +277,17 @@ int CVMWebCrypto::updateAuthorizedKeystore() {
  int CVMWebCrypto::validateDomainData ( std::string domain, std::string signature, const unsigned char * data, const int dataLen ) {
 
     // Check if domain does not exist
-    if (!isDomainValid(domain)) return HVE_NOT_FOUND;
+    if (!isDomainValid(domain)) {
+        CVMWA_LOG("Debug", "Domain " << domain << " not found in the local keystore");
+        return HVE_NOT_FOUND;
+    }
 
     // Load public key of the domain
     std::string domainData = base64_decode( domainKeys[domain] );
     const unsigned char * pData = ( const unsigned char * ) domainData.c_str();
     EVP_PKEY * domainKey = d2i_PUBKEY( NULL, &pData, domainData.length() );
     if (domainKey == NULL) {
-        CVMWA_LOG( "[Crypto]", "Unable to load domain public key!" );
+        CVMWA_LOG( "Crypto", "Unable to load domain public key!" );
         return HVE_EXTERNAL_ERROR;
     }
     
