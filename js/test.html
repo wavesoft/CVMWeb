@@ -4,17 +4,31 @@
       <script type="text/javascript" src="cvmwebapi-1.0.js"></script>
       <script type="text/javascript">
       
+      // Generic handler for errors thrown in the process
       var error_handler = function(msg, code) { alert("[Error #" + code + "] " + msg); };
-      CVM.startCVMWebAPI(function(plugin) {
+      
+      // Request plugin
+      CVM.startCVMWebAPI(
          
-         window.plugin = plugin;
+         // 1) Success callback
+         function(plugin) {
 
-         // Request session
-         plugin.requestSession("http://localhost/temp/sign.php", function(session) {
-            alert("Got session: " + session);
-         }, error_handler)
+            // Create/Request/Resume session using the VMCP provided
+            plugin.requestSession("http://localhost/temp/sign.php", function(session) {
+               
+               alert("Got session: " + session);
+               
+            }, error_handler)
          
-      }, error_handler, true);
+         }, 
+         
+         // 2) Failure callback
+         error_handler, 
+         
+         // 3) Setup the environment for us (plugin, hypervisor)
+         true
+         
+      );
       
       </script>
    </head>
