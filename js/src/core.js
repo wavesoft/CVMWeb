@@ -39,13 +39,15 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail ) {
             }
 
         }
-
+        
+        // Validate plugin status
         if (__pluginSingleton.version == undefined) {
             cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
         } else {
             console.log("Using CernVM WebAPI " + __pluginSingleton.version);
             cbOK( new _NS_.WebAPIPlugin(__pluginSingleton) ); 
         }
+        
     };
     
     // If the page is still loading, request an onload hook,

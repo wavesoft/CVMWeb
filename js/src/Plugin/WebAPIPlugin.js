@@ -3,7 +3,7 @@
  * Developer-friendly wrapper for the session object
  */
 _NS_.WebAPIPlugin = function( plugin_ref ) {
-    this.plugin = plugin_ref;
+    this.__plugin = plugin_ref;
 };
 
     
@@ -11,8 +11,8 @@ _NS_.WebAPIPlugin = function( plugin_ref ) {
  * Check if the hypervisor is there
  */
 _NS_.WebAPIPlugin.prototype.hasHypervisor = function() {
-    if (!this.plugin) return false;
-    return (this.plugin.version != undefined) && (this.plugin.hypervisorName != "");
+    if (!this.__plugin) return false;
+    return (this.__plugin.version != undefined) && (this.__plugin.hypervisorName != "");
 },
 
 /**
@@ -35,7 +35,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
     if ((cbFail) && (typeof(cbFail) != "function")) return false;
     
     // Request safe session (Using a VMCP URL)
-    this.plugin.requestSafeSession( configURL, function(session) {
+    this.__plugin.requestSafeSession( configURL, function(session) {
         cSession = session;
         
         // Open session if it's closed
@@ -48,7 +48,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
             };
             var f_error = function( code ) {
                 session.removeEventListener( 'error', f_error );
-                if (cbFail) cbFail( "Could not open session", code )
+                if (cbFail) cbFail( "Could not open session: " + error_string(code) + ".", code )
             };
             session.addEventListener('open', f_open, f_error);
             session.addEventListener('openError', cb_open);
@@ -63,9 +63,9 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
             
         }
         
-    }, function(e) {
-        console.log("RequestSession Error #" + e);
-        if (cbFail) cbFail( "Could not request session", e );
+    }, function(code) {
+        console.log("RequestSession Error #" + code);
+        if (cbFail) cbFail( "Could not request session: " + error_string(code) + ".", code );
     });
     
 };
