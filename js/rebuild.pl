@@ -24,7 +24,7 @@ sub get_js_list {
     # Start from deeper directories
     my @dirs = grep { -d $_ } @files;
     foreach ( @dirs ) {
-        print "File: $_\n";
+        print "Scanning directory: $_\n";
         @files = ( @files, get_js_list ($_) );
     }
     
@@ -48,7 +48,7 @@ sub read_file {
 my @files = 
 my $buffer = "";
 foreach (get_js_list('src')) {
-    print "Collecting $_...";
+    print "Collecting: $_...";
     $buffer .= read_file( $_ );
     print "ok\n";
 }

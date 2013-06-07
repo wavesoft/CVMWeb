@@ -8,8 +8,12 @@ var __pluginSingleton = null,
 
 /**
  * Global function to initialize the plugin and callback when ready
+ *
+ * @param cbOK              A callback function that will be fired when a plugin instance is obtained
+ * @param cbFail            [Optional] A callback that will be fired when an error occurs
+ * @param setupEnvironment  [Optional] Set to 'true' to let library handle environment initialization
  */
-_NS_.startCVMWebAPI = function( cbOK, cbFail ) {
+_NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
     
     // Create a local callback that will check the plugin
     // status and trigger the appropriate user callbacks
@@ -40,12 +44,8 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail ) {
 
         }
         
-        // Validate plugin status
-        if (__pluginSingleton.version == undefined) {
-            cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
-        } else {
-            console.log("Using CernVM WebAPI " + __pluginSingleton.version);
-            
+        // Next steop of construction process, stored in a function as a reusable approach
+        var continue_init = function() {
             // Request daemon access in order to be able to do status probing
             __pluginSingleton.requestDaemonAccess(
                 function(daemon) {
@@ -54,6 +54,79 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail ) {
                     cbFail( "Unable to obtain daemon access: " + error_string(error), error );
                 }
             );
+        }
+         
+        
+        // Validate plugin status
+        if (__pluginSingleton.version == undefined) {
+            
+            // Check if we are told to take care of setting up the environment for the user
+            if (setupEnvironment) {
+                
+                // Prompt the user for plugin installation
+                if (confirm("This website is using the CernVM Web API extension, but it doesn't seem to be installed in your browser.\n\nDo you want to install it now?")) {
+                    
+                    // Check the browser
+                    if (BrowserDetect.browser == "Firefox") {
+                        window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.1.4.xpi";
+                    } else if (BrowserDetect.browser == "Chrome") {
+                        window.location = "https://chrome.google.com/webstore/detail/cernvm-web-api/iakpghcolokcngbhjiihjcomioihjnfm";
+                    } else {
+                        window.location = "http://cernvm.cern.ch/portal/webapi";
+                    }
+                    
+                } else {
+                    cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
+                }
+                
+            } else {
+                // Could not do anything, fire the error callback
+                cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
+            }
+            
+        } else {
+            console.log("Using CernVM WebAPI " + __pluginSingleton.version);
+            
+            // If we are told to check the environment, check if we have hypervisor
+            if (setupEnvironment) {
+                if (__pluginSingleton.hypervisorName == "") {
+                    if (confirm("You are going to need a hypervisor before you can use this website. Do you allow the CernVM Web API extension to install VirtualBox for you?")) {
+                        
+                        var once=true;
+                        var cb_ok = function() {
+                            if (once) { once=false } else { return };
+                            __pluginSingleton.removeEventListener('install', cb_ok);
+                            
+                            // Hypervisor is now in place, continue
+                            continue_init();
+                            
+                        };
+                        var cb_error = function(code) {
+                            if (once) { once=false } else { return };
+                            __pluginSingleton.removeEventListener('installError', cb_error);
+                            cbFail( "Unable to install hypervisor!", -103 );
+                        };
+                        
+                        // Setup callbacks and install hypervisor
+                        __pluginSingleton.addEventListener('install', cb_ok);
+                        __pluginSingleton.addEventListener('installError', cb_error);
+                        __pluginSingleton.installHypervisor();
+                        
+                    } else {
+                        cbFail( "User denied hypervisor installation!", -102 );
+                    }
+                    
+                } else {
+                    
+                    // Hypervisor is there, continue...
+                    continue_init();
+                    
+                }
+            
+            // Otherwise, that's the user's responsibility
+            } else {
+                continue_init();
+            }
             
         }
         
