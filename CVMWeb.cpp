@@ -48,6 +48,7 @@ void CVMWeb::StaticInitialize()
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
     thinIPCInitialize();
+    cryptoInitialize();
     CVMInitializeDialogs();
 }
 
@@ -62,6 +63,7 @@ void CVMWeb::StaticDeinitialize()
 {
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
+    cryptoCleanup();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,6 +75,10 @@ CVMWeb::CVMWeb()
 {
     // Detect the hypervisor the user has installed
     this->hv = detectHypervisor(); // !IMPORTANT! Populate the daemonBin
+        
+    // Create crypto instance
+    crypto = new CVMWebCrypto();
+    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,6 +90,7 @@ CVMWeb::~CVMWeb()
     // root object) and tell the host to free the retained JSAPI objects then
     // unless you are holding another shared_ptr reference to your JSAPI object
     // they will be released here.
+    delete crypto;
     releaseRootJSAPI();
     m_host->freeRetainedObjects();
 }

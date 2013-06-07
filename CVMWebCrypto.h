@@ -29,6 +29,7 @@
 
 #include "Utilities.h"
 #include "Hypervisor.h"
+#include "LocalConfig.h"
 
 #include <openssl/pem.h>
 #include <openssl/sha.h>
@@ -36,6 +37,13 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+
+
+#define CRYPTO_FREQUENT_THRESSHOLD  60  // Thresshold between consecutive requests (seconds)
+#define CRYPTO_STORE_VALIDITY    86400  // The validity of the keystore (seconds). After this time it will be reloaded
+
+#define CRYPTO_URL_STORE            "http://labs.wavesoft.gr/lhcah/domainkeys.lst"
+#define CRYPTO_URL_SIGNATURE        "http://labs.wavesoft.gr/lhcah/domainkeys.sig"
 
 /**
  * Cryptographic and validation routines for CernVM Web API
@@ -85,11 +93,6 @@ public:
     bool    valid;
 
 private:
-    
-    /**
-     * The global static RSA object used for list validation 
-     */
-    EVP_PKEY * cvmPublicKey;
 
     /**
      * Domain-keydata mapping
@@ -100,7 +103,25 @@ private:
      * Signature calculation properties
      */
     std::string signatureData;
+    
+    /**
+     * LocalConfig for accessing the key store
+     */
+    LocalConfig config;
+    
+    /**
+     * The last time we loaded the keystore
+     */
+    time_t lastUpdateTimestamp;
+    
+    /**
+     * The timestamp of the local keystore
+     */
+    time_t keystoreTimestamp;
 
 };
+
+int                                 cryptoInitialize();
+int                                 cryptoCleanup();
 
 #endif /* end of include guard: CRYPTO_H_41EFXAZS */

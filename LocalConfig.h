@@ -28,21 +28,24 @@ class LocalConfig
 public:
     LocalConfig ();
     
-    bool        loadLines       ( std::string file, std::vector<std::string> * lines );
-    bool        loadBuffer      ( std::string file, std::string * buffer );
-    bool        loadMap         ( std::string file, std::map<std::string, std::string> * map );
-    bool        saveLines       ( std::string file, std::vector<std::string> * lines );
-    bool        saveBuffer      ( std::string file, std::string * buffer );
-    bool        saveMap         ( std::string file, std::map<std::string, std::string> * map );
+    bool                        loadLines       ( std::string file, std::vector<std::string> * lines );
+    bool                        loadBuffer      ( std::string file, std::string * buffer );
+    bool                        loadMap         ( std::string file, std::map<std::string, std::string> * map );
+    bool                        saveLines       ( std::string file, std::vector<std::string> * lines );
+    bool                        saveBuffer      ( std::string file, std::string * buffer );
+    bool                        saveMap         ( std::string file, std::map<std::string, std::string> * map );
     
-    std::string get             ( std::string name );
-    std::string getDef          ( std::string name, std::string defaultValue );
-    void        set             ( std::string name, std::string value );
+    std::string                 get             ( std::string name );
+    std::string                 getDef          ( std::string name, std::string defaultValue );
+    void                        set             ( std::string name, std::string value );
 
-    template<typename T> T      getNum      ( std::string name );
-    template<typename T> T      getNumDef   ( std::string name, T defaultValue );
-    template<typename T> void   setNum      ( std::string name, T value );
+    template<typename T> T      getNum          ( std::string name );
+    template<typename T> T      getNumDef       ( std::string name, T defaultValue );
+    template<typename T> void   setNum          ( std::string name, T value );
     
+    time_t                      getLastModified ( std::string configFile );
+    bool                        exists          ( std::string configFile );
+    std::string                 getPath         ( std::string configFile );
 
 private:
     std::string                         configDir;

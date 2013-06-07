@@ -36,6 +36,8 @@
 #include "PluginCore.h"
 #include "Hypervisor.h"
 
+#include "CVMWebCrypto.h"
+
 class CVMWebAPIDaemon;
 
 FB_FORWARD_PTR(CVMWeb)
@@ -59,6 +61,9 @@ public:
     std::string                         getFilesystemPath();
     std::string                         getDataFolderPath();
     std::string                         getDaemonBin();
+
+    // Cryptography class
+    CVMWebCrypto        * crypto;
     
     
     /* Always windowless */

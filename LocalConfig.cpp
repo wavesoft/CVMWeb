@@ -173,6 +173,32 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     
 }
 
+std::string LocalConfig::getPath( std::string configFile ) {
+    std::string file = this->configDir + "/" + configFile;
+    return file;
+}
+
+bool LocalConfig::exists ( std::string configFile ) {
+    std::string file = this->configDir + "/" + configFile;
+    return file_exists( file );
+}
+
+time_t LocalConfig::getLastModified ( std::string configFile ) {
+    std::string file = this->configDir + "/" + configFile;
+
+    // Get file modification time
+    #ifdef _WIN32
+    struct _stat attrib;
+    _stat( file.c_str(), &attrib);
+    #else
+    struct stat attrib;
+    stat( file.c_str(), &attrib);
+    #endif
+    
+    // Convert it to time_t
+    return attrib.st_mtime;
+    
+}
 
 std::string LocalConfig::get ( std::string name ) {
     if (globalConfig.find(name) == globalConfig.end())

@@ -60,11 +60,15 @@ void __fwProgress( int step, int total, std::string msg, void * ptr ) {
  * specified.
  */
 std::string CVMWebAPI::calculateHostID( std::string& domain ) {
+
+    /* Get a plugin reference */
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return "";
     
     /* Fetch/Generate user UUID */
     string machineID = this->config.get("local-id");
     if (machineID.empty()) {
-        machineID = this->crypto->generateSalt();
+        machineID = p->crypto->generateSalt();
         this->config.set("local-id", machineID);
     }
     
@@ -181,7 +185,7 @@ FB::variant CVMWebAPI::checkSession( const FB::variant& vm, const FB::variant& s
 /**
  * Request a new session using the safe URL
  */
-FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb ) {
     
     /* Block requests when reached throttled state */
     if (this->throttleBlock) return CVME_ACCESS_DENIED;
@@ -202,12 +206,12 @@ FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB:
 /**
  * The thread of requesting new session
  */
-void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb ) {
 
     /* Handle request */
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
         return;
     }
 
@@ -218,18 +222,18 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     if (!isDomainPrivileged()) {
         
         // Trigger update
-        if (!this->crypto->valid)
-            this->crypto->updateAuthorizedKeystore();
+        if (!p->crypto->valid)
+            p->crypto->updateAuthorizedKeystore();
 
         // Still invalid? Something's wrong
-        if (!this->crypto->valid) {
-            if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
+        if (!p->crypto->valid) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
             return;
         }
 
         // Block requests from untrusted domains
-        if (!this->crypto->isDomainValid(domain)) {
-            if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
+        if (!p->crypto->isDomainValid(domain)) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
             return;
         }
         
@@ -238,12 +242,12 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     /* Validate arguments */
     std::string sURL = vmcpURL.convert_cast<std::string>();
     if (sURL.empty()) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
         return;
     }
     
     /* Put salt and user-specific ID in the URL */
-    std::string salt = this->crypto->generateSalt();
+    std::string salt = p->crypto->generateSalt();
     std::string glueChar = "&";
     if (sURL.find("?") == string::npos) glueChar = "?";
     std::string newURL = 
@@ -255,36 +259,36 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     std::string jsonString;
     int res = downloadText( newURL, &jsonString );
     if (res < 0) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( res ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
         return;
     }
     
     /* Try to parse the data */
     FB::variant jsonData = FB::jsonToVariantValue( jsonString );
     if (!jsonData.is_of_type<FB::VariantMap>()) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
         return;
     }
     
     /* Validate response */
     FB::VariantMap jsonHash = jsonData.cast<FB::VariantMap>();
     if (jsonHash.find("name") == jsonHash.end()) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
         return;
     };
     if (jsonHash.find("secret") == jsonHash.end()) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
         return;
     };
     if (jsonHash.find("signature") == jsonHash.end()) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
         return;
     };
     
     /* Validate signature */
-    res = this->crypto->signatureValidate( domain, salt, jsonHash );
+    res = p->crypto->signatureValidate( domain, salt, jsonHash );
     if (res < 0) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( res ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
         return;
     }
     
@@ -296,14 +300,14 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     res = p->hv->sessionValidate( vmName, vmSecret );
     if (res == 2) { 
         // Invalid password
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
         return;
     }
     
     /* Open/resume session */
     HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
     if (session == NULL) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
         return;
     }
     
@@ -329,7 +333,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
 
     /* Call success callback */
     boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session);
-    if (isMissing(successCb)) successCb->InvokeAsync("", FB::variant_list_of( pSession ));
+    if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
     
 }
 
@@ -337,7 +341,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
 /**
  * Create and return a session object. 
  */
-FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant& secret, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant& secret, const FB::variant &successCb, const FB::variant &failureCb ) {
 
     /* Fetch domain info */
     std::string domain = this->getDomainName();
@@ -357,7 +361,7 @@ FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant&
     return HVE_SCHEDULED;
 }
 
-void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant& secret, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant& secret, const FB::variant &successCb, const FB::variant &failureCb ) {
     
     /* Fetch domain info once again */
     string domain = this->getDomainName();
@@ -371,13 +375,13 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
 
         // Still invalid? Something's wrong
         if (!this->crypto->valid) {
-            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
+            if (failureCb != NULL) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
             return;
         }
 
         // Block requests from untrusted domains
         if (!this->crypto->isDomainValid(domain)) {
-            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
+            if (failureCb != NULL) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
             return;
         }
     }
@@ -386,7 +390,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
     /* Handle request */
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
-        if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
         return;
 
     } else {
@@ -416,7 +420,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
                     this->throttleTimestamp = getMillis();
                 }
                 
-                if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+                if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
                 return;
                 
             } else {
@@ -429,7 +433,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
             
         /* Notify invalid passwords */
         } else if (ans == 2) {
-            if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
             return;
             
         }
@@ -437,13 +441,13 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         /* Open session */
         HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
         if (session == NULL) {
-            if (isMissing(failureCb)) failureCb->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
             return;
         }
         
         /* Call success callback */
         boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session);
-        if (isMissing(successCb)) successCb->InvokeAsync("", FB::variant_list_of( pSession ));
+        if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
         
         /* Check if we need a daemon for our current services */
         p->hv->checkDaemonNeed();
@@ -521,13 +525,13 @@ bool CVMWebAPI::confirm( std::string msg ) {
 /**
  * Get a access to the idle daemon
  */
-FB::variant CVMWebAPI::requestDaemonAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+FB::variant CVMWebAPI::requestDaemonAccess( const FB::variant &successCb, const FB::variant &failureCb ) {
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
-        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
         return CVME_UNSUPPORTED;
     } else {
-        if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of(
+        if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of(
             boost::make_shared<CVMWebAPIDaemon>(p, m_host)
         ));
         return HVE_SCHEDULED;
@@ -537,17 +541,17 @@ FB::variant CVMWebAPI::requestDaemonAccess( const FB::JSObjectPtr &successCb, co
 /**
  * Get a access to the control daemon
  */
-FB::variant CVMWebAPI::requestControlAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb ) {
+FB::variant CVMWebAPI::requestControlAccess( const FB::variant &successCb, const FB::variant &failureCb ) {
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
-        if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
         return CVME_UNSUPPORTED;
     } else {
         if (!isDomainPrivileged()) {
-            if (failureCb != NULL) failureCb->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
             return CVME_ACCESS_DENIED;
         } else {
-            if (successCb != NULL) successCb->InvokeAsync("", FB::variant_list_of(
+            if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of(
                 boost::make_shared<CVMWebLocalConfig>(p, m_host)
             ));
             return HVE_SCHEDULED;

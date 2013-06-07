@@ -21,7 +21,17 @@
 #include "CVMWebCrypto.h"
 
 using namespace std;
- 
+
+/**
+ * Mutex configuration for multi-threaded openssl
+ */ 
+#define MUTEX_TYPE       pthread_mutex_t
+#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
+#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
+#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
+#define THREAD_ID        pthread_self(  )
+
 /**
  * Public key used for key-list validation
  */
@@ -46,6 +56,89 @@ const unsigned char * CVMWAPI_PUBKEY_DER = (const unsigned char *)
     "\xd8\x70\xa1\xad\x90\x2d\x6b\x5e\xbb\x18\x23\x64\x58\xef\x03\x89\x70\x26\xbe\xf6\xbb\xb8\xd5\x85\xbe\xab\x39\xb3\x80\x22\x24\xf0"
     "\x91\x02\x03\x01\x00\x01";
 
+    
+/**
+ * The global static RSA object used for list validation 
+ */
+EVP_PKEY * cvmPublicKey;
+ 
+/* This array will store all of the mutexes available to OpenSSL. */ 
+static MUTEX_TYPE *mutex_buf= NULL;
+ 
+/**
+ * Locking function helper for OpenSSL
+ */
+static void locking_function(int mode, int n, const char * file, int line) {
+  if (mode & CRYPTO_LOCK)
+    MUTEX_LOCK(mutex_buf[n]);
+  else
+    MUTEX_UNLOCK(mutex_buf[n]);
+}
+ 
+/**
+ * ID function helper for OpenSSL
+ */
+static unsigned long id_function(void) {
+  return ((unsigned long)THREAD_ID);
+}
+ 
+/**
+ * Initialize cryptographic library
+ */
+int cryptoInitialize(void) {
+    int i;
+ 
+    // Enable multi-threading
+    mutex_buf = (pthread_mutex_t*) malloc(CRYPTO_num_locks(  ) * sizeof(MUTEX_TYPE));
+    if (!mutex_buf) {
+        std::cout << "[Crypto] Unable to allocate MUTEX!" << std::endl;
+        return 0;
+    }
+    for (i = 0;  i < CRYPTO_num_locks(  );  i++)
+    MUTEX_SETUP(mutex_buf[i]);
+    CRYPTO_set_id_callback(id_function);
+    CRYPTO_set_locking_callback(locking_function);
+  
+    // Seed the OpenSSL's PRAND functions
+    #ifdef _WIN32
+    RAND_screen(void);
+    #else
+    RAND_load_file("/dev/random", 1024);
+    #endif
+    
+    // Load key into memory
+    cvmPublicKey = d2i_PUBKEY( NULL, &CVMWAPI_PUBKEY_DER, CVMWAPI_PUBKEY_DER_SIZE );
+    if (cvmPublicKey == NULL) {
+        std::cout << "[Crypto] Unable to load public key!" << std::endl;
+        return 0;
+    }
+     
+    // Init completed
+    return 1;
+}
+ 
+/**
+ * Cleanup cryptographic library
+ */
+int cryptoCleanup(void) {
+    int i;
+ 
+    // Cleanup multi-threading support
+    if (!mutex_buf) return 0;
+    CRYPTO_set_id_callback(NULL);
+    CRYPTO_set_locking_callback(NULL);
+    for (i = 0;  i < CRYPTO_num_locks(  );  i++)
+    MUTEX_CLEANUP(mutex_buf[i]);
+    free(mutex_buf);
+    mutex_buf = NULL;
+    return 1;
+    
+    // Free the public key
+    EVP_PKEY_free( cvmPublicKey );
+    
+}
+
+
 /**
  * Initialize the cryptographic subsystem
  */
@@ -54,59 +147,115 @@ CVMWebCrypto::CVMWebCrypto () {
     // Defaults to invalid
     valid = false;
         
-    // Load key into memory
-    cvmPublicKey = d2i_PUBKEY( NULL, &CVMWAPI_PUBKEY_DER, CVMWAPI_PUBKEY_DER_SIZE );
-    if (cvmPublicKey == NULL) {
-        std::cout << "[Crypto] Unable to load public key!" << std::endl;
-        return;
-    }
-    
-    // Seed the OpenSSL's PRAND functions
-    #ifdef _WIN32
-    RAND_screen(void);
-    #else
-    RAND_load_file("/dev/random", 1024);
-    #endif
-    
 }
 
 /**
  * Cleanup
  */
 CVMWebCrypto::~CVMWebCrypto () {
-    // Free the public key
-    EVP_PKEY_free( cvmPublicKey );
 }
 
-
 /**
- * Download the updated version of the authorized keystore
+ * Validate the signature of the given data file, using the contents
+ * of the given signature file.
  */
-int CVMWebCrypto::updateAuthorizedKeystore() {
-    valid = false;
+bool validateSignature( std::string dataFile, std::string sigFile ) {
 
-    // Load the contents of the authorized keystore
-    string keys = "";
-    int res = downloadText( "http://labs.wavesoft.gr/lhcah/domainkeys.lst", &keys );
-    if ( res != HVE_OK ) return res;
-
-    // Load the keystore signature
-    string sigData = "";
-    res = downloadText( "http://labs.wavesoft.gr/lhcah/domainkeys.sig", &sigData );
-    if ( res != HVE_OK ) return res;
+    std::string keys;
+    std::string sigData;
     
+    // Open files
+    std::ifstream iData( dataFile.c_str() );
+    std::ifstream iSig( sigFile.c_str() );
+    if (iData.fail()) return false;
+    if (iSig.fail()) return false;
+    
+    // Allocate buffers
+    iData.seekg(0, std::ios::end);   
+    keys.reserve(iData.tellg());
+    iData.seekg(0, std::ios::beg);
+    iSig.seekg(0, std::ios::end);   
+    sigData.reserve(iSig.tellg());
+    iSig.seekg(0, std::ios::beg);
+
+    // Read contents
+    keys.assign((std::istreambuf_iterator<char>(iData)),
+            std::istreambuf_iterator<char>());
+    sigData.assign((std::istreambuf_iterator<char>(iSig)),
+            std::istreambuf_iterator<char>());
+
+    // Close files
+    iSig.close();
+    iData.close();
+
     // Verify signature
     EVP_MD_CTX ctx;
     EVP_VerifyInit( &ctx, EVP_sha512());
     EVP_VerifyUpdate( &ctx, keys.c_str(), keys.length() );
     int ans = EVP_VerifyFinal( &ctx, (unsigned char *) sigData.c_str(), sigData.length(), cvmPublicKey );
-    if (ans != 1) return HVE_NOT_VALIDATED;
+    if (ans != 1) return false;
     
-    // Everything looks good, read the key list
-    vector<string> keyLines;
-    splitLines( keys, &keyLines );
-    domainKeys = tokenize( &keyLines, ':' );
-    mapDump(domainKeys);
+    // Looks good
+    return true;
+}
+
+/**
+ * Download the updated version of the authorized keystore
+ */
+int CVMWebCrypto::updateAuthorizedKeystore() {
+    bool needsReload = true;
+    time_t currTime;
+    time( &currTime );
+
+    // Don't do this frequently
+    if (valid && (lastUpdateTimestamp - currTime < CRYPTO_FREQUENT_THRESSHOLD)) {
+        return 0;
+    }
+    valid = false;
+
+    // Check if it has been some time since we last checked the keystore
+    std::string localKeystore = config.getPath("domainkeys.conf");
+    std::string localKeystoreSig = config.getPath("domainkeys.dat");
+    if (config.exists("domainkeys.lst") && config.exists("domainkeys.sig")) {
+        
+        // Check for external modifications
+        time_t storeTime = config.getLastModified("domainkeys.lst");
+        if (storeTime != keystoreTimestamp) {
+            if (validateSignature( localKeystore, localKeystoreSig )) {
+                // Crypto store is still valid (sombody touched it)
+                std::cout << "[Crypto] Store timestamp changed but is still valid" << std::endl;
+                return 0;
+            }
+        } else {
+
+            // Check if we are still within the thresshold
+            if (currTime - storeTime < CRYPTO_STORE_VALIDITY) {
+                // We are still within it's validity time
+                std::cout << "[Crypto] Store still valid" << std::endl;
+                return 0;
+            }
+            
+        }
+    }
+    
+    // Download the authorized keystore
+    std::cout << "[Crypto] Downloading updated keystore" << std::endl;
+    int res = downloadFile( CRYPTO_URL_STORE, localKeystore, NULL );
+    if ( res != HVE_OK ) return res;
+
+    // Download the keystore signature
+    std::cout << "[Crypto] Downloading store signature" << std::endl;
+    res = downloadFile( CRYPTO_URL_SIGNATURE, localKeystoreSig, NULL );
+    if ( res != HVE_OK ) return res;
+    
+    // Validate files
+    std::cout << "[Crypto] Validating signature" << std::endl;
+    if (!validateSignature( localKeystore, localKeystoreSig ))
+        return HVE_NOT_VALIDATED;
+    
+    // Everything looks good, read the key map
+    std::cout << "[Crypto] Loading keystore map" << std::endl;
+    config.loadMap( "domainkeys", &domainKeys );
     
     // We are ready!
     valid = true;

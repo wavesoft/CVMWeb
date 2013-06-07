@@ -37,6 +37,9 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 // Only for WIN32
 #ifdef _WIN32
 #include <Windows.h>
@@ -57,8 +60,6 @@
 #include <arpa/inet.h>
 
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <libgen.h>
@@ -293,7 +294,8 @@ inline long getMillis() {
 /** 
  * Macro to check if variant is null or missing
  */
-#define isMissing(x)    !(x.empty() || x.is_of_type<FB::FBVoid>() || x.is_of_type<FB::FBNull>())
+#define IS_MISSING(x)       (x.empty() || x.is_of_type<FB::FBVoid>() || x.is_of_type<FB::FBNull>())
+#define IS_CB_AVAILABLE(x)  (x.is_of_type<FB::JSObjectPtr>() && !IS_MISSING(x) )
 
 /**
  * Debug macro

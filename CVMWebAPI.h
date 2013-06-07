@@ -32,7 +32,6 @@
 
 #include "LocalConfig.h"
 #include "CVMWeb.h"
-#include "CVMWebCrypto.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI
@@ -89,9 +88,6 @@ public:
         this->throttleDenies = 0;
         this->throttleBlock = false;
         
-        // Create crypto instance
-        crypto = new CVMWebCrypto();
-        
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -102,7 +98,6 @@ public:
     ///         the plugin is released.
     ///////////////////////////////////////////////////////////////////////////////
     virtual ~CVMWebAPI() {
-        delete crypto;
     };
 
     CVMWebPtr getPlugin();
@@ -114,15 +109,15 @@ public:
 
     // Threads
     void thread_install( );
-    void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
-    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
+    void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::variant &successCb, const FB::variant &failureCb );
+    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb );
 
     // Methods
     FB::variant checkSession( const FB::variant& vm, const FB::variant& code );
-    FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
-    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
-    FB::variant requestDaemonAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
-    FB::variant requestControlAccess( const FB::JSObjectPtr &successCb, const FB::JSObjectPtr &failureCb );
+    FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::variant &successCb, const FB::variant &failureCb );
+    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb );
+    FB::variant requestDaemonAccess( const FB::variant &successCb, const FB::variant &failureCb );
+    FB::variant requestControlAccess( const FB::variant &successCb, const FB::variant &failureCb );
     std::string getDomainName();
     std::string toString();
     int         authenticate( const std::string& key );
@@ -147,9 +142,6 @@ private:
     int                 m_authType;
 
     bool                isDomainPrivileged();
-
-    // Cryptography class
-    CVMWebCrypto        * crypto;
 
     // Throttling protection
     long                throttleTimestamp;
