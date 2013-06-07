@@ -82,9 +82,9 @@ public:
         this->onStop = NULL;
         this->onDebug = NULL;
         
-        this->cpus = 0;
-        this->memory = 0;
-        this->disk = 0;
+        this->cpus = 1;
+        this->memory = 256;
+        this->disk = 1024;
         this->executionCap = 100;
         this->state = 0;
         this->internalID = 0;
@@ -95,6 +95,13 @@ public:
         this->name = "";
         this->apiPort = DEFAULT_API_PORT;
         this->flags = 0;
+        this->userData = "";
+        
+        this->daemonControlled = false;
+        this->daemonMinCap = 0;
+        this->daemonMaxCap = 100;
+        this->daemonFlags = 0;
+        
         
     };
     
@@ -102,6 +109,7 @@ public:
     std::string             ip;
     std::string             key;
     std::string             name;
+    std::string             userData;
     
     int                     cpus;
     int                     memory;

@@ -208,7 +208,6 @@ int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB:
 
     /* Extract pointers */
     string strHash = checksumBuf.str();
-    std::cout <<  "Going to validate buffer: '" << strHash << "' with signature '" << dataSignature << "'" << std::endl;
 
     /* Validate signature */
     return validateDomainData( domain, dataSignature, (const unsigned char * ) strHash.c_str(), strHash.length() );
@@ -216,5 +215,11 @@ int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB:
 }
 
 /*
-core.requestSafeSession( "http://localhost/temp/sign.php", function(s){window.session=s;console.log("OK!");}, function(e){console.error("Error "+e);})
+core.requestSafeSession( "http://localhost/temp/sign.php", function(s){
+    window.session=s;
+    s.addEventListener('debug', function(l){console.log(l);});
+    s.addEventListener('progress', function(vc,vt,a){console.log('['+vc+'/'+vt+'] '+a);});
+    s.addEventListener('error', function(msg,id,cat){console.error('['+cat+'] '+msg);});
+    console.log("OK!");
+}, function(e){console.error("Error "+e);})
 */

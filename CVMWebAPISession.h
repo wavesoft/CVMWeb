@@ -63,6 +63,7 @@ public:
         registerProperty("flags",               make_property(this, &CVMWebAPISession::get_flags));
         registerProperty("ram",                 make_property(this, &CVMWebAPISession::get_memory));
         registerProperty("disk",                make_property(this, &CVMWebAPISession::get_disk));
+        registerProperty("name",                make_property(this, &CVMWebAPISession::get_name));
         registerProperty("version",             make_property(this, &CVMWebAPISession::get_version));
         registerProperty("live",                make_property(this, &CVMWebAPISession::get_live));
         registerProperty("executionCap",        make_property(this, &CVMWebAPISession::get_executionCap));
@@ -140,7 +141,7 @@ public:
     void thread_stop( );
     void thread_reset( );
     void thread_hibernate( );
-    void thread_open( const FB::JSObjectPtr &o );
+    void thread_open( const FB::variant &o );
     void thread_start( const FB::variant& cfg );
     
     // Functions
@@ -151,7 +152,7 @@ public:
     int stop();
     int update();
     int hibernate();
-    int open( const FB::JSObjectPtr &o );
+    int open( const FB::variant &o );
     int start( const FB::variant& cfg );
     int setExecutionCap(int cap);
     int setProperty( const std::string& name, const std::string& value );
@@ -169,6 +170,7 @@ public:
     int get_daemonFlags();
     bool get_daemonControlled();
     bool get_live();
+    std::string get_name();
     std::string get_ip();
     std::string get_rdp();
     std::string get_apiEntryPoint();

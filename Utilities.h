@@ -290,9 +290,15 @@ inline long getMillis() {
  */
 #define toLowerCase(x)  std::transform( x.begin(), x.end(), x.begin(), ::tolower)
 
+/** 
+ * Macro to check if variant is null or missing
+ */
+#define isMissing(x)    !(x.empty() || x.is_of_type<FB::FBVoid>() || x.is_of_type<FB::FBNull>())
+
 /**
  * Debug macro
  */
+#define LOGGING 1
 #if defined(DEBUG) || defined(LOGGING)
 #define CVMWA_LOG(kind, ...) \
      do { std::cerr << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0);

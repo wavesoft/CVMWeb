@@ -213,7 +213,7 @@ void CVMWebAPISession::thread_hibernate(){
     }
 }
 
-int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
+int CVMWebAPISession::open( const FB::variant& o ){
 
     /* Validate state */
     if ((this->session->state != STATE_CLOSED) && 
@@ -226,14 +226,16 @@ int CVMWebAPISession::open( const FB::JSObjectPtr& o ){
     return HVE_SCHEDULED;
 }
 
-void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
-    int cpus = 1;
-    int ram = 256;
-    int disk = 1024;
+void CVMWebAPISession::thread_open( const FB::variant& oUserData  ){
+    int cpus = this->session->cpus;
+    int ram = this->session->memory;
+    int disk = this->session->disk;
+    int flags = this->session->flags;
+    std::string ver = this->session->version;
     int ans = 0;
-    int flags = 0;
-    std::string ver = DEFAULT_CERNVM_VERSION;
-    if (o != NULL) {
+    if (oUserData.is_of_type<FB::JSObjectPtr>()) {
+        FB::JSObjectPtr o = oUserData.cast<FB::JSObjectPtr>();
+        
         if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
         if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
         if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
@@ -276,6 +278,7 @@ void CVMWebAPISession::thread_open( const FB::JSObjectPtr& o ){
 
         }
     }
+    
     ans = this->session->open( cpus, ram, disk, ver, flags );
     if (ans == 0) {
         this->fire_open();
@@ -310,7 +313,12 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     int ans;
     std::string vmUserData;
-    vmUserData = cfg.cast<std::string>();
+    
+    if (cfg.empty() || cfg.is_of_type<FB::FBVoid>() || cfg.is_of_type<FB::FBNull>()) {
+        vmUserData = "*";
+    } else {
+        vmUserData = cfg.cast<std::string>();
+    }
     
     ans = this->session->start(vmUserData);
     if (ans == 0) {
@@ -370,6 +378,10 @@ std::string CVMWebAPISession::get_rdp() {
 
 std::string CVMWebAPISession::get_version() {
     return this->session->version;
+}
+
+std::string CVMWebAPISession::get_name() {
+    return this->session->name;
 }
 
 std::string CVMWebAPISession::get_apiEntryPoint() {

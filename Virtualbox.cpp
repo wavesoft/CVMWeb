@@ -157,7 +157,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     /* Update session */
     this->cpus = cpus;
     this->memory = memory;
-    this->executionCap = 100;
     this->flags = flags;
         
     /* (1) Create slot */
@@ -193,6 +192,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         << uuid
         << " --cpus "                   << cpus
         << " --memory "                 << memory
+        << " --cpuexecutioncap "        << this->executionCap
         << " --vram "                   << "32"
         << " --acpi "                   << "on"
         << " --ioapic "                 << "on"
@@ -333,7 +333,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
             /* (4) Create disk */
             args.str("");
-            args << "createhd "
+            args << "createhd"
                 << " --filename "   << "\"" << vmDisk << "\""
                 << " --size "       << disk;
 
@@ -532,10 +532,14 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 /**
  * Start VM with the given
  */
-int VBoxSession::start( std::string userData ) { 
+int VBoxSession::start( std::string uData ) { 
     string vmContextDsk, kk, kv;
     ostringstream args;
     int ans;
+    
+    /* Update local userData */
+    if (uData.compare("*") != 0) 
+        userData = uData;
 
     /* Validate state */
     cout << "0 (" << this->state << ")\n";
@@ -721,6 +725,9 @@ int VBoxSession::start( std::string userData ) {
     if (this->onProgress!=NULL) (this->onProgress)(7, 7, "Completed", this->cbObject);
     this->executionCap = 100;
     this->state = STATE_STARTED;
+    
+    /* Store user-data to the properties */
+    if (userData.compare("*") != 0) this->setProperty("/CVMWeb/userData", base64_encode(userData));
     
     /* Check for daemon need */
     this->host->checkDaemonNeed();
@@ -1087,6 +1094,9 @@ std::string VBoxSession::getHostOnlyAdapter() {
     for (vector< map<string, string> >::iterator i = ifs.begin(); i != ifs.end(); i++) {
         map<string, string> iface = *i;
 
+        CVMWA_LOG("log", "Checking interface");
+        mapDump(iface);
+
         /* Ensure proper environment */
         if (iface.find("Name") == iface.end()) continue;
         if (iface.find("VBoxNetworkName") == iface.end()) continue;
@@ -1103,10 +1113,13 @@ std::string VBoxSession::getHostOnlyAdapter() {
             map<string, string> dhcp = *i;
             if (dhcp.find("NetworkName") == dhcp.end()) continue;
             if (dhcp.find("Enabled") == dhcp.end()) continue;
+
+            CVMWA_LOG("log", "Checking dhcp");
+            mapDump(dhcp);
             
             /* The network has a DHCP server, check if it's running */
-            if (vboxName.compare(dhcp["NetworkName"])) {
-                if (dhcp["Enabled"].compare("yes") == 0) {
+            if (vboxName.compare(dhcp["NetworkName"]) == 0) {
+                if (dhcp["Enabled"].compare("Yes") == 0) {
                     hasDHCP = true;
                     break;
                 } else {
@@ -1301,20 +1314,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->name = name;
     sess->key = key;
     sess->host = this;
-    sess->state = 0;
-    sess->ip = "";
-    sess->apiPort = DEFAULT_API_PORT;
     sess->rdpPort = 0;
-    sess->cpus = 1;
-    sess->memory = 256;
-    sess->executionCap = 100;
-    sess->disk = 1024;
-    sess->version = DEFAULT_CERNVM_VERSION;
-    sess->daemonControlled = false;
-    sess->daemonMinCap = 0;
-    sess->daemonMaxCap = 100;
-    sess->daemonFlags = 0;
-    sess->flags = 0;
     return sess;
 }
 
@@ -1580,6 +1580,12 @@ int Virtualbox::updateSession( HVSession * session ) {
     } else {
         session->daemonFlags = ston<int>(strProp);
     }
+    strProp = this->getProperty( uuid, "/CVMWeb/userData" );
+    if (strProp.empty()) {
+        session->userData = "";
+    } else {
+        session->userData = base64_decode(strProp);
+    }
     
     /* Updated successfuly */
     return HVE_OK;
@@ -1596,7 +1602,7 @@ int Virtualbox::loadSessions() {
     /* List the running VMs in the system */
     int ans = this->exec("list vms", &lines);
     if (ans != 0) return HVE_QUERY_ERROR;
-    
+
     /* Tokenize */
     vms = tokenize( &lines, '{' );
     this->sessions.clear();
