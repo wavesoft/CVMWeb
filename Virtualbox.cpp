@@ -1133,7 +1133,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
                 } else {
                     
                     /* Check if we can enable the server */
-                    ans = this->wrapExec("dhcpserver modify --ifname " + ifName + " --enable", NULL);
+                    ans = this->wrapExec("dhcpserver modify --ifname \"" + ifName + "\" --enable", NULL);
                     if (ans == 0) {
                         hasDHCP = true;
                         break;
@@ -1169,7 +1169,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
         
         /* Add and start server */
         ans = this->wrapExec(
-            "dhcpserver add --ifname " + foundIface + 
+            "dhcpserver add --ifname \"" + foundIface + "\"" +
             " --ip " + ipServer +
             " --netmask " + foundMask +
             " --lowerip " + ipMin +
