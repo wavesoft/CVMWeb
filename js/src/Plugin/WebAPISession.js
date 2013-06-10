@@ -57,6 +57,13 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     this.__session.addEventListener('reset',          (function(a,b,c){ this.fire('reset'); }).bind(this));
     this.__session.addEventListener('apiAvailable',   (function(a,b){   this.fire('apiAvailable', a,b); }).bind(this));
     this.__session.addEventListener('apiUnavailable', (function() {     this.fire('apiUnavailable'); }).bind(this));
+    this.__session.addEventListener('openError',      (function(a,b){   this.fire('openError',a,b); }).bind(this));
+    this.__session.addEventListener('closeError',     (function(a,b){   this.fire('closeError',a,b); }).bind(this));
+    this.__session.addEventListener('startError',     (function(a,b){   this.fire('startError',a,b); }).bind(this));
+    this.__session.addEventListener('stopError',      (function(a,b){   this.fire('stopError',a,b); }).bind(this));
+    this.__session.addEventListener('pauseError',     (function(a,b){   this.fire('pauseError',a,b); }).bind(this));
+    this.__session.addEventListener('resetError',     (function(a,b){   this.fire('resetError',a,b); }).bind(this));
+    this.__session.addEventListener('hibernateError', (function(a,b){   this.fire('hibernateError',a,b); }).bind(this));
 
     // Smart progress events
     var inProgress = false;
@@ -87,16 +94,90 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
 _NS_.WebAPISession.prototype = Object.create( _NS_.EventDispatcher.prototype );
 
 /**
- * Merge/override user-data
+ * Proxy functions for start,stop,pause,resume,hibernate
  */
 _NS_.WebAPISession.prototype.start = function( userVariables, cbOK, cbFail ) {
-    var cb_proxy_ok=null,
-        cb_proxy_free=null,;
     
+    // Setup proxies
+    var cb_once=true,
+        cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; cbOK(); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; cbFail(eMsg,eCode); cleanup_cb(); },
+        cleanup_cb = (function() {
+            if (cbOK != null) this.__session.removeEventListener('start', cb_proxy_ok);
+            if (cbFail != null) this.__session.removeEventListener('startError', cb_proxy_fail);
+        }).bind(this);
+        if (cbOK != null) this.__session.addEventListener('start', cb_proxy_ok);
+        if (cbFail != null) this.__session.addEventListener('startError', cb_proxy_fail);
     
+    // Start session
     this.__session.start();
-};
 
-_NS_.WebAPISession.prototype.stop = function( userVariables ) {
+};
+_NS_.WebAPISession.prototype.stop = function( cbOK, cbFail ) {
+    
+    // Setup proxies
+    var cb_once=true,
+        cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; cbOK(); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; cbFail(eMsg,eCode); cleanup_cb(); },
+        cleanup_cb = (function() {
+            if (cbOK != null) this.__session.removeEventListener('stop', cb_proxy_ok);
+            if (cbFail != null) this.__session.removeEventListener('stopError', cb_proxy_fail);
+        }).bind(this);
+        if (cbOK != null) this.__session.addEventListener('stop', cb_proxy_ok);
+        if (cbFail != null) this.__session.addEventListener('stopError', cb_proxy_fail);
+    
+    // Start session
     this.__session.stop();
+
+};
+_NS_.WebAPISession.prototype.pause = function( cbOK, cbFail ) {
+    
+    // Setup proxies
+    var cb_once=true,
+        cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; cbOK(); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; cbFail(eMsg,eCode); cleanup_cb(); },
+        cleanup_cb = (function() {
+            if (cbOK != null) this.__session.removeEventListener('pause', cb_proxy_ok);
+            if (cbFail != null) this.__session.removeEventListener('pauseError', cb_proxy_fail);
+        }).bind(this);
+        if (cbOK != null) this.__session.addEventListener('pause', cb_proxy_ok);
+        if (cbFail != null) this.__session.addEventListener('pauseError', cb_proxy_fail);
+    
+    // Start session
+    this.__session.pause();
+
+};
+_NS_.WebAPISession.prototype.resume = function( cbOK, cbFail ) {
+    
+    // Setup proxies
+    var cb_once=true,
+        cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; cbOK(); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; cbFail(eMsg,eCode); cleanup_cb(); },
+        cleanup_cb = (function() {
+            if (cbOK != null) this.__session.removeEventListener('resume', cb_proxy_ok);
+            if (cbFail != null) this.__session.removeEventListener('resumeError', cb_proxy_fail);
+        }).bind(this);
+        if (cbOK != null) this.__session.addEventListener('resume', cb_proxy_ok);
+        if (cbFail != null) this.__session.addEventListener('resumeError', cb_proxy_fail);
+    
+    // Start session
+    this.__session.resume();
+
+};
+_NS_.WebAPISession.prototype.hibernate = function( cbOK, cbFail ) {
+    
+    // Setup proxies
+    var cb_once=true,
+        cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; cbOK(); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; cbFail(eMsg,eCode); cleanup_cb(); },
+        cleanup_cb = (function() {
+            if (cbOK != null) this.__session.removeEventListener('hibernate', cb_proxy_ok);
+            if (cbFail != null) this.__session.removeEventListener('hibernateError', cb_proxy_fail);
+        }).bind(this);
+        if (cbOK != null) this.__session.addEventListener('hibernate', cb_proxy_ok);
+        if (cbFail != null) this.__session.addEventListener('hibernateError', cb_proxy_fail);
+    
+    // Start session
+    this.__session.hibernate();
+
 };

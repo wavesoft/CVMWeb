@@ -1064,7 +1064,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
     vector<string> lines;
     vector< map<string, string> > ifs;
     vector< map<string, string> > dhcps;
-    string ifName = "", vboxName;
+    string ifName = "", vboxName, ipServer, ipMin, ipMax;
     
     /* Check if we already have host-only interfaces */
     int ans = this->wrapExec("list hostonlyifs", &lines);
@@ -1130,7 +1130,33 @@ std::string VBoxSession::getHostOnlyAdapter() {
                 if (dhcp["Enabled"].compare("Yes") == 0) {
                     hasDHCP = true;
                     break;
+                    
                 } else {
+                    
+                    /* Make sure the server does not have an invalid IP address */
+                    bool updateIPInfo = false;
+                    if (dhcp['IP'].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp['lowerIPAddress'].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp['upperIPAddress'].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp['NetworkMask'].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (updateIPInfo) {
+                        
+                        /* Prepare IP addresses */
+                        ipServer = changeUpperIP( iface["IPAddress"], 100 );
+                        ipMin = changeUpperIP( iface["IPAddress"], 101 );
+                        ipMax = changeUpperIP( iface["IPAddress"], 254 );
+                    
+                        /* Modify server */
+                        ans = this->wrapExec(
+                            "dhcpserver modify --ifname \"" + ifName + "\"" +
+                            " --ip " + ipServer +
+                            " --netmask " + iface["NetworkMask"] +
+                            " --lowerip " + ipMin +
+                            " --upperip " + ipMax +
+                             , NULL);
+                        if (ans != 0) continue;
+                    
+                    }
                     
                     /* Check if we can enable the server */
                     ans = this->wrapExec("dhcpserver modify --ifname \"" + ifName + "\" --enable", NULL);
@@ -1163,9 +1189,9 @@ std::string VBoxSession::getHostOnlyAdapter() {
     if (!foundDHCPServer) {
         
         /* Prepare IP addresses */
-        string ipServer = changeUpperIP( foundBaseIP, 100 );
-        string ipMin = changeUpperIP( foundBaseIP, 101 );
-        string ipMax = changeUpperIP( foundBaseIP, 254 );
+        ipServer = changeUpperIP( foundBaseIP, 100 );
+        ipMin = changeUpperIP( foundBaseIP, 101 );
+        ipMax = changeUpperIP( foundBaseIP, 254 );
         
         /* Add and start server */
         ans = this->wrapExec(
@@ -1177,7 +1203,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
             " --enable"
              , NULL);
         if (ans != 0) return "";
-        
+                
     }
     
     /* Got my interface */
