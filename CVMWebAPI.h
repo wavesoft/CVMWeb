@@ -131,6 +131,7 @@ public:
     
     // Forward proxy to browser's confirm
     bool        confirm( std::string );
+    bool        unsafeConfirm( std::string msg );
     
     // Common configuration class
     LocalConfig         config;    

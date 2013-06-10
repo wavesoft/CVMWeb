@@ -30,6 +30,29 @@ _NS_.setConfirmFunction = function( customFunction ) {
 };
 
 /**
+ * This is an overridable alert function, so the user can specify
+ * anoter, more beautiful implementation.
+ */
+var alertFunction = function(msg) { alert(msg) };
+_NS_.setAlertFunction = function( customFunction ) { alertFunction = customFunction; };
+
+/**
+ * Global error handler
+ */
+var globalErrorHandler = function(msg, code) { };
+_NS_.setGlobalErrorHandler = function( customFunction ) { globalErrorHandler = customFunction; };
+
+/**
+ * Shorthand function to call both the global error handler and the user-specified
+ * error callback (if it's valid)
+ */
+function callError( userCallback, message, code ) {
+    if (userCallback)
+        if (userCallback(message, code)) return;
+    globalErrorHandler( message, code );
+};
+
+/**
  * Global function to initialize the plugin and callback when ready
  *
  * @param cbOK              A callback function that will be fired when a plugin instance is obtained
@@ -54,7 +77,8 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
 
                 // Still problems?
                 if (__pluginSingleton == null) {
-                    cbFail( "Your browser does not support the <embed /> tag!", -101 );
+                    callError( cbFail, "Your browser does not support the <embed /> tag!", -101 );
+                    return;
                 }
 
                 // Initialize
@@ -74,7 +98,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                 function(daemon) {
                     cbOK( new _NS_.WebAPIPlugin( __pluginSingleton, daemon ) ); 
                 },function(error) {
-                    cbFail( "Unable to obtain daemon access: " + error_string(error), error );
+                    callError( cbFail, "Unable to obtain daemon access: " + error_string(error), error );
                 }
             );
         }
@@ -101,14 +125,14 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                                 window.location = "http://cernvm.cern.ch/portal/webapi";
                             }
                         } else {
-                            cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
+                            callError( cbFail, "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
                         }
                     }
                 );
                 
             } else {
                 // Could not do anything, fire the error callback
-                cbFail( "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
+                callError( cbFail, "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
             }
             
         } else {
@@ -137,7 +161,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                                 var cb_error = function(code) {
                                     if (once) { once=false } else { return };
                                     __pluginSingleton.removeEventListener('installError', cb_error);
-                                    cbFail( "Unable to install hypervisor!", -103 );
+                                    callError( cbFail, "Unable to install hypervisor!", -103 );
                                 };
 
                                 // Setup callbacks and install hypervisor
@@ -146,7 +170,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                                 __pluginSingleton.installHypervisor();
 
                             } else {
-                                cbFail( "User denied hypervisor installation!", -102 );
+                                callError( cbFail, "User denied hypervisor installation!", -102 );
                             }
                         }
                     );

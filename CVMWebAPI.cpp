@@ -303,6 +303,38 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         return;
     }
     
+    /* Check if the session is new and prompt the user */
+    if (res == 0) {
+        
+        // Newline-specific split
+        string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine. This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
+
+        // Prompt user
+        // (It is safe to use unsafe confirm, since we trust the domain - Therefore we also get rid of all the platform-dependant code)
+        if (!this->unsafeConfirm(msg)) {
+            
+            /* Manage throttling */
+            if ((getMillis() - this->throttleTimestamp) <= THROTTLE_TIMESPAN) {
+                if (++this->throttleDenies >= THROTTLE_TRIES)
+                    this->throttleBlock = true;
+            } else {
+                this->throttleDenies = 1;
+                this->throttleTimestamp = getMillis();
+            }
+            
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+            return;
+            
+        } else {
+            
+            /* Reset throttle */
+            this->throttleDenies = 0;
+            this->throttleTimestamp = 0;
+            
+        }
+        
+    }
+    
     /* Open/resume session */
     HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
     if (session == NULL) {
@@ -324,10 +356,23 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonControlled = jsonHash["daemonMaxCap"].convert_cast<int>();
     if (jsonHash.find("daemonFlags") != jsonHash.end())      session->daemonControlled = jsonHash["daemonFlags"].convert_cast<int>();
     if (jsonHash.find("diskURL") != jsonHash.end()) {
+        
+        // If we have a missing checksum, that's a problem
+        if (jsonHash.find("diskChecksum") == jsonHash.end()) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+            return;
+        }
+        
+        // Update information
         session->version = jsonHash["diskURL"].convert_cast<string>();
+        session->diskChecksum = jsonHash["diskChecksum"].convert_cast<string>();
         session->flags |= HVF_DEPLOYMENT_HDD;
+        
     } else if (jsonHash.find("version") != jsonHash.end()) {
+        
+        // Update the default flags for CernVM Micro
         session->flags |= HVF_SYSTEM_64BIT;
+        
     }
 
     /* Call success callback */
@@ -489,31 +534,40 @@ int CVMWebAPI::installHV( ) {
 /**
  * Show a confirmation dialog using browser's API
  */
+bool CVMWebAPI::unsafeConfirm( std::string msg ) {
+    
+    // Retrieve a reference to the DOM Window
+    FB::DOM::WindowPtr window = m_host->getDOMWindow();
+
+    // Check if the DOM Window has an alert property
+    if (window && window->getJSObject()->HasProperty("window")) {
+    
+        // Create a reference to alert
+        FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr>("window");
+    
+        // Make sure the function is valid native function and not a hack 
+        FB::variant f = obj->GetProperty("confirm");
+        FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
+        string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
+        if (fType.find("native") == string::npos)
+            return false;
+    
+        // Invoke alert with some text
+        return obj->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
+    } else {
+        return false;
+    }
+    
+}
+
+/**
+ * Show a confirmation dialog using browser's API
+ */
 bool CVMWebAPI::confirm( std::string msg ) {
     
     #ifdef BROWSER_CONFIRM
     
-        // Retrieve a reference to the DOM Window
-        FB::DOM::WindowPtr window = m_host->getDOMWindow();
-    
-        // Check if the DOM Window has an alert property
-        if (window && window->getJSObject()->HasProperty("window")) {
-        
-            // Create a reference to alert
-            FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr>("window");
-        
-            // Make sure the function is valid native function and not a hack 
-            FB::variant f = obj->GetProperty("confirm");
-            FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
-            string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
-            if (fType.find("native") == string::npos)
-                return false;
-        
-            // Invoke alert with some text
-            return obj->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
-        } else {
-            return false;
-        }
+        return unsafeConfirm( msg );
 
     #else
     

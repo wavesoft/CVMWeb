@@ -244,7 +244,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         /* (3) Download the disk image specified by the URL */
         string masterDisk;
         if (this->onProgress!=NULL) (this->onProgress)(20, 110, "Downloading VM Disk", this->cbObject);
-        ans = this->host->diskImageDownload( cvmVersion, &masterDisk, &feedback );
+        ans = this->host->diskImageDownload( cvmVersion, this->diskChecksum, &masterDisk, &feedback );
         if (ans < HVE_OK) {
             this->state = STATE_ERROR;
             return HVE_IO_ERROR;
@@ -729,6 +729,10 @@ int VBoxSession::start( std::string uData ) {
     /* Store user-data to the properties */
     if (userData.compare("*") != 0) this->setProperty("/CVMWeb/userData", base64_encode(userData));
     
+    /* We don't know the IP address of the VM. During it's possible hibernation
+       state the DHCP lease might have been released. */
+    this->ip = "";
+    
     /* Check for daemon need */
     this->host->checkDaemonNeed();
     return 0;
@@ -956,6 +960,10 @@ int VBoxSession::resume() {
     
     /* Validate state */
     if (this->state != STATE_PAUSED) return HVE_INVALID_STATE;
+    
+    /* We don't know the IP address of the VM. During it's pause
+       state the DHCP lease might have been released. */
+    this->ip = "";
     
     /* Resume VM */
     ans = this->controlVM("resume");
@@ -1263,6 +1271,24 @@ std::string VBoxSession::getRDPHost() {
 int VBoxSession::update() {
     return this->host->updateSession( this );
 }
+
+/**
+ * Return the IP Address of the session
+ */
+std::string VBoxSession::getIP() {
+    if (this->ip.empty()) {
+        std::string guessIP = this->getProperty("/VirtualBox/GuestInfo/Net/1/V4/IP");
+        if (!guessIP.empty()) {
+            this->ip = guessIP;
+            return guessIP;
+        } else {
+            return "";
+        }
+    } else {
+        return this->ip;
+    }
+}
+
 
 /** =========================================== **\
             Virtualbox Implementation

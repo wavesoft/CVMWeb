@@ -96,6 +96,7 @@ public:
         this->apiPort = DEFAULT_API_PORT;
         this->flags = 0;
         this->userData = "";
+        this->diskChecksum = "";
         
         this->daemonControlled = false;
         this->daemonMinCap = 0;
@@ -118,6 +119,7 @@ public:
     int                     state;
     int                     apiPort;
     std::string             version;
+    std::string             diskChecksum;
     
     int                     flags;
     
@@ -241,7 +243,7 @@ public:
     int                     cernVMDownload      ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
     int                     cernVMCached        ( std::string version, std::string * filename );
     std::string             cernVMVersion       ( std::string filename );
-    int                     diskImageDownload   ( std::string url, std::string * filename, HVPROGRESS_FEEDBACK * fb );
+    int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, HVPROGRESS_FEEDBACK * fb );
     int                     buildContextISO     ( std::string userData, std::string * filename );
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
         

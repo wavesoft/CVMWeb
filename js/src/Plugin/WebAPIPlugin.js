@@ -64,7 +64,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
             var f_error = (function( code ) {
                 if (once) { once=false } else { return };
                 session.removeEventListener( 'error', f_error );
-                if (cbFail) cbFail( "Could not open session: " + error_string(code) + ".", code )
+                callError( cbFail, "Could not open session: " + error_string(code) + ".", code )
             }).bind(this);
             session.addEventListener('open', f_open);
             session.addEventListener('openError', f_error);
@@ -81,7 +81,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
         
     }).bind(this), function(code) {
         console.error("RequestSession Error #" + code);
-        if (cbFail) cbFail( "Could not request session: " + error_string(code) + ".", code );
+        callError( cbFail, "Could not request session: " + error_string(code) + ".", code );
     });
     
 };

@@ -48,6 +48,7 @@ public:
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
     virtual std::string     getRDPHost();
+    virtual std::string     getIP();
 
     virtual int             update();
     

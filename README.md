@@ -117,7 +117,7 @@ values will be used. The supported parameters and their default values are the f
 
 	{
 		cpus: 		1,
-		memory: 	256, 		// Mb
+		ram:  	256, 		// Mb
 		disk:		1024,		// Mb
 		version:	'1.3'		// The CernVM Micro Release
 	}
