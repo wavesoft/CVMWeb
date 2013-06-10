@@ -37,6 +37,20 @@ var HVF_GUEST_ADDITIONS = 4;
 var HVF_FLOPPY_IO = 8;
 
 /**
+ * Convert state to string
+ */
+function state_string(state) {
+    if (state == STATE_CLOSED)      return "Closed";
+    if (state == STATE_OPPENING)    return "Oppening";
+    if (state == STATE_OPEN)        return "Open";
+    if (state == STATE_STARTING)    return "Starting";
+    if (state == STATE_STARTED)     return "Started";
+    if (state == STATE_ERROR)       return "Error";
+    if (state == STATE_PAUSED)      return "Paused";
+    return "Unknown state " + state;
+};
+
+/**
  * Convert error code to string
  */
 function error_string(code) {
@@ -58,4 +72,5 @@ function error_string(code) {
     if (code == HVE_NOT_TRUSTED) return "The domain is not trusted";
     if (code == HVE_USAGE_ERROR) return "Usage error";
     if (code == HVE_NOT_IMPLEMENTED) return "The requested functionality is not implemented";
+    return "Unknown error #" + code;
 }

@@ -30,6 +30,11 @@ _NS_.setConfirmFunction = function( customFunction ) {
 };
 
 /**
+ * Debug flag
+ */
+_NS_.debugLogging = false;
+
+/**
  * This is an overridable alert function, so the user can specify
  * anoter, more beautiful implementation.
  */
@@ -60,6 +65,13 @@ function callError( userCallback, message, code ) {
  * @param setupEnvironment  [Optional] Set to 'true' to let library handle environment initialization
  */
 _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
+    
+    // Check for missing cbFail function : We can say setupEnvironment=true
+    // without having to specify a null cbFail.
+    if (cbFail === true) {
+        setupEnvironment = true;
+        cbFail = null;
+    }
     
     // Create a local callback that will check the plugin
     // status and trigger the appropriate user callbacks
