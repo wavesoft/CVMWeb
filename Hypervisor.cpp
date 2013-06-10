@@ -191,6 +191,21 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     string sURL = url;
     int res;
     
+    // Create a custom HVPROGRESS_FEEDBACK in order to 
+    // use the higher part for the extracting.
+    HVPROGRESS_FEEDBACK nfb;
+    if (fb != NULL) {
+        nfb.min = fb->min;
+        nfb.max = fb->max - 1;
+        nfb.total = fb->total;
+        nfb.data = fb->data;
+        nfb.message = fb->message;
+        nfb.lastEventTime = fb->lastEventTime;
+        nfb.callback = fb->callback;
+    } else {
+        nfb.callback = NULL;
+    }
+    
     // Calculate the SHA256 checksum of the URL
     string sChecksum = "";
     sha256_buffer( url, &sChecksum );
@@ -221,7 +236,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
         } else {
             
             // Notify progress
-            if ((fb != NULL) && (fb->callback != NULL)) fb->callback( 100, 100, "Extracting compressed disk", fb->data );
+            if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk", fb->data );
             res = decompressFile( sGZOutput, sOutput );
             if (res != HVE_OK) 
                 return res;
@@ -242,11 +257,11 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     // (Nothing is there, download it now)
     
     // Download the file to sGZOutput
-    res = downloadFile(sURL, sGZOutput, fb);
+    res = downloadFile(sURL, sGZOutput, &nfb);
     if (res != HVE_OK) return res;
     
     // Decompress
-    if ((fb != NULL) && (fb->callback != NULL)) fb->callback( 100, 100, "Extracting compressed disk", fb->data );
+    if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk", fb->data );
     res = decompressFile( sGZOutput, sOutput );
     if (res != HVE_OK) 
         return res;

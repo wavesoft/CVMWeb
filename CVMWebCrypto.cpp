@@ -25,12 +25,21 @@ using namespace std;
 /**
  * Mutex configuration for multi-threaded openssl
  */ 
+#ifdef _WIN32
+#define MUTEX_TYPE       HANDLE
+#define MUTEX_SETUP(x)   x = CreateMutex(NULL, FALSE, NULL)
+#define MUTEX_CLEANUP(x) CloseHandle(x)
+#define MUTEX_LOCK(x)    WaitForSingleObject(x, INFINITE)
+#define MUTEX_UNLOCK(x)  ReleaseMutex(x)
+#define THREAD_ID        GetCurrentThreadId(  )
+#else
 #define MUTEX_TYPE       pthread_mutex_t
 #define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
 #define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
 #define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
 #define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
 #define THREAD_ID        pthread_self(  )
+#endif
 
 /**
  * Public key used for key-list validation
@@ -103,7 +112,7 @@ int cryptoInitialize(void) {
     #ifdef _WIN32
     RAND_screen(void);
     #else
-    RAND_load_file("/dev/random", 1024);
+    RAND_load_file("/dev/urandom", 1024);
     #endif
     
     // Load key into memory
