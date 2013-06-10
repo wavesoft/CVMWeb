@@ -723,7 +723,6 @@ int VBoxSession::start( std::string uData ) {
     
     /* Update parameters */
     if (this->onProgress!=NULL) (this->onProgress)(7, 7, "Completed", this->cbObject);
-    this->executionCap = 100;
     this->state = STATE_STARTED;
     
     /* Store user-data to the properties */
@@ -1604,6 +1603,19 @@ int Virtualbox::updateSession( HVSession * session ) {
             }
             
         }
+    }
+    
+    /* Parse execution cap */
+    session->executionCap = 100;
+    if (info.find( "CPU exec cap" ) != info.end()) {
+        
+        /* Get execution cap */
+        kk = info["CPU exec cap"];
+        kk = kk.substr(0, kk.length()-1); // Strip %
+        
+        /* Convert to number */
+        session->executionCap = ston<int>( kk );
+        
     }
     
     /* Parse daemon information */

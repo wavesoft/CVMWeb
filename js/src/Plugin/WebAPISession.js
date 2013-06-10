@@ -130,6 +130,13 @@ _NS_.WebAPISession.prototype.start = function( userVariables, cbOK, cbFail ) {
     // Check for invalid session
     if (!this.__valid) return false;
     
+    // Check for missing userVariables
+    if (typeof(userVariables) == 'function') {
+        cbFail = cbOK;
+        cbOK = userVariables;
+        userVariables = "";
+    }
+    
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
