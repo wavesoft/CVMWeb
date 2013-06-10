@@ -1041,18 +1041,36 @@ int VBoxSession::hibernate() {
 int VBoxSession::setExecutionCap(int cap) {
     ostringstream os;
     int ans;
-    
-    /* Validate state */
-    if ((this->state != STATE_STARTED) && (this->state != STATE_OPEN)) return HVE_INVALID_STATE;
 
-    os << "cpuexecutioncap " << cap;
-    ans = this->controlVM( os.str());
-    if (ans == 0) {
-        this->executionCap = cap;
-        return cap;
+    /* If it's not started, use modifyVM */
+    if ((this->state == STATE_OPEN) || (this->state == STATE_ERROR)) {
+        
+        // VM Inactive -> Modify
+        os << "modifyvm "
+            << this->uuid
+            << " --cpuexecutioncap " << cap;
+        ans = this->wrapExec( os.str(), NULL);
+        if (ans == 0) {
+            this->executionCap = cap;
+            return cap;
+        } else {
+            return ans; /* Failed */
+        }
+
     } else {
-        return ans; /* Failed */
+        
+        // VM Active -> Control
+        os << "cpuexecutioncap " << cap;
+        ans = this->controlVM( os.str());
+        if (ans == 0) {
+            this->executionCap = cap;
+            return cap;
+        } else {
+            return ans; /* Failed */
+        }
+
     }
+
 }
 
 /**
@@ -1134,10 +1152,10 @@ std::string VBoxSession::getHostOnlyAdapter() {
                     
                     /* Make sure the server does not have an invalid IP address */
                     bool updateIPInfo = false;
-                    if (dhcp['IP'].compare("0.0.0.0") == 0) updateIPInfo=true;
-                    if (dhcp['lowerIPAddress'].compare("0.0.0.0") == 0) updateIPInfo=true;
-                    if (dhcp['upperIPAddress'].compare("0.0.0.0") == 0) updateIPInfo=true;
-                    if (dhcp['NetworkMask'].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp["IP"].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp["lowerIPAddress"].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp["upperIPAddress"].compare("0.0.0.0") == 0) updateIPInfo=true;
+                    if (dhcp["NetworkMask"].compare("0.0.0.0") == 0) updateIPInfo=true;
                     if (updateIPInfo) {
                         
                         /* Prepare IP addresses */
@@ -1151,7 +1169,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
                             " --ip " + ipServer +
                             " --netmask " + iface["NetworkMask"] +
                             " --lowerip " + ipMin +
-                            " --upperip " + ipMax +
+                            " --upperip " + ipMax
                              , NULL);
                         if (ans != 0) continue;
                     
