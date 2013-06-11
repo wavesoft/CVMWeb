@@ -249,7 +249,7 @@ public:
         
     /* Control functions (called externally) */
     int                     checkDaemonNeed ();
-    void                    setDownloadProvider( DOWNLOAD_PROVIDER * p );
+    void                    setDownloadProvider( DownloadProvider * p );
     
     /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
              the Hypervisor class in order to use the checkDaemonNeed() function. It's
@@ -259,7 +259,7 @@ public:
     
 private:
     int                     sessionID;
-    DOWNLOAD_PROVIDER *     downloadProvider;
+    DownloadProvider *      downloadProvider;
     
 };
 
@@ -268,7 +268,7 @@ private:
  */
 Hypervisor *                    detectHypervisor    ( );
 void                            freeHypervisor      ( Hypervisor * );
-int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData, DOWNLOAD_PROVIDER * provider );
+int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData, DownloadProvider * provider );
 std::string                     hypervisorErrorStr  ( int error );
 
 

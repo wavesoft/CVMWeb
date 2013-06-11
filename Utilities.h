@@ -115,25 +115,47 @@ typedef struct {
 } HVPROGRESS_FEEDBACK;
 
 /**
- * Download provider is an abstraction that allows
- * use of both FB::BrowserStream and CURL interfaces
- * to the download functions.
+ * Base class that download providers override
  */
-typedef struct _DOWNLOAD_PROVIDER DOWNLOAD_PROVIDER;
-struct _DOWNLOAD_PROVIDER {
+class DownloadProvider {
+public:
     
-    void *                  userData;
+    DownloadProvider()
+    {
+        this->userData = NULL;
+        this->progressFeedback = NULL;
+        this->handleData = NULL;
+        this->dataLength = 0;
+        this->dataPos = 0;
+    }
+    
+    virtual int             startDownload( std::string url );
+    void                    setHandler( void (*cb)( DownloadProvider * p, void *,size_t ), void * cbData );
+    void                    callDataHandler( void * ptr, size_t len );
+    
     HVPROGRESS_FEEDBACK *   progressFeedback;
-    
-    int (*startDownload)  ( DOWNLOAD_PROVIDER *p, std::string URL );
-    void (*handleData)    ( DOWNLOAD_PROVIDER * p, void * ptr, size_t dataLength );
-    
+    void *                  userData;
     size_t                  dataLength;
     size_t                  dataPos;
     
-    // Internal variables
-    void *                  __data;
+private:
+    void (*handleData)    ( DownloadProvider * p, void * ptr, size_t len );
+        
+};
+
+/**
+ * CURL Data Provider
+ */
+class CURLDownloadProvider : public DownloadProvider {
+public:
     
+                            CURLDownloadProvider();
+    virtual                 ~CURLDownloadProvider();
+    virtual int             startDownload( std::string url );
+    
+private:
+    CURL *                  curl;
+
 };
 
 /**
@@ -162,16 +184,10 @@ int                                                 downloadText    ( std::strin
 int                                                 downloadFile    ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb );
 
 /**
- * ALloc/Release functions for the CURL provider
- */
-DOWNLOAD_PROVIDER *                                 allocCURLProvider();
-void                                                freeCURLProvider( DOWNLOAD_PROVIDER * p );
-
-/**
  * Replacement functions for downloadFile and downloadText that support custom download provider
  */
-int                                                 downloadTextEx  ( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK * fb, DOWNLOAD_PROVIDER * p );
-int                                                 downloadFileEx  ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb, DOWNLOAD_PROVIDER * p );
+int                                                 downloadTextEx  ( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK * fb, DownloadProvider * p );
+int                                                 downloadFileEx  ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb, DownloadProvider * p );
 
 /**
  * Get the base64 representation of the given string buffer

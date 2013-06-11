@@ -196,7 +196,7 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
 /**
  * Download the updated version of the authorized keystore
  */
-int CVMWebCrypto::updateAuthorizedKeystore( DOWNLOAD_PROVIDER * downloadProvider ) {
+int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider ) {
     time_t currTime;
     time( &currTime );
 

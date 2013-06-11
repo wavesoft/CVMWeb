@@ -65,7 +65,7 @@ public:
     /**
      * Update the authorized domain keystore from out webserers.
      */
-    int     updateAuthorizedKeystore    ( DOWNLOAD_PROVIDER * );
+    int     updateAuthorizedKeystore    ( DownloadProvider * );
 
     /**
      * Verify the authenticity of the contextualization information received form the given domain

@@ -503,7 +503,7 @@ int Hypervisor::checkDaemonNeed() {
 /**
  * Change the default download provider
  */
-void Hypervisor::setDownloadProvider( DOWNLOAD_PROVIDER * p ) { 
+void Hypervisor::setDownloadProvider( DownloadProvider * p ) { 
     this->downloadProvider = p;
 };
 
@@ -619,7 +619,7 @@ void freeHypervisor( Hypervisor * hv ) {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData, DOWNLOAD_PROVIDER * downloadProvider ) {
+int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData, DownloadProvider * downloadProvider ) {
     
     /**
      * Contact the information point
