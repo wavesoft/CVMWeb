@@ -137,7 +137,7 @@ public:
     virtual int             stop();
     virtual int             hibernate();
     virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
-    virtual int             start( std::map<std::string,std::string> userData );
+    virtual int             start( std::map<std::string,std::string> &userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
@@ -259,7 +259,7 @@ public:
     
 private:
     int                     sessionID;
-    DOWNLOAD_PROVIDER       downloadProvider;
+    DOWNLOAD_PROVIDER *     downloadProvider;
     
 };
 
@@ -268,7 +268,7 @@ private:
  */
 Hypervisor *                    detectHypervisor    ( );
 void                            freeHypervisor      ( Hypervisor * );
-int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData );
+int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData, DOWNLOAD_PROVIDER * provider );
 std::string                     hypervisorErrorStr  ( int error );
 
 

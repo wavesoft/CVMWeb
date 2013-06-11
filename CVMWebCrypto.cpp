@@ -23,25 +23,6 @@
 using namespace std;
 
 /**
- * Mutex configuration for multi-threaded openssl
- */ 
-#ifdef _WIN32
-#define MUTEX_TYPE       HANDLE
-#define MUTEX_SETUP(x)   x = CreateMutex(NULL, FALSE, NULL)
-#define MUTEX_CLEANUP(x) CloseHandle(x)
-#define MUTEX_LOCK(x)    WaitForSingleObject(x, INFINITE)
-#define MUTEX_UNLOCK(x)  ReleaseMutex(x)
-#define THREAD_ID        GetCurrentThreadId(  )
-#else
-#define MUTEX_TYPE       pthread_mutex_t
-#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
-#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
-#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
-#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
-#define THREAD_ID        pthread_self(  )
-#endif
-
-/**
  * Public key used for key-list validation
  */
 const int CVMWAPI_PUBKEY_DER_SIZE        = 1598;
@@ -215,8 +196,7 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
 /**
  * Download the updated version of the authorized keystore
  */
-int CVMWebCrypto::updateAuthorizedKeystore( DOWNLOAD_PROVIDER downloadProvider ) {
-    bool needsReload = true;
+int CVMWebCrypto::updateAuthorizedKeystore( DOWNLOAD_PROVIDER * downloadProvider ) {
     time_t currTime;
     time( &currTime );
 

@@ -41,7 +41,7 @@ class CVMWebAPISession : public FB::JSAPIAuto
 {
 public:
 
-    CVMWebAPISession(const CVMWebPtr& plugin, const FB::BrowserHostPtr& host, HVSession * session) :
+    CVMWebAPISession(const CVMWebPtr& plugin, const FB::BrowserHostPtr& host, HVSession * session ) :
         m_plugin(plugin), m_host(host)
     {
         registerMethod("start",                 make_method(this, &CVMWebAPISession::start));

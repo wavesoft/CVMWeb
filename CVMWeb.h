@@ -65,7 +65,6 @@ public:
     // Cryptography class
     CVMWebCrypto        * crypto;
     
-    
     /* Always windowless */
     virtual bool isWindowless() { return true; }
 

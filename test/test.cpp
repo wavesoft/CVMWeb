@@ -36,17 +36,35 @@ std::string generateSalt() {
     return saltData;
 }
 
+class miClass {
+public:
+    
+    miClass() {
+        std::cout << "CONSTRUCTED!" << std::endl;
+    }
+
+    ~miClass() {
+        std::cout << "DESTRUCTED!" << std::endl;
+    }
+    
+};
+
+typedef struct T {
+    
+    miClass * p;
+    
+};
+
 int main( int argc, char ** argv ) {
     
-    std::string data = "Sowwwy :(";
-    downloadTextEx( "http://localhost/", &data, NULL, NULL );
-    std::cout << data << std::endl;
-    downloadTextEx( "http://localhost/", &data, NULL, NULL );
-    std::cout << data << std::endl;
-    downloadTextEx( "http://localhost/", &data, NULL, NULL );
-    std::cout << data << std::endl;
-    downloadTextEx( "http://localhost/", &data, NULL, NULL );
-    std::cout << data << std::endl;
+    std::cout << "Allocating T" << std::endl;
+    T * t = new T;
+    std::cout << "Allocating miClass" << std::endl;
+    t->p = new miClass();
+    std::cout << "Destructing T" << std::endl;
+    delete t->p;
+    delete t;
     
+    std::cout << "About to returm" << std::endl;
     return 0;
 }

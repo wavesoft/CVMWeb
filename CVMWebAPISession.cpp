@@ -25,6 +25,7 @@
 \**********************************************************/
 
 #include "JSObject.h"
+#include "variant.h"
 #include "variant_list.h"
 #include "DOM/Document.h"
 #include "global/config.h"
@@ -314,12 +315,19 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     int ans;
     std::map<std::string, std::string> vmUserData;
     
-    if (cfg.empty() || cfg.is_of_type<FB::FBVoid>() || cfg.is_of_type<FB::FBNull>()) {
-        vmUserData = "*";
-    } else {
-        vmUserData = cfg.cast<std::string>();
+    // Update user data if they are specified
+    if ( !(cfg.empty() || cfg.is_of_type<FB::FBVoid>() || cfg.is_of_type<FB::FBNull>()) && cfg.is_of_type<FB::VariantMap>() ) {
+        FB::VariantMap map = cfg.convert_cast<FB::VariantMap>();
+        std::string kk; FB::variant kv;
+        for (FB::VariantMap::iterator it=map.begin(); it!=map.end(); ++it) {
+            kk = (*it).first; kv = (*it).second;
+            try {
+                vmUserData[kk] = kv.convert_cast<std::string>();
+            } catch (const FB::bad_variant_cast &) { }
+        }
     }
     
+    // Start session
     ans = this->session->start(vmUserData);
     if (ans == 0) {
         this->fire_start();

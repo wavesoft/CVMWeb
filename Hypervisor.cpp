@@ -50,7 +50,7 @@ int HVSession::reset()                                              { return HVE
 int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
-int HVSession::start( std::map<std::string,std::string> userData )  { return HVE_NOT_IMPLEMENTED; }
+int HVSession::start( std::map<std::string,std::string> &userData ) { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
 std::string HVSession::getIP()                                      { return ""; }
@@ -503,8 +503,8 @@ int Hypervisor::checkDaemonNeed() {
 /**
  * Change the default download provider
  */
-int Hypervisor::setDownloadProvider( DOWNLOAD_PROVIDER * p ) { 
-    this->downloadProvider = p 
+void Hypervisor::setDownloadProvider( DOWNLOAD_PROVIDER * p ) { 
+    this->downloadProvider = p;
 };
 
 /**
@@ -619,7 +619,7 @@ void freeHypervisor( Hypervisor * hv ) {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData, DOWNLOAD_PROVIDER downloadProvider ) {
+int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData, DOWNLOAD_PROVIDER * downloadProvider ) {
     
     /**
      * Contact the information point
@@ -627,7 +627,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     string requestBuf;
     CVMWA_LOG( "Info", "Fetching data" );
     if (cbProgress!=NULL) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system", cbData);
-    int res = downloadTextEx( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf, downloadProvider );
+    int res = downloadTextEx( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf, NULL, downloadProvider );
     if ( res != HVE_OK ) return res;
     
     /**

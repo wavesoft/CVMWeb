@@ -376,7 +376,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     }
 
     /* Call success callback */
-    boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session);
+    boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session );
     if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
         
     /* Check if we need a daemon for our current services */
@@ -508,7 +508,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
  */
 void CVMWebAPI::thread_install() {
     CVMWebPtr p = this->getPlugin();
-    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this, NULL );
+    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this, this->browserDownloadProvider );
     if (ans == HVE_OK) {
         this->fire_install();
     } else {

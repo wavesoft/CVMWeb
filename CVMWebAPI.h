@@ -30,8 +30,10 @@
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
 
+#include "Utilities.h"
 #include "LocalConfig.h"
 #include "CVMWeb.h"
+#include "CVMWebStreamProviderFactory.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI
@@ -88,6 +90,14 @@ public:
         this->throttleDenies = 0;
         this->throttleBlock = false;
         
+        // Allocate a download provider that uses browser for I/O
+        this->streamProvider = new CVMWebStreamProviderFactory( host );
+        this->browserDownloadProvider = this->streamProvider->allocProvider();
+        
+        // Override default (cURL download provider)
+        if (plugin->hv != NULL)
+            plugin->hv->setDownloadProvider( this->browserDownloadProvider );
+        
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -98,6 +108,8 @@ public:
     ///         the plugin is released.
     ///////////////////////////////////////////////////////////////////////////////
     virtual ~CVMWebAPI() {
+        this->streamProvider->freeProvider( this->browserDownloadProvider );
+        delete this->streamProvider;
     };
 
     CVMWebPtr getPlugin();
@@ -150,6 +162,10 @@ private:
     bool                throttleBlock;
     
     std::string         calculateHostID( std::string& domain );
+    
+    // Browser-based download system
+    DOWNLOAD_PROVIDER * browserDownloadProvider;
+    CVMWebStreamProviderFactory * streamProvider;
     
 };
 

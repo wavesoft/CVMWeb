@@ -537,7 +537,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 /**
  * Start VM with the given
  */
-int VBoxSession::start( std::map<std::string,std::string> uData ) { 
+int VBoxSession::start( std::map<std::string,std::string> &uData ) { 
     string vmContextDsk, vmPatchedUserData, kk, kv;
     ostringstream args;
     int ans;
