@@ -57,6 +57,16 @@ static const char reverse_table[128] = {
 std::string appDataDir = "";
 
 /**
+ * Singleton for accessing CURL provider
+ */
+DOWNLOAD_PROVIDER * __curl_download_provider_singleton = NULL;
+DOWNLOAD_PROVIDER * globalCURLProvider() {
+    if (__curl_download_provider_singleton == NULL)
+        __curl_download_provider_singleton = allocCURLProvider();
+    return __curl_download_provider_singleton;
+};
+
+/**
  * Convert an std::string to a number
  */
 template <typename T> T ston( const string &Text ) {
@@ -633,6 +643,10 @@ int sha256_bin( string buffer, unsigned char * hash ) {
    return retval;
 }
 
+// =========================
+// ==== BEGIN DEPRECATE ====
+// =========================
+
 /**
  * Helper function for writing data
  */
@@ -732,6 +746,186 @@ int downloadText( std::string url, std::string * buffer ) {
         return HVE_QUERY_ERROR;
     }
 };
+
+// =========================
+// ==== END DEPRECATE ====
+// =========================
+
+/**
+ * Proxy function for the CURL download provider
+ */
+size_t __curl_dp_proxy(void *ptr, size_t size, size_t nmemb, DOWNLOAD_PROVIDER *p) {
+    p->handleData( p, ptr, size * nmemb );
+    return size * nmemb;
+}
+
+/**
+ * Proxy function to start the CURL download
+ */
+int __curl_dp_start( DOWNLOAD_PROVIDER * p, std::string url ) {
+    CURL * curl = (CURL *) p->__data;
+    if (curl == NULL) return -1;
+    
+    // Setup URL and start download
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    return curl_easy_perform(curl);
+}
+
+/**
+ * Allocate a CURL download provider
+ */
+DOWNLOAD_PROVIDER * allocCURLProvider() {
+    DOWNLOAD_PROVIDER * p = new DOWNLOAD_PROVIDER;
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_dp_proxy);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, p);
+        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+        p->__data = (void *) curl;
+        p->startDownload = __curl_dp_start;
+        return p;
+    } else {
+        return NULL;
+    }
+};
+
+/**
+ * Release CURL download provider
+ */
+void freeCURLProvider( DOWNLOAD_PROVIDER * p ) {
+    CURL * curl = (CURL *) p->__data;
+    if (curl == NULL) return;
+    
+    // Cleanup & Free memory
+    curl_easy_cleanup(curl);
+    delete curl;
+};
+
+
+/**
+ * Common function to update progress
+ */
+void __provider_update_progress( DOWNLOAD_PROVIDER * p, int dataLength ) {
+
+    // Continue only if we have valid structures
+    if ((p->progressFeedback != NULL) && (p->progressFeedback->callback != NULL)) {
+        int dlnow = p->dataPos + dataLength;
+        int dltotal = p->dataLength;
+        
+        // Check if we are not able to get progress status
+        if (dltotal == 0) return;
+        
+        // Throttle events on 2 per second, unless that's the last one
+        if ((dlnow != dltotal) && ((getMillis() - p->progressFeedback->lastEventTime) < 500)) return;
+        p->progressFeedback->lastEventTime = getMillis();
+        p->dataPos = dlnow;
+
+        // Calculate percentage
+        int ipos = p->progressFeedback->min;
+        if (dltotal != 0) {
+            double pos = (p->progressFeedback->max - p->progressFeedback->min) * dlnow / dltotal;
+            ipos += (int)pos;
+        }
+    
+        // Callback
+        cout << "INFO: dltotal=" << dltotal << ", dlnow=" << dlnow << ", ipos=" << ipos << "\n";
+        p->progressFeedback->callback( 
+            ipos, 
+            p->progressFeedback->total, 
+            p->progressFeedback->message, 
+            p->progressFeedback->data );
+    }
+    
+}
+
+/**
+ * Write data to file using a download provider
+ */
+void __provider_write_file( DOWNLOAD_PROVIDER * p, void * data, size_t dataLength ) {
+    
+    // Write file
+    FILE * fStream = (FILE *) p->userData;
+    fwrite( data, 1, dataLength, fStream );
+    
+    // Update progress if needed
+    __provider_update_progress( p, dataLength );
+    
+}
+
+/**
+ * Write data to string using a download provider
+ */
+void __provider_write_string( DOWNLOAD_PROVIDER * p, void * data, size_t dataLength ) {
+    
+    // Write string buffer
+    ((std::string*)p->userData)->append((char*)data, dataLength);
+    
+    // Update progress if needed
+    __provider_update_progress( p, dataLength );
+
+}
+
+/**
+ * Download a file using a download provider
+ * (That might be FireBreath Browser API or cURL)
+ */
+int downloadFileEx( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb, DOWNLOAD_PROVIDER * p ) {
+    int res;
+    
+    // Try to open file
+    FILE *fp = fopen(target.c_str(),"wb");
+    if (fp == NULL) return HVE_IO_ERROR;
+    
+    // Use default provider if it's missing
+    if (p == NULL) p = globalCURLProvider();
+    if (p == NULL) return -2;
+    
+    // Setup provider
+    p->handleData = __provider_write_file;
+    p->userData = fp;
+    p->progressFeedback = fb;
+    p->dataLength = 0;
+    p->dataPos = 0;
+    
+    // Download
+    if ((res = p->startDownload(p, url)) == 0) {
+        fclose(fp);
+        return HVE_OK;
+    } else {
+        fclose(fp);
+        return HVE_IO_ERROR;
+    }
+}
+
+/**
+ * Download a file using a download provider
+ * (That might be FireBreath Browser API or cURL)
+ */
+int downloadTextEx( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK * fb, DOWNLOAD_PROVIDER * p ) {
+    int res;
+
+    // Reset string
+    *buffer = "";
+    
+    // Use default provider if it's missing
+    if (p == NULL) p = globalCURLProvider();
+    
+    // Setup provider
+    p->handleData = __provider_write_string;
+    p->userData = buffer;
+    p->progressFeedback = fb;
+    p->dataLength = 0;
+    p->dataPos = 0;
+    
+    // Download
+    if ((res = p->startDownload(p, url)) == 0) {
+        return HVE_OK;
+    } else {
+        return HVE_IO_ERROR;
+    }
+}
 
 /**
  * Check if the given port is open

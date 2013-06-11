@@ -17,7 +17,7 @@
  * Developed by Ioannis Charalampidis 2013
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
- 
+
 #ifndef CVMWEBLOCALCONFIG_H_W7H2YROC
 #define CVMWEBLOCALCONFIG_H_W7H2YROC
 

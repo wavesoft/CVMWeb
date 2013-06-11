@@ -312,7 +312,7 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
 
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     int ans;
-    std::string vmUserData;
+    std::map<std::string, std::string> vmUserData;
     
     if (cfg.empty() || cfg.is_of_type<FB::FBVoid>() || cfg.is_of_type<FB::FBNull>()) {
         vmUserData = "*";

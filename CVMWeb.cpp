@@ -221,3 +221,10 @@ std::string CVMWeb::getDaemonBin() {
     /* Return it */
     return dPath;
 }
+
+/**
+ * Returns a DOWNLOAD_PROVIDER that uses browser streams to download data
+ */
+DOWNLOAD_PROVIDER * CVMWeb::getBrowserProvider() {
+    return NULL;
+}

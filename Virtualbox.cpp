@@ -32,6 +32,11 @@
 
 using namespace std;
 
+// Regex definitions
+const char* regex_template_replace = 
+    "";
+
+
 // Where to mount the bootable CD-ROM
 #define BOOT_CONTROLLER     "IDE"
 #define BOOT_PORT           "0"
@@ -532,14 +537,20 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 /**
  * Start VM with the given
  */
-int VBoxSession::start( std::string uData ) { 
-    string vmContextDsk, kk, kv;
+int VBoxSession::start( std::map<std::string,std::string> uData ) { 
+    string vmContextDsk, vmPatchedUserData, kk, kv;
     ostringstream args;
     int ans;
     
     /* Update local userData */
-    if (uData.compare("*") != 0) 
-        userData = uData;
+    vmPatchedUserData = this->userData;
+    if (uData.empty() && !vmPatchedUserData.empty()) {
+        for (std::map<string, string>::iterator it=uData.begin(); it!=uData.end(); ++it) {
+            kk = (*it).first;
+            kv = (*it).second;
+            
+        }
+    }
 
     /* Validate state */
     CVMWA_LOG( "Info", "0 (" << this->state << ")" );
@@ -558,7 +569,7 @@ int VBoxSession::start( std::string uData ) {
     }
     
     /* Touch context ISO only if we have user-data and the VM is not hibernated */
-    if (!userData.empty() && !inSavedState) {
+    if (!vmPatchedUserData.empty() && !inSavedState) {
         
         /* Check if we are using FloppyIO instead of contextualization CD */
         if ((this->flags & HVF_FLOPPY_IO) != 0) {
@@ -614,7 +625,7 @@ int VBoxSession::start( std::string uData ) {
     
             /* Create Context floppy */
             if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building configuration floppy", this->cbObject);
-            if (this->host->buildFloppyIO( userData, &vmContextDsk ) != 0) 
+            if (this->host->buildFloppyIO( vmPatchedUserData, &vmContextDsk ) != 0) 
                 return HVE_CREATE_ERROR;
 
             /* Attach context Floppy to the floppy controller */
@@ -688,7 +699,7 @@ int VBoxSession::start( std::string uData ) {
     
             /* Create Context ISO */
             if (this->onProgress!=NULL) (this->onProgress)(4, 7, "Building contextualization CD-ROM", this->cbObject);
-            if (this->host->buildContextISO( userData, &vmContextDsk ) != 0) 
+            if (this->host->buildContextISO( vmPatchedUserData, &vmContextDsk ) != 0) 
                 return HVE_CREATE_ERROR;
 
             /* Attach context CD-ROM to the IDE controller */
@@ -726,7 +737,7 @@ int VBoxSession::start( std::string uData ) {
     this->state = STATE_STARTED;
     
     /* Store user-data to the properties */
-    if (userData.compare("*") != 0) this->setProperty("/CVMWeb/userData", base64_encode(userData));
+    this->setProperty("/CVMWeb/userData", base64_encode(this->userData));
     
     /* We don't know the IP address of the VM. During it's possible hibernation
        state the DHCP lease might have been released. */

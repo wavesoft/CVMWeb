@@ -96,6 +96,28 @@ typedef struct {
 } HVPROGRESS_FEEDBACK;
 
 /**
+ * Download provider is an abstraction that allows
+ * use of both FB::BrowserStream and CURL interfaces
+ * to the download functions.
+ */
+typedef struct _DOWNLOAD_PROVIDER DOWNLOAD_PROVIDER;
+struct _DOWNLOAD_PROVIDER {
+    
+    void *                  userData;
+    HVPROGRESS_FEEDBACK *   progressFeedback;
+    
+    int (*startDownload)  ( DOWNLOAD_PROVIDER *p, std::string URL );
+    void (*handleData)    ( DOWNLOAD_PROVIDER * p, void * ptr, size_t dataLength );
+    
+    size_t                  dataLength;
+    size_t                  dataPos;
+    
+    // Internal variables
+    void *                  __data;
+    
+};
+
+/**
  * Get the location of the application's AppData folder
  */
 std::string                                         getAppDataPath  ( );
@@ -119,6 +141,18 @@ int                                                 downloadText    ( std::strin
  * Download a file from the given URL to the given target
  */
 int                                                 downloadFile    ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb );
+
+/**
+ * ALloc/Release functions for the CURL provider
+ */
+DOWNLOAD_PROVIDER *                                 allocCURLProvider();
+void                                                freeCURLProvider( DOWNLOAD_PROVIDER * p );
+
+/**
+ * Replacement functions for downloadFile and downloadText that support custom download provider
+ */
+int                                                 downloadTextEx  ( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK * fb, DOWNLOAD_PROVIDER * p );
+int                                                 downloadFileEx  ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb, DOWNLOAD_PROVIDER * p );
 
 /**
  * Get the base64 representation of the given string buffer

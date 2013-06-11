@@ -50,7 +50,7 @@ int HVSession::reset()                                              { return HVE
 int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
-int HVSession::start( std::string userData )                        { return HVE_NOT_IMPLEMENTED; }
+int HVSession::start( std::map<std::string,std::string> userData )  { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
 std::string HVSession::getIP()                                      { return ""; }
@@ -180,7 +180,7 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, HVP
     if (file_exists(sOutput)) {
         return 0;
     } else {
-        return downloadFile(sURL, sOutput, fb);
+        return downloadFileEx(sURL, sOutput, fb, downloadProvider);
     }
 };
 
@@ -257,7 +257,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     // (Nothing is there, download it now)
     
     // Download the file to sGZOutput
-    res = downloadFile(sURL, sGZOutput, &nfb);
+    res = downloadFileEx(sURL, sGZOutput, &nfb, downloadProvider);
     if (res != HVE_OK) return res;
     
     // Decompress
@@ -301,6 +301,9 @@ Hypervisor::Hypervisor() {
     /* Pick a system folder to store persistent information  */
     this->dirData = getAppDataPath();
     this->dirDataCache = this->dirData + "/cache";
+    
+    /* Unless overriden use the default downloadProvider */
+    this->downloadProvider = NULL;
     
 };
 
@@ -498,6 +501,13 @@ int Hypervisor::checkDaemonNeed() {
 }
 
 /**
+ * Change the default download provider
+ */
+int Hypervisor::setDownloadProvider( DOWNLOAD_PROVIDER * p ) { 
+    this->downloadProvider = p 
+};
+
+/**
  * Search the system's folders and try to detect what hypervisor
  * the user has installed and it will then populate the Hypervisor Config
  * structure that was passed to it.
@@ -609,7 +619,7 @@ void freeHypervisor( Hypervisor * hv ) {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData ) {
+int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData, DOWNLOAD_PROVIDER downloadProvider ) {
     
     /**
      * Contact the information point
@@ -617,7 +627,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     string requestBuf;
     CVMWA_LOG( "Info", "Fetching data" );
     if (cbProgress!=NULL) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system", cbData);
-    int res = downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
+    int res = downloadTextEx( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf, downloadProvider );
     if ( res != HVE_OK ) return res;
     
     /**
@@ -715,7 +725,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     string tmpHypervisorInstall = getTmpFile( kFileExt );
     if (cbProgress!=NULL) (cbProgress)(2, 100, "Downloading hypervisor", cbData);
     CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
-    res = downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
+    res = downloadFileEx( data[kDownloadUrl], tmpHypervisorInstall, &feedback, downloadProvider );
     CVMWA_LOG( "Info", "    : Got " << res  );
     if ( res != HVE_OK ) return res;
     

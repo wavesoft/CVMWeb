@@ -125,22 +125,22 @@ _NS_.WebAPISession.prototype = Object.create( _NS_.EventDispatcher.prototype );
 /**
  * Proxy functions for start,stop,pause,resume,hibernate and close
  */
-_NS_.WebAPISession.prototype.start = function( userVariables, cbOK, cbFail ) {
+_NS_.WebAPISession.prototype.start = function( values, cbOK, cbFail ) {
     
     // Check for invalid session
     if (!this.__valid) return false;
     
     // Check for missing userVariables
-    if (typeof(userVariables) == 'function') {
+    if (typeof(values) == 'function') {
         cbFail = cbOK;
-        cbOK = userVariables;
-        userVariables = "";
+        cbOK = values;
+        values = undefined;
     }
     
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
-        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, eMsg,eCode); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, 'Could not start: '+eMsg,eCode); cleanup_cb(); },
         cleanup_cb = (function() {
             this.__session.removeEventListener('start', cb_proxy_ok);
             this.__session.removeEventListener('startError', cb_proxy_fail);
@@ -151,7 +151,7 @@ _NS_.WebAPISession.prototype.start = function( userVariables, cbOK, cbFail ) {
     // Start session
     var res = this.__session.start();
     if (res != HVE_SCHEDULED) {
-        callError( cbFail, error_string(res), res );
+        callError( cbFail, 'Could not start: '+error_string(res), res );
         return false;
     }
     
@@ -168,7 +168,7 @@ _NS_.WebAPISession.prototype.stop = function( cbOK, cbFail ) {
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
-        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, eMsg,eCode); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, 'Could not stop: '+eMsg,eCode); cleanup_cb(); },
         cleanup_cb = (function() {
             this.__session.removeEventListener('stop', cb_proxy_ok);
             this.__session.removeEventListener('stopError', cb_proxy_fail);
@@ -179,7 +179,7 @@ _NS_.WebAPISession.prototype.stop = function( cbOK, cbFail ) {
     // Stop session
     var res = this.__session.stop();
     if (res != HVE_SCHEDULED) {
-        callError( cbFail, error_string(res), res );
+        callError( cbFail, 'Could not stop: '+error_string(res), res );
         return false;
     }
     
@@ -196,7 +196,7 @@ _NS_.WebAPISession.prototype.pause = function( cbOK, cbFail ) {
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
-        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, eMsg,eCode); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, 'Could not pause: '+eMsg,eCode); cleanup_cb(); },
         cleanup_cb = (function() {
             this.__session.removeEventListener('pause', cb_proxy_ok);
             this.__session.removeEventListener('pauseError', cb_proxy_fail);
@@ -207,7 +207,7 @@ _NS_.WebAPISession.prototype.pause = function( cbOK, cbFail ) {
     // Pause session
     var res = this.__session.pause();
     if (res != HVE_SCHEDULED) {
-        callError( cbFail, error_string(res), res );
+        callError( cbFail, 'Could not pause: '+error_string(res), res );
         return false;
     }
     
@@ -224,7 +224,7 @@ _NS_.WebAPISession.prototype.resume = function( cbOK, cbFail ) {
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
-        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, eMsg,eCode); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, 'Could not resume: '+eMsg,eCode); cleanup_cb(); },
         cleanup_cb = (function() {
             this.__session.removeEventListener('resume', cb_proxy_ok);
             this.__session.removeEventListener('resumeError', cb_proxy_fail);
@@ -235,7 +235,7 @@ _NS_.WebAPISession.prototype.resume = function( cbOK, cbFail ) {
     // Resume session
     var res = this.__session.resume();
     if (res != HVE_SCHEDULED) {
-        callError( cbFail, error_string(res), res );
+        callError( cbFail, 'Could not resume: '+error_string(res), res );
         return false;
     }
     
@@ -252,7 +252,7 @@ _NS_.WebAPISession.prototype.hibernate = function( cbOK, cbFail ) {
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
-        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, eMsg,eCode); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, 'Could not hibernate: '+eMsg,eCode); cleanup_cb(); },
         cleanup_cb = (function() {
             this.__session.removeEventListener('hibernate', cb_proxy_ok);
             this.__session.removeEventListener('hibernateError', cb_proxy_fail);
@@ -263,7 +263,7 @@ _NS_.WebAPISession.prototype.hibernate = function( cbOK, cbFail ) {
     // Hibernate session
     var res = this.__session.hibernate();
     if (res != HVE_SCHEDULED) {
-        callError( cbFail, error_string(res), res );
+        callError( cbFail, 'Could not hibernate: '+error_string(res), res );
         return false;
     }
     
@@ -280,7 +280,7 @@ _NS_.WebAPISession.prototype.reset = function( cbOK, cbFail ) {
     // Setup proxies
     var cb_once=true,
         cb_proxy_ok=function() { if (cb_once) {cb_once=false} else {return}; if (cbOK) cbOK(); cleanup_cb(); },
-        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, eMsg,eCode); cleanup_cb(); },
+        cb_proxy_fail=function(eMsg, eCode) { if (cb_once) {cb_once=false} else {return}; callError( cbFail, 'Could not reset: '+eMsg,eCode); cleanup_cb(); },
         cleanup_cb = (function() {
             this.__session.removeEventListener('reset', cb_proxy_ok);
             this.__session.removeEventListener('resetError', cb_proxy_fail);
@@ -291,7 +291,7 @@ _NS_.WebAPISession.prototype.reset = function( cbOK, cbFail ) {
     // Reset session
     var res = this.__session.reset();
     if (res != HVE_SCHEDULED) {
-        callError( cbFail, error_string(res), res );
+        callError( cbFail, 'Could not reset: '+error_string(res), res );
         return false;
     }
     

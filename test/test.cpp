@@ -38,14 +38,15 @@ std::string generateSalt() {
 
 int main( int argc, char ** argv ) {
     
-    RAND_load_file("/dev/random", 1024);
-    std::cout << generateSalt() << std::endl;
-    
-    std::cout << urlEncode("This is a test and this is another\nIn multiple lines\rAnd binary\ntext") << std::endl;
-    
-    std::string lcasestr = "toLowerCase";
-    toLowerCase( lcasestr );
-    std::cout << lcasestr << std::endl;
+    std::string data = "Sowwwy :(";
+    downloadTextEx( "http://localhost/", &data, NULL, NULL );
+    std::cout << data << std::endl;
+    downloadTextEx( "http://localhost/", &data, NULL, NULL );
+    std::cout << data << std::endl;
+    downloadTextEx( "http://localhost/", &data, NULL, NULL );
+    std::cout << data << std::endl;
+    downloadTextEx( "http://localhost/", &data, NULL, NULL );
+    std::cout << data << std::endl;
     
     return 0;
 }

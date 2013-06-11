@@ -23,6 +23,7 @@
 
 #include "Hypervisor.h"
 #include <map>
+#include <boost/regex.hpp>
 
 /* Forward decleration */
 class Virtualbox;
@@ -43,7 +44,7 @@ public:
     virtual int             stop();
     virtual int             hibernate();
     virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
-    virtual int             start( std::string userData );
+    virtual int             start( std::map<std::string,std::string> userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
@@ -60,6 +61,10 @@ public:
         std::string>        getMachineInfo      ();
     int                     startVM             ();
     int                     controlVM           ( std::string how );
+
+private:
+    
+    boost::regex            rxTemplates;
     
 };
 

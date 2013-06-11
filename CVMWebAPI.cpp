@@ -222,7 +222,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     if (!isDomainPrivileged()) {
         
         // Trigger update in the keystore (if it's nessecary)
-        p->crypto->updateAuthorizedKeystore();
+        p->crypto->updateAuthorizedKeystore( NULL );
 
         // Still invalid? Something's wrong
         if (!p->crypto->valid) {
@@ -508,7 +508,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
  */
 void CVMWebAPI::thread_install() {
     CVMWebPtr p = this->getPlugin();
-    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this );
+    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this, NULL );
     if (ans == HVE_OK) {
         this->fire_install();
     } else {

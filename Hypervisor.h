@@ -137,7 +137,7 @@ public:
     virtual int             stop();
     virtual int             hibernate();
     virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
-    virtual int             start( std::string userData );
+    virtual int             start( std::map<std::string,std::string> userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
@@ -237,7 +237,7 @@ public:
     virtual int             getUsage            ( HVINFO_RES * usage);
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
     
-    /* Tool functions */
+    /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList );
     void                    detectVersion       ( );
     int                     cernVMDownload      ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
@@ -247,17 +247,19 @@ public:
     int                     buildContextISO     ( std::string userData, std::string * filename );
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
         
-    /* Check if we need to start or stop the daemon */
+    /* Control functions (called externally) */
     int                     checkDaemonNeed ();
+    void                    setDownloadProvider( DOWNLOAD_PROVIDER * p );
     
     /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
              the Hypervisor class in order to use the checkDaemonNeed() function. It's
              a hack because those two systems (JSAPI & HypervisorAPI) should be isolated. */
     std::string             daemonBinPath;
-    
+     
     
 private:
     int                     sessionID;
+    DOWNLOAD_PROVIDER       downloadProvider;
     
 };
 

@@ -18,7 +18,6 @@ _NS_.WebAPIPlugin = function( plugin_ref, daemon_ref ) {
  * Subclass event dispatcher
  */
 _NS_.WebAPIPlugin.prototype = Object.create( _NS_.EventDispatcher.prototype );
-
     
 /**
  * Check if the hypervisor is there
