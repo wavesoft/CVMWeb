@@ -79,7 +79,7 @@ int cryptoInitialize(void) {
     int i;
  
     // Enable multi-threading
-    mutex_buf = (pthread_mutex_t*) malloc(CRYPTO_num_locks(  ) * sizeof(MUTEX_TYPE));
+    mutex_buf = (MUTEX_TYPE*) malloc(CRYPTO_num_locks(  ) * sizeof(MUTEX_TYPE));
     if (!mutex_buf) {
         CVMWA_LOG( "Crypto", "Unable to allocate MUTEX!" );
         return 0;
@@ -91,7 +91,7 @@ int cryptoInitialize(void) {
   
     // Seed the OpenSSL's PRAND functions
     #ifdef _WIN32
-    RAND_screen(void);
+    RAND_screen();
     #else
     RAND_load_file("/dev/urandom", 1024);
     #endif

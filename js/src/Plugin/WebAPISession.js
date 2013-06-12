@@ -25,8 +25,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     this.__checkDaemonUpdates = function() {
         
         // Update daemon status
-        var running = this.__daemon.isRunning,
-            idle = this.__daemon.isSystemIdle;
+        var running = this.__daemon.isRunning;
             
         // Check daemon state change
         if (running != this.__daemonStatus) {
@@ -35,9 +34,16 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
         }
         
         // Check system idle state change
-        if (idle != this.__systemStatus) {
-            this.__systemStatus = idle;
-            this.fire('systemStateChange', idle);
+        if (running) {
+            
+            // (We use the running check to ensure that no delays
+            // are introduced becuse of IPC timeouts)
+            var idle = this.__daemon.isSystemIdle;
+            if (idle != this.__systemStatus) {
+                this.__systemStatus = idle;
+                this.fire('systemStateChange', idle);
+            }
+            
         }
         
     };
@@ -46,7 +52,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     setInterval( (function(){
         
         // Update session status
-        this.__session.update();
+        //// this.__session.update(); //// REMOVED BECAUSE OF HIGH LOAD
         
         // Update daemon status
         this.__checkDaemonUpdates();
@@ -55,12 +61,30 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     
     // Connect plugin properties with this object properties using getters/setters
     Object.defineProperties(this, {
-        "state"         : { get: function () { return this.__session.state; } },
-        "stateName"     : { get: function () { return state_string(this.__session.state ); } },
-        "ip"            : { get: function () { return this.__session.ip; } },
-        "apiURL"        : { get: function () { return this.__session.apiURL; } },
-        "rdpURL"        : { get: function () { return this.__session.rdpURL; } },
-        "executionCap"  : { get: function () { return this.__session.executionCap; }, set: function(v) { this.__session.setExecutionCap(v); } }
+        "state"         :   {   get: function () { return this.__session.state;                 } },
+        "stateName"     :   {   get: function () { return state_string(this.__session.state );  } },
+        "ip"            :   {   get: function () { return this.__session.ip;                    } },
+        "apiURL"        :   {   get: function () { return this.__session.apiURL;                } },
+        "rdpURL"        :   {   get: function () { return this.__session.rdpURL;                } },
+        "executionCap"  :   {   get: function () { return this.__session.executionCap;          }, 
+                                set: function(v) { this.__session.setExecutionCap(v);           } },
+        "daemonMinCap"  :   {   get: function () { return this.__session.daemonMinCap;          }, 
+                                set: function(v) { this.__session.daemonMinCap =v;              } },
+        "daemonMaxCap"  :   {   get: function () { return this.__session.daemonMaxCap;          }, 
+                                set: function(v) { this.__session.daemonMaxCap =v;              } },
+        "daemonFlags"   :   {   get: function () { return this.__session.daemonFlags;           }, 
+                                set: function(v) { this.__session.daemonFlags =v;               } },
+        "daemonControlled": {   get: function () { return this.__session.daemonControlled;      }, 
+                                set: function(v) { 
+                                    this.__session.daemonControlled=v;
+                                    
+                                    // Include a more frequent update, since we know it is going to be
+                                    // started very soon... 
+                                    setTimeout( (function(){ 
+                                        this.__checkDaemonUpdates(); 
+                                    }).bind(this), 500)
+                                    
+                                }                                                                 }
     });
 
     // Bind events and delegate them to the event dispatcher
