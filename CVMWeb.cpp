@@ -101,10 +101,16 @@ void CVMWeb::onPluginReady()
     // created, and we are ready to interact with the page and such.  The
     // PluginWindow may or may not have already fire the AttachedEvent at
     // this point.
+
+    // Allocate a download provider that uses browser for I/O
+    browserDownloadProvider = NULL; //new CVMBrowserProvider( m_host );
     
     // We now have the plugin path, get the location of the daemon binary
-    if (this->hv != NULL)
+    if (this->hv != NULL) {
         this->hv->daemonBinPath = this->getDaemonBin();
+        //CVMWA_LOG("Debug", "Setting browser download provider");
+        this->hv->setDownloadProvider( browserDownloadProvider );
+    }
         
 }
 

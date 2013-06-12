@@ -222,7 +222,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     if (!isDomainPrivileged()) {
         
         // Trigger update in the keystore (if it's nessecary)
-        p->crypto->updateAuthorizedKeystore( NULL );
+        p->crypto->updateAuthorizedKeystore( p->browserDownloadProvider );
 
         // Still invalid? Something's wrong
         if (!p->crypto->valid) {
@@ -256,7 +256,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     
     /* Download data from URL */
     std::string jsonString;
-    int res = downloadText( newURL, &jsonString );
+    int res = downloadTextEx( newURL, &jsonString, NULL, p->browserDownloadProvider );
     if (res < 0) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
         return;
@@ -508,7 +508,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
  */
 void CVMWebAPI::thread_install() {
     CVMWebPtr p = this->getPlugin();
-    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this, this->browserDownloadProvider );
+    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this, p->browserDownloadProvider );
     if (ans == HVE_OK) {
         this->fire_install();
     } else {

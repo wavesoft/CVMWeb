@@ -90,13 +90,6 @@ public:
         this->throttleDenies = 0;
         this->throttleBlock = false;
         
-        // Allocate a download provider that uses browser for I/O
-        this->browserDownloadProvider = new CVMBrowserProvider( host );
-        
-        // Override default download provider (cURL download provider)
-        if (plugin->hv != NULL)
-            plugin->hv->setDownloadProvider( this->browserDownloadProvider );
-        
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -107,7 +100,6 @@ public:
     ///         the plugin is released.
     ///////////////////////////////////////////////////////////////////////////////
     virtual ~CVMWebAPI() {
-        delete this->browserDownloadProvider;
     };
 
     CVMWebPtr getPlugin();
@@ -160,9 +152,6 @@ private:
     bool                throttleBlock;
     
     std::string         calculateHostID( std::string& domain );
-    
-    // Browser-based download system
-    DownloadProvider *  browserDownloadProvider;
     
 };
 

@@ -15,19 +15,22 @@
       // Generic handler for errors thrown in the process
       var error_handler = function(msg, code) { alert("[Error #" + code + "] " + msg); };
       
+      var plugin;
+      var doit = function() {      
+         // Create/Request/Resume session using the VMCP provided
+         plugin.requestSession("http://localhost/temp/sign.php", function(session) {
+            
+            alert("Got session: " + session);
+            
+         }, error_handler)
+      };
+      
       // Request plugin
       CVM.startCVMWebAPI(
          
          // 1) Success callback
-         function(plugin) {
-
-            // Create/Request/Resume session using the VMCP provided
-            plugin.requestSession("http://localhost/temp/sign.php", function(session) {
-               
-               alert("Got session: " + session);
-               
-            }, error_handler)
-         
+         function(cplugin) {
+            plugin = cplugin;
          }, 
          
          // 2) Failure callback

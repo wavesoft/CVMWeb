@@ -174,16 +174,6 @@ std::string                                         stripComponent  ( std::strin
 std::string                                         getFilename     ( std::string path );
 
 /**
- * Download a string from the given URL
- */
-int                                                 downloadText    ( std::string url, std::string * buffer );
-
-/**
- * Download a file from the given URL to the given target
- */
-int                                                 downloadFile    ( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb );
-
-/**
  * Replacement functions for downloadFile and downloadText that support custom download provider
  */
 int                                                 downloadTextEx  ( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK * fb, DownloadProvider * p );

@@ -104,7 +104,7 @@ std::string extractMac( std::string nicInfo ) {
  * Replace the last part of the given IP
  */
 std::string changeUpperIP( std::string baseIP, int value ) {
-    int iDot = baseIP.find_last_of(".");
+    size_t iDot = baseIP.find_last_of(".");
     if (iDot == string::npos) return "";
     return baseIP.substr(0, iDot) + "." + ntos<int>(value);
 };
@@ -298,6 +298,24 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         /* If we must attach the disk, do it now */
         if (needsUpdate) {
             
+            /* Get a list of the disks in order to properly compute multi-attach */
+            string masterDiskID = "\"" + masterDisk + "\"";
+            vector< map< string, string > > disks = this->host->getDiskList();
+            for (vector< map<string, string> >::iterator i = disks.begin(); i != disks.end(); i++) {
+                map<string, string> iface = *i;
+                
+                /* Look of the master disk of what we are using */
+                if ( (iface.find("Type") != iface.end()) && (iface.find("Parent UUID") != iface.end()) && (iface.find("Location") != iface.end()) && (iface.find("UUID") != iface.end()) ) {
+                    if ( (iface["Type"].compare("multiattach") == 0) && (iface["Parent UUID"].compare("base") == 0) && (iface["Location"].compare(masterDisk) == 0) ) {
+                        
+                        /* Use the master UUID instead of the filename */
+                        masterDiskID = "{" + iface["UUID"] + "}";
+                        break;
+                        
+                    }
+                }
+            }
+            
             /* (5) Attach disk to the SATA controller */
             args.str("");
             args << "storageattach "
@@ -307,7 +325,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --device "     << BOOT_DEVICE
                 << " --type "       << "hdd"
                 << " --mtype "      << "multiattach"
-                << " --medium "     << "\"" << masterDisk << "\"";
+                << " --medium "     <<  masterDiskID;
 
             if (this->onProgress!=NULL) (this->onProgress)(95, 110, "Attaching hard disk", this->cbObject);
             ans = this->wrapExec(args.str(), NULL);
@@ -1119,8 +1137,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
     
     /* The name of the first network found and a flag
        to check if we were able to find a DHCP server */
-    bool    foundDHCPServer = false,
-            foundDisabledDHCP = false;
+    bool    foundDHCPServer = false;
     string  foundIface      = "",
             foundBaseIP     = "",
             foundVBoxName   = "",
@@ -1486,7 +1503,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
 /**
  * Get a list of mediums managed by VirtualBox
  */
-std::vector< std::map< std::string, std::string > > Virtualbox::loadDisks() {
+std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
     vector<string> lines;
     std::vector< std::map< std::string, std::string > > resMap;
 

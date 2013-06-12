@@ -23,16 +23,17 @@
 
 #include "BrowserStream.h"
 #include "BrowserHost.h"
+#include "SimpleStreamHelper.h"
+#include "BrowserStreamRequest.h"
 #include "DefaultBrowserStreamHandler.h"
 
+#include "Hypervisor.h"
 #include "Utilities.h"
 
 /**
  * Stream handler event delegate to DOWNLOAD_PROVIDER
  */
-class CVMBrowserProvider : 
-    public FB::DefaultBrowserStreamHandler, public DownloadProvider
-    
+class CVMBrowserProvider : public DownloadProvider, public FB::DefaultBrowserStreamHandler
 {
 public:
 
@@ -40,10 +41,9 @@ public:
      * Constructor
      */
     CVMBrowserProvider( FB::BrowserHostPtr host ) : 
-        DefaultBrowserStreamHandler(), DownloadProvider()
+        DownloadProvider(), DefaultBrowserStreamHandler(), m_host(host)
     {
-        this->m_host = host;
-        MUTEX_SETUP(this->m_mutex);
+        CVMWA_LOG("Debug", "Initializing browser provider");
     };
     
     /**
@@ -51,25 +51,36 @@ public:
      */
     virtual ~CVMBrowserProvider()
     {
-        MUTEX_CLEANUP(this->m_mutex);
+        CVMWA_LOG("Debug", "Destroying browser provider");
     };
 
     /**
-     * DefaultBrowserStreamHandler Event handlers
+     * DefaultBrowserStreamHandler overrides
      */
-    virtual bool                    onStreamDataArrived (FB::StreamDataArrivedEvent *evt, FB::BrowserStream *);
-    virtual bool                    onStreamCompleted   (FB::StreamCompletedEvent *evt, FB::BrowserStream *);
-    virtual bool                    onStreamOpened      (FB::StreamOpenedEvent *evt, FB::BrowserStream *);
-    virtual bool                    onStreamFailedOpen  (FB::StreamFailedOpenEvent *evt, FB::BrowserStream *);
+    bool onStreamDataArrived        ( FB::StreamDataArrivedEvent *evt, FB::BrowserStream * );
+    bool onStreamOpened             ( FB::StreamOpenedEvent *evt, FB::BrowserStream * s);
+    bool onStreamCompleted          (FB::StreamCompletedEvent *evt, FB::BrowserStream *);
+    bool onStreamFailedOpen         (FB::StreamFailedOpenEvent *evt, FB::BrowserStream *);
 
     /**
      * DownloadProvider Implementation
      */
-    virtual int                     startDownload( std::string url );
+    virtual int startDownload       ( std::string url );
+    
+    /**
+     *
+     */
+    //void                            getURLCallback      (bool success, const FB::HeaderMap& headers, const boost::shared_array<uint8_t>& data, const size_t size);
     
 private:
+    
     FB::BrowserHostPtr              m_host;
-    MUTEX_TYPE                      m_mutex;
+    
+    /**
+     * Locking mechanism to make startDownload synchronous
+     */
+    boost::condition_variable       m_cond;
+    boost::mutex                    m_mutex;
     int                             returnCode;
 
 };

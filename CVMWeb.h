@@ -63,8 +63,11 @@ public:
     std::string                         getDaemonBin();
 
     // Cryptography class
-    CVMWebCrypto        * crypto;
+    CVMWebCrypto *                      crypto;
     
+    // Browser-based download system
+    DownloadProvider *                  browserDownloadProvider;
+
     /* Always windowless */
     virtual bool isWindowless() { return true; }
 

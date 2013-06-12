@@ -24,6 +24,7 @@
  * Data arrived callback -> Forward to DOWNLOAD_PROVIDER structure
  */
 bool CVMBrowserProvider::onStreamDataArrived( FB::StreamDataArrivedEvent *evt, FB::BrowserStream * ) {
+    CVMWA_LOG("Info", "Data arrived. Calling handler (len=" << evt->getLength() << ")" );
     this->callDataHandler( (void*)evt->getData(), evt->getLength() );
     return true;
 }
@@ -33,6 +34,7 @@ bool CVMBrowserProvider::onStreamDataArrived( FB::StreamDataArrivedEvent *evt, F
  */
 bool CVMBrowserProvider::onStreamOpened( FB::StreamOpenedEvent *evt, FB::BrowserStream * s) {
     this->dataLength = s->getLength();
+    CVMWA_LOG("Info", "Stream open. Data length: " << this->dataLength );
     return true; 
 }
 
@@ -40,8 +42,10 @@ bool CVMBrowserProvider::onStreamOpened( FB::StreamOpenedEvent *evt, FB::Browser
  * Notify then download trigger when the file is downloaded
  */
 bool CVMBrowserProvider::onStreamCompleted(FB::StreamCompletedEvent *evt, FB::BrowserStream *) {
-    this->returnCode = 0;
-    MUTEX_UNLOCK(m_mutex);
+    returnCode = 0;
+    CVMWA_LOG("Info", "Stream completed");
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+    m_cond.notify_all();
     return true;
 }
 
@@ -49,8 +53,10 @@ bool CVMBrowserProvider::onStreamCompleted(FB::StreamCompletedEvent *evt, FB::Br
  * Notify the download trigger if something failed
  */
 bool CVMBrowserProvider::onStreamFailedOpen(FB::StreamFailedOpenEvent *evt, FB::BrowserStream *) {
-    this->returnCode = -1;
-    MUTEX_UNLOCK(m_mutex);
+    returnCode = HVE_IO_ERROR;
+    CVMWA_LOG("Error", "Failed to open stream");
+    boost::lock_guard<boost::mutex> lock(m_mutex);
+    m_cond.notify_all();
     return true;
 }
 
@@ -58,16 +64,42 @@ bool CVMBrowserProvider::onStreamFailedOpen(FB::StreamFailedOpenEvent *evt, FB::
  * Allocate a new WebStreams provider
  */
 int CVMBrowserProvider::startDownload( std::string url ) {
+    returnCode = 0;
     
-    /**
-     * Start stream
-     */
-    FB::BrowserStreamPtr tempStream = m_host->createStream( url, (FB::PluginEventSinkPtr) this, true, false );
-    FB_UNUSED_VARIABLE(tempStream);
+    /*
+    try {
+        
+        // Prepare stream request
+        CVMWA_LOG("Debug", "Requesting " << url);
+        FB::BrowserStreamRequest req( url, "GET" );
 
+        req.setCacheable(true);
+        req.setSeekable(false);
+        req.setEventSink( (FB::PluginEventSinkPtr) this );
+
+        // Perform asynchronous request
+        CVMWA_LOG("Debug", "Starting async request");
+        FB::BrowserStreamPtr mStream = m_host->createStream( req );
+        mStream->AttachObserver( req );
+
+    } catch (const std::exception& e) {
+        // If anything weird happens, return error
+        CVMWA_LOG("Error", "An I/O exception occured! " << e.what());
+        return HVE_IO_ERROR;
+    }
+    */
+    
     /**
      * Block until it's downloaded
      */
-    MUTEX_LOCK(m_mutex);
+     /*
+    CVMWA_LOG("Debug", "Waiting for condition variable");
+    boost::unique_lock<boost::mutex> lock(m_mutex);
+    m_cond.wait(lock);
+    CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+    return returnCode;
+    */
+    
+    CVMWA_LOG("WAT", "What-cha-doing?");
     return returnCode;
 }

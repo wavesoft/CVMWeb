@@ -174,6 +174,7 @@ int DownloadProvider::startDownload( std::string url ) {
  * Update the handler 
  */
 void DownloadProvider::setHandler( void (*cb)( DownloadProvider * p, void *,size_t ), void * cbData ) {
+    CVMWA_LOG("Debug", "Setting handler " << cb );
     this->userData=cbData; 
     this->handleData=cb; 
 };
@@ -362,7 +363,7 @@ void splitLines( string rawString, vector<string> * out ) {
     istringstream ss( rawString );
 
     /* Split new lines and store them in the vector */
-    int iTrim;
+    size_t iTrim;
     string item;
     out->clear();
     while (getline(ss, item)) {
@@ -708,114 +709,6 @@ int sha256_bin( string buffer, unsigned char * hash ) {
    return retval;
 }
 
-// =========================
-// ==== BEGIN DEPRECATE ====
-// =========================
-
-/**
- * Helper function for writing data
- */
-size_t __curl_write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
-size_t __curl_write_string(void *contents, size_t size, size_t nmemb, void *userp) {
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
-    return size * nmemb;
-}
-
-/**
- * Helper function for delegating progress
- */
-int __curl_progress_proxy(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-    HVPROGRESS_FEEDBACK * fb = (HVPROGRESS_FEEDBACK *) clientp;
-    
-    // Throttle events on 2 per second
-    if ((dlnow != dltotal) && ((getMillis() - fb->lastEventTime) < 500)) return 0;
-    fb->lastEventTime = getMillis();
-
-    // Calculate percentage
-    int ipos = fb->min;
-    if (dltotal != 0) {
-        double pos = (fb->max - fb->min) * dlnow / dltotal;
-        ipos += (int)pos;
-    }
-    
-    // Callback
-    cout << "INFO: dltotal=" << dltotal << ", dlnow=" << dlnow << ", ultotal=" << ultotal << ", ulnow=" << ulnow << ", ipos=" << ipos << "\n";
-    fb->callback( ipos, fb->total, fb->message, fb->data );
-    return 0;
-};
-
-/**
- * Generic purpose download to file function
- */
-int downloadFile( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb ) {
-    CURL *curl;
-    FILE *fp;
-    CURLcode res;
-    curl = curl_easy_init();
-    if (curl) {
-        fp = fopen(target.c_str(),"wb");
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_write_file);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-        if ((fb != NULL) && (fb->callback != NULL)) {
-            cout << "INFO: Using feedbac callback\n";
-            fb->lastEventTime = getMillis();
-            curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
-            curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, __curl_progress_proxy );
-            curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, fb);
-        }
-        res = curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-        fclose(fp);
-        if (res != 0) {
-            remove( target.c_str() );
-            return HVE_IO_ERROR;
-        } else {
-            return HVE_OK;
-        }
-    } else {
-        return HVE_QUERY_ERROR;
-    }
-};
-
-/**
- * General purpose download to buffer
- */
-int downloadText( std::string url, std::string * buffer ) {
-    CURL *curl;
-    CURLcode res;
-    curl = curl_easy_init();
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_write_string);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-        res = curl_easy_perform(curl);
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-        if (res != 0) {
-            return HVE_IO_ERROR;
-        } else {
-            return HVE_OK;
-        }
-    } else {
-        return HVE_QUERY_ERROR;
-    }
-};
-
-// =========================
-// ==== END DEPRECATE ====
-// =========================
-
 /**
  * Common function to update progress
  */
@@ -867,19 +760,6 @@ void __provider_write_file( DownloadProvider * p, void * data, size_t dataLength
 }
 
 /**
- * Write data to string using a download provider
- */
-void __provider_write_string( DownloadProvider * p, void * data, size_t dataLength ) {
-    
-    // Write string buffer
-    ((std::string*)p->userData)->append((char*)data, dataLength);
-    
-    // Update progress if needed
-    __provider_update_progress( p, dataLength );
-
-}
-
-/**
  * Download a file using a download provider
  * (That might be FireBreath Browser API or cURL)
  */
@@ -891,7 +771,8 @@ int downloadFileEx( std::string url, std::string target, HVPROGRESS_FEEDBACK * f
     if (fp == NULL) return HVE_IO_ERROR;
     
     // Use default provider if it's missing
-    if (p == NULL) p = globalCURLProvider();
+    //if (p == NULL) 
+    p = globalCURLProvider();
     if (p == NULL) return -2;
     
     // Setup provider
@@ -909,6 +790,19 @@ int downloadFileEx( std::string url, std::string target, HVPROGRESS_FEEDBACK * f
 }
 
 /**
+ * Write data to string using a download provider
+ */
+void __provider_write_string( DownloadProvider * p, void * data, size_t dataLength ) {
+    
+    // Write string buffer
+    ((std::string*)p->userData)->append((char*)data, dataLength);
+    
+    // Update progress if needed
+    __provider_update_progress( p, dataLength );
+
+}
+
+/**
  * Download a file using a download provider
  * (That might be FireBreath Browser API or cURL)
  */
@@ -919,7 +813,9 @@ int downloadTextEx( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK *
     *buffer = "";
     
     // Use default provider if it's missing
-    if (p == NULL) p = globalCURLProvider();
+    //if (p == NULL) 
+    p = globalCURLProvider();
+    if (p == NULL) return -2;
     
     // Setup provider
     p->setHandler( __provider_write_string, buffer );
@@ -1023,7 +919,7 @@ void hexDump (const char *desc, void *addr, int len) {
 bool isSanitized( std::string * check, const char * chars ) {
     int numChars = strlen(chars);
     bool foundInChars = false;
-    for (int j=0; j<check->length(); j++) {
+    for (size_t j=0; j<check->length(); j++) {
         foundInChars = false;
         char c = check->at(j);
         for (int i=0; i<numChars; i++) {
