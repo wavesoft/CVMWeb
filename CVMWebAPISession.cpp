@@ -508,20 +508,33 @@ void CVMWebAPISession::set_daemonFlags( int flags ) {
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(flags));
 }
 
+int CVMWebAPISession::thread_update() {
+    if (this->updating) return HVE_STILL_WORKING;
+    this->updating = true;
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_update ));
+    return HVE_SCHEDULED;
+}
+
 /**
  * Update session information from disk
  */
-int CVMWebAPISession::update() {
+void CVMWebAPISession::thread_update() {
 
     // Don't do anything if we are in the middle of something
-    if ((this->session->state == STATE_OPPENING) || (this->session->state == STATE_STARTING)) return 0;
+    if ((this->session->state == STATE_OPPENING) || (this->session->state == STATE_STARTING)) {
+        this->updating = false;
+        return;
+    }
     
     // Keep old state in order to detect state changes
     int oldState = this->session->state;
     
     // Update session info from driver
     int ans = this->session->update();
-    if (ans < 0) return ans;
+    if (ans < 0) {
+        this->updating = false;
+        return;
+    }
     
     // Check state differences
     if (oldState != this->session->state) {
@@ -584,6 +597,6 @@ int CVMWebAPISession::update() {
     }
     
     /* Everything was OK */
-    return HVE_OK;
+    this->updating = false;
     
 }

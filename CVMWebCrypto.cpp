@@ -210,7 +210,7 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider 
     // Check if it has been some time since we last checked the keystore
     std::string localKeystore = config.getPath("domainkeys.conf");
     std::string localKeystoreSig = config.getPath("domainkeys.dat");
-    if (config.exists("domainkeys.lst") && config.exists("domainkeys.sig")) {
+    if ( file_exists(localKeystore) && file_exists(localKeystoreSig) ) {
         
         // Check for external modifications
         time_t storeTime = config.getLastModified("domainkeys.lst");

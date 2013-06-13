@@ -92,6 +92,7 @@ public:
         
         /* Defaults */
         this->isAlive = false;
+        this->updating = false;
         
         /* Setup session connections */
         if (this->session != NULL) {
@@ -141,6 +142,7 @@ public:
     void thread_stop( );
     void thread_reset( );
     void thread_hibernate( );
+    void thread_update( );
     void thread_open( const FB::variant &o );
     void thread_start( const FB::variant& cfg );
     
@@ -204,6 +206,7 @@ private:
     FB::BrowserHostPtr      m_host;
     int                     sessionID;
     HVSession *             session;
+    bool                    updating;
 };
 
 #endif // H_CVMWebAPISession

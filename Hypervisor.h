@@ -44,6 +44,7 @@
 #define HVE_NOT_SUPPORTED       -11
 #define HVE_NOT_VALIDATED       -12
 #define HVE_NOT_TRUSTED         -13
+#define HVE_STILL_WORKING       -14
 #define HVE_USAGE_ERROR         -99
 #define HVE_NOT_IMPLEMENTED     -100
 
