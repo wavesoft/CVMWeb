@@ -508,16 +508,15 @@ void CVMWebAPISession::set_daemonFlags( int flags ) {
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(flags));
 }
 
-int CVMWebAPISession::thread_update() {
+/**
+ * Update session information from hypervisor session
+ */
+int CVMWebAPISession::update() {
     if (this->updating) return HVE_STILL_WORKING;
     this->updating = true;
-    boost::thread t(boost::bind(&CVMWebAPISession::thread_update ));
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_update, this ));
     return HVE_SCHEDULED;
 }
-
-/**
- * Update session information from disk
- */
 void CVMWebAPISession::thread_update() {
 
     // Don't do anything if we are in the middle of something
