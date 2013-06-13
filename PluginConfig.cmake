@@ -72,3 +72,4 @@ add_firebreath_library(curl)
 add_firebreath_library(openssl)
 add_firebreath_library(jsoncpp)
 
+add_boost_library(regex)

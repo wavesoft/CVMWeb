@@ -34,9 +34,9 @@
 using namespace std;
 
 // Regex definitions
-const char* rxUserDataMacro = 
-    "\\\${([a-zA-Z_]+)(:[^}+])?}";
-
+const char* rdUserDataMacro = 
+    "\\${([a-zA-Z_]+)(:[^}+])?}";
+boost::regex rxUserDataMacro(rdUserDataMacro);
 
 // Where to mount the bootable CD-ROM
 #define BOOT_CONTROLLER     "IDE"
@@ -554,24 +554,63 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 }
 
 /**
+ * Regex replace
+ */
+struct userDataReplaceProxy {
+public:
+    
+    /**
+     * I/O String
+     */
+    std::string                         userData;
+    std::map<std::string,std::string> * keyData;
+
+    /**
+     * Iterator feed
+     */
+    void operator() ( const boost::match_results<std::string::const_iterator>& what ) {
+        
+        // Populate data
+        std::string vKey = what[1];
+        std::string vDefault = "";
+        size_t iMacroStart = what.position(1), iMacroLen = what.length(1);
+        if (what.size() >= 2) {
+            vDefault = what[2];
+        }
+        
+        // Fetch data
+        std::string vValue = vDefault;
+        if (keyData->find(vKey) != keyData->end())
+            vValue = keyData->at(vKey);
+        
+        // Replace data
+        userData = userData.substr(0, iMacroStart) + vValue + userData.substr(iMacroStart + iMacroLen);
+        
+    }
+    
+};
+
+/**
  * Start VM with the given
  */
 int VBoxSession::start( std::map<std::string,std::string> *uData ) { 
     string vmContextDsk, vmPatchedUserData, kk, kv;
+    userDataReplaceProxy regexProxy;
     ostringstream args;
     int ans;
     
     /* Update local userData */
     vmPatchedUserData = this->userData;
-    if (uData->empty() && !vmPatchedUserData.empty()) {
-        for (std::map<string, string>::iterator it=uData->begin(); it!=uData->end(); ++it) {
-            kk = (*it).first;
-            kv = (*it).second;
-            
-            /* Find and replace all macro matches */
-            //boost::sregex_iterator m1(vmPatchedUserData.begin(), vmPatchedUserData.end(), rxUserDataMacro);
-            
-        }
+    if ( (uData != NULL) && !uData->empty() && !vmPatchedUserData.empty() ) {
+
+        /* Find and replace all macro matches */
+        regexProxy.userData = vmPatchedUserData;
+        regexProxy.keyData = uData;
+        boost::sregex_iterator m1(vmPatchedUserData.begin(), vmPatchedUserData.end(), rxUserDataMacro);
+        boost::sregex_iterator m2;
+        std::for_each(m1, m2, regexProxy);
+        vmPatchedUserData = regexProxy.userData;
+
     }
 
     /* Validate state */
