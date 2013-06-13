@@ -50,7 +50,7 @@ int HVSession::reset()                                              { return HVE
 int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
-int HVSession::start( std::map<std::string,std::string> &userData ) { return HVE_NOT_IMPLEMENTED; }
+int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
 std::string HVSession::getIP()                                      { return ""; }

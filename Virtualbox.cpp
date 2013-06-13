@@ -555,15 +555,15 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 /**
  * Start VM with the given
  */
-int VBoxSession::start( std::map<std::string,std::string> &uData ) { 
+int VBoxSession::start( std::map<std::string,std::string> *uData ) { 
     string vmContextDsk, vmPatchedUserData, kk, kv;
     ostringstream args;
     int ans;
     
     /* Update local userData */
     vmPatchedUserData = this->userData;
-    if (uData.empty() && !vmPatchedUserData.empty()) {
-        for (std::map<string, string>::iterator it=uData.begin(); it!=uData.end(); ++it) {
+    if (uData->empty() && !vmPatchedUserData.empty()) {
+        for (std::map<string, string>::iterator it=uData->begin(); it!=uData->end(); ++it) {
             kk = (*it).first;
             kv = (*it).second;
             
@@ -587,7 +587,7 @@ int VBoxSession::start( std::map<std::string,std::string> &uData ) {
     }
     
     /* Touch context ISO only if we have user-data and the VM is not hibernated */
-    if (!vmPatchedUserData.empty() && !inSavedState) {
+    if (!vmPatchedUserData.empty() && !(uData == NULL) && !inSavedState) {
         
         /* Check if we are using FloppyIO instead of contextualization CD */
         if ((this->flags & HVF_FLOPPY_IO) != 0) {

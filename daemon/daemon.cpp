@@ -51,6 +51,7 @@ LocalConfig         * config;
  * Switch the idle states of the VMs
  */
 void switchIdleStates( bool idle ) {
+    map<string,string> emptyMap;
     
     /* Pause all the VMs if we are not idle */
     if (!idle) {
@@ -80,7 +81,7 @@ void switchIdleStates( bool idle ) {
                       have the DF_AUTOSTART flag, start the VM now. */
                     if ((sess->state == STATE_OPEN) && ((sess->daemonFlags & DF_AUTOSTART) != 0)) {
                         cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                        sess->start( NULL ); // Blank user-data means 'keep the context iso untouched'
                     }
                     
                     cout << "INFO: Setting cap to " << sess->daemonMinCap << " for VM " << sess->uuid << " (" << sess->name << ")" << endl;
@@ -102,7 +103,7 @@ void switchIdleStates( bool idle ) {
                     /* If we have the DF_SUSPEND flag, start the vm */
                     if ( (sess->daemonFlags & DF_SUSPEND) != 0 ) {
                         cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                        sess->start( NULL ); // Blank user-data means 'keep the context iso untouched'
                         
                     /* Otherwise, resume the VM if it's paused */
                     } else if (sess->state == STATE_PAUSED) {
@@ -112,7 +113,7 @@ void switchIdleStates( bool idle ) {
                     /* If we have the DF_AUTOSTART flag, start the vm */
                     } else if ((sess->state == STATE_OPEN) || ((sess->daemonFlags & DF_AUTOSTART) != 0 )) {
                         cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                        sess->start( NULL ); // Blank user-data means 'keep the context iso untouched'
                         
                     }
                     
@@ -123,7 +124,7 @@ void switchIdleStates( bool idle ) {
                       have the DF_AUTOSTART flag, start the VM now. */
                     if ((sess->state == STATE_OPEN) && ((sess->daemonFlags & DF_AUTOSTART) != 0)) {
                         cout << "INFO: Starting VM " << sess->uuid << " (" << sess->name << ")" << endl;
-                        sess->start( "" ); // Blank user-data means 'keep the context iso untouched'
+                        sess->start( NULL ); // Blank user-data means 'keep the context iso untouched'
                     }
                     
                     /* Set execution cap */

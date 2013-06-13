@@ -138,7 +138,7 @@ public:
     virtual int             stop();
     virtual int             hibernate();
     virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
-    virtual int             start( std::map<std::string,std::string> &userData );
+    virtual int             start( std::map<std::string,std::string> *userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );

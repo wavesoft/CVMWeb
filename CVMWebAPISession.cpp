@@ -314,6 +314,7 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     int ans;
     std::map<std::string, std::string> vmUserData;
+    std::map<std::string, std::string> * dataPtr = NULL;
     
     // Update user data if they are specified
     if ( !(cfg.empty() || cfg.is_of_type<FB::FBVoid>() || cfg.is_of_type<FB::FBNull>()) && cfg.is_of_type<FB::VariantMap>() ) {
@@ -325,10 +326,11 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
                 vmUserData[kk] = kv.convert_cast<std::string>();
             } catch (const FB::bad_variant_cast &) { }
         }
+        dataPtr = &vmUserData;
     }
     
     // Start session
-    ans = this->session->start(vmUserData);
+    ans = this->session->start( dataPtr );
     if (ans == 0) {
         this->fire_start();
     } else {
