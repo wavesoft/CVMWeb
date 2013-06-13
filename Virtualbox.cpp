@@ -1536,14 +1536,13 @@ int Virtualbox::updateSession( HVSession * session ) {
     session->flags = 0;
     
     /* Check state */
+    session->state = STATE_OPEN;
     if (info.find("State") != info.end()) {
         string state = info["State"];
         if (state.find("running") != string::npos) {
             session->state = STATE_STARTED;
         } else if (state.find("paused") != string::npos) {
             session->state = STATE_PAUSED;
-        } else {
-            session->state = STATE_OPEN;
         }
     }
     

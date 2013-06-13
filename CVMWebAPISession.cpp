@@ -561,7 +561,7 @@ void CVMWebAPISession::thread_update() {
                 this->probeTimer->start();
                 
                 /* Session open */
-                this->fire_open();
+                //this->fire_open();
                 break;
             
             case STATE_STARTED:
