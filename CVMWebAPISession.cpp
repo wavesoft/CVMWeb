@@ -246,7 +246,6 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
             try {
                 flags = o->GetProperty("flags").convert_cast<int>();
             } catch ( const FB::bad_variant_cast &) {
-                flags = 0;
             }
         }
         

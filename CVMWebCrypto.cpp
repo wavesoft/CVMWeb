@@ -183,8 +183,8 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
     iData.close();
 
     CVMWA_LOG( "Crypto", "Verifying store signature" );
-    hexDump( "Store data", (void *)keys.c_str(), keys.length() );
-    hexDump( "Store signature", (void *) sigData.c_str(), sigData.length() );
+    //hexDump( "Store data", (void *)keys.c_str(), keys.length() );
+    //hexDump( "Store signature", (void *) sigData.c_str(), sigData.length() );
 
     // Verify signature
     EVP_MD_CTX ctx;
@@ -293,7 +293,7 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider 
 
     // Validate signature
     CVMWA_LOG( "Crypto", "Validating signature: '" << signature << "' of domain '" << domain << "'" );
-    hexDump( "Validating domain data",  (void *)data, dataLen );
+    //hexDump( "Validating domain data",  (void *)data, dataLen );
     EVP_MD_CTX ctx;
     EVP_MD_CTX_init(&ctx);
     EVP_VerifyInit( &ctx, EVP_sha512());

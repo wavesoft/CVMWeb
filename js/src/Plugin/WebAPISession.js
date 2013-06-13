@@ -52,7 +52,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     setInterval( (function(){
         
         // Update session status
-        //// this.__session.update(); //// REMOVED BECAUSE OF HIGH LOAD
+        this.__session.update();
         
         // Update daemon status
         this.__checkDaemonUpdates();

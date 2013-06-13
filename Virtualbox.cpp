@@ -34,9 +34,7 @@
 using namespace std;
 
 // Regex definitions
-const char* rdUserDataMacro = 
-    "\\${([a-zA-Z_]+)(:[^}+])?}";
-boost::regex rxUserDataMacro(rdUserDataMacro);
+const char* rdUserDataMacro = "\\${([^:}]+)(:[^}]+)?}";
 
 // Where to mount the bootable CD-ROM
 #define BOOT_CONTROLLER     "IDE"
@@ -603,6 +601,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     vmPatchedUserData = this->userData;
     if ( (uData != NULL) && !uData->empty() && !vmPatchedUserData.empty() ) {
 
+        boost::regex rxUserDataMacro(rdUserDataMacro);
+        
         /* Find and replace all macro matches */
         regexProxy.userData = vmPatchedUserData;
         regexProxy.keyData = uData;

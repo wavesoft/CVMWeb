@@ -354,7 +354,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     if (jsonHash.find("daemonControlled") != jsonHash.end()) session->daemonControlled = jsonHash["daemonControlled"].convert_cast<bool>();
     if (jsonHash.find("daemonMinCap") != jsonHash.end())     session->daemonMinCap = jsonHash["daemonMinCap"].convert_cast<int>();
     if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonControlled = jsonHash["daemonMaxCap"].convert_cast<int>();
-    if (jsonHash.find("daemonFlags") != jsonHash.end())      session->daemonControlled = jsonHash["daemonFlags"].convert_cast<int>();
+    if (jsonHash.find("daemonFlags") != jsonHash.end())      session->daemonFlags = jsonHash["daemonFlags"].convert_cast<int>();
     if (jsonHash.find("diskURL") != jsonHash.end()) {
         
         // If we have a missing checksum, that's a problem
