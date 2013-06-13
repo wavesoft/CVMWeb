@@ -25,6 +25,7 @@
 #include <sstream>
 #include <map>
 #include <algorithm>
+#include <boost/regex.hpp>
 
 #include "Hypervisor.h"
 #include "Virtualbox.h"
@@ -33,8 +34,8 @@
 using namespace std;
 
 // Regex definitions
-const char* regex_template_replace = 
-    "";
+const char* rxUserDataMacro = 
+    "\\\${([a-zA-Z_]+)(:[^}+])?}";
 
 
 // Where to mount the bootable CD-ROM
@@ -566,6 +567,9 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
         for (std::map<string, string>::iterator it=uData->begin(); it!=uData->end(); ++it) {
             kk = (*it).first;
             kv = (*it).second;
+            
+            /* Find and replace all macro matches */
+            //boost::sregex_iterator m1(vmPatchedUserData.begin(), vmPatchedUserData.end(), rxUserDataMacro);
             
         }
     }

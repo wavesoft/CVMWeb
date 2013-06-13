@@ -182,6 +182,10 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
     iSig.close();
     iData.close();
 
+    CVMWA_LOG( "Crypto", "Verifying store signature" );
+    hexDump( "Store data", (void *)keys.c_str(), keys.length() );
+    hexDump( "Store signature", (void *) sigData.c_str(), sigData.length() );
+
     // Verify signature
     EVP_MD_CTX ctx;
     EVP_VerifyInit( &ctx, EVP_sha512());
@@ -197,6 +201,7 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
  * Download the updated version of the authorized keystore
  */
 int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider ) {
+    bool needsReload = true;
     time_t currTime;
     time( &currTime );
 
@@ -218,7 +223,7 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider 
             if (validateSignature( localKeystore, localKeystoreSig )) {
                 // Crypto store is still valid (sombody touched it)
                 CVMWA_LOG( "Crypto", "Store timestamp changed but is still valid" );
-                return 0;
+                needsReload = false;
             }
         } else {
 
@@ -226,26 +231,29 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider 
             if (currTime - storeTime < CRYPTO_STORE_VALIDITY) {
                 // We are still within it's validity time
                 CVMWA_LOG( "Crypto", "Store still valid" );
-                return 0;
+                needsReload = false;
             }
             
         }
     }
     
-    // Download the authorized keystore
-    CVMWA_LOG( "Crypto", "Downloading updated keystore" );
-    int res = downloadFileEx( CRYPTO_URL_STORE, localKeystore, NULL, downloadProvider );
-    if ( res != HVE_OK ) return res;
+    // If we need reload, do it now
+    if (needsReload) {
+        // Download the authorized keystore
+        CVMWA_LOG( "Crypto", "Downloading updated keystore" );
+        int res = downloadFileEx( CRYPTO_URL_STORE, localKeystore, NULL, downloadProvider );
+        if ( res != HVE_OK ) return res;
 
-    // Download the keystore signature
-    CVMWA_LOG( "Crypto", "Downloading store signature" );
-    res = downloadFileEx( CRYPTO_URL_SIGNATURE, localKeystoreSig, NULL, downloadProvider );
-    if ( res != HVE_OK ) return res;
+        // Download the keystore signature
+        CVMWA_LOG( "Crypto", "Downloading store signature" );
+        res = downloadFileEx( CRYPTO_URL_SIGNATURE, localKeystoreSig, NULL, downloadProvider );
+        if ( res != HVE_OK ) return res;
     
-    // Validate files
-    CVMWA_LOG( "Crypto", "Validating signature" );
-    if (!validateSignature( localKeystore, localKeystoreSig ))
-        return HVE_NOT_VALIDATED;
+        // Validate files
+        CVMWA_LOG( "Crypto", "Validating signature" );
+        if (!validateSignature( localKeystore, localKeystoreSig ))
+            return HVE_NOT_VALIDATED;
+    }
     
     // Everything looks good, read the key map
     CVMWA_LOG( "Crypto", "Loading keystore map" );
@@ -284,11 +292,14 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider 
     std::string sigData = base64_decode( signature );
 
     // Validate signature
+    CVMWA_LOG( "Crypto", "Validating signature: '" << signature << "' of domain '" << domain << "'" );
+    hexDump( "Validating domain data",  (void *)data, dataLen );
     EVP_MD_CTX ctx;
     EVP_MD_CTX_init(&ctx);
     EVP_VerifyInit( &ctx, EVP_sha512());
     EVP_VerifyUpdate( &ctx, data, dataLen );
     int ans = EVP_VerifyFinal( &ctx, (unsigned char *) sigData.c_str(), sigData.length(), domainKey );
+    CVMWA_LOG( "Crypto", "EVP_VerifyFinal = " << ans );
     if (ans != 1) return HVE_NOT_VALIDATED;
     
     // Free the key
