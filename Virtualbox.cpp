@@ -25,16 +25,12 @@
 #include <sstream>
 #include <map>
 #include <algorithm>
-#include <boost/regex.hpp>
 
 #include "Hypervisor.h"
 #include "Virtualbox.h"
 #include "Utilities.h"
 
 using namespace std;
-
-// Regex definitions
-boost::regex rxUserDataMacro("\\$\\{([^:}]+)(:[^}]+)?\\}", boost::regex::perl | boost::regex::icase);
 
 // Where to mount the bootable CD-ROM
 #define BOOT_CONTROLLER     "IDE"
@@ -552,33 +548,54 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
 }
 
-/**
- * Regex replace static function and variables
- */
-std::string                         cb_userData;
-std::map<std::string,std::string> * cb_keyData;
-void regex_cb ( const boost::match_results<std::string::const_iterator>& what ) {
-    
-    // Populate data
-    std::string vKey = what[1];
-    std::string vDefault = "";
-    size_t iMacroStart = what.position(1), iMacroLen = what.length(1);
-    if (what.size() >= 2) {
-        vDefault = what[2];
-        vDefault = vDefault.substr(1); // Skip ':'
+std::string macroReplace( std::map<std::string,std::string> *uData, std::string iString ) {
+    size_t iPos, ePos, lPos = 0, tokStart = 0, tokLen = 0;
+    while ( (iPos = iString.find("${", lPos)) != string::npos ) {
+
+        // Find token bounds
+        CVMWA_LOG("Debug", "Found '${' at " << iPos);
+        tokStart = iPos;
+        iPos += 2;
+        ePos = iString.find("}", iPos);
+        if (ePos == string::npos) break;
+        CVMWA_LOG("Debug", "Found '}' at " << ePos);
+        tokLen = ePos - tokStart;
+
+        // Extract token value
+        string token = iString.substr(tokStart+2, tokLen-2);
+        CVMWA_LOG("Debug", "Token is '" << token << "'");
+        
+        // Extract default
+        string vDefault = "";
+        iPos = token.find(":");
+        if (iPos != string::npos) {
+            CVMWA_LOG("Debug", "Found ':' at " << iPos );
+            token = token.substr(0, iPos);
+            vDefault = token.substr(iPos+1);
+            CVMWA_LOG("Debug", "Default is '" << vDefault << "', token is '" << token << "'" );
+        }
+
+        
+        // Look for token value
+        string vValue = vDefault;
+        CVMWA_LOG("Debug", "Checking value" );
+        if (uData != NULL)
+            if (uData->find(token) != uData->end())
+                vValue = uData->at(token);
+        
+        // Replace value
+        CVMWA_LOG("Debug", "Value is '" << vValue << "'" );
+        iString = iString.substr(0,tokStart) + vValue + iString.substr(tokStart+tokLen+1);
+        
+        // Move forward
+        CVMWA_LOG("Debug", "String replaced" );
+        lPos = tokStart + tokLen;
     }
     
-    // Fetch data
-    std::string vValue = vDefault;
-    if (cb_keyData != NULL)
-        if (cb_keyData->find(vKey) != cb_keyData->end())
-            vValue = cb_keyData->at(vKey);
+    // Return replaced data
+    return iString;
     
-    // Replace data
-    CVMWA_LOG("Debug", "Replacing '" << vKey << "' at " << iMacroStart << "[" << iMacroLen << "] with '" << vValue << "");
-    cb_userData = cb_userData.substr(0, iMacroStart) + vValue + cb_userData.substr(iMacroStart + iMacroLen);
-    
-}
+};
 
 /**
  * Start VM with the given
@@ -598,17 +615,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     /* Update local userData */
     if ( !vmPatchedUserData.empty() ) {
 
-        CVMWA_LOG("Debug", "Going to perform regex replace");
         CVMWA_LOG("Debug", "Replacing from '" << vmPatchedUserData << "'");
-        
-        /* Find and replace all macro matches */
-        cb_userData = vmPatchedUserData;
-        cb_keyData = uData;
-        boost::sregex_iterator m1(vmPatchedUserData.begin(), vmPatchedUserData.end(), rxUserDataMacro);
-        boost::sregex_iterator m2;
-        std::for_each(m1, m2, &regex_cb);
-        vmPatchedUserData = cb_userData;
-
+        vmPatchedUserData = macroReplace( uData, vmPatchedUserData );
         CVMWA_LOG("Debug", "Replaced to '" << vmPatchedUserData << "'");
 
     }
