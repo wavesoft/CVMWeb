@@ -237,6 +237,7 @@ public:
     virtual int             registerSession     ( HVSession * sess );
     virtual int             getUsage            ( HVINFO_RES * usage);
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
+    virtual bool            waitTillReady       ( );
     
     /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList );
@@ -247,7 +248,7 @@ public:
     int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, HVPROGRESS_FEEDBACK * fb );
     int                     buildContextISO     ( std::string userData, std::string * filename );
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
-        
+    
     /* Control functions (called externally) */
     int                     checkDaemonNeed ();
     void                    setDownloadProvider( DownloadProvider * p );

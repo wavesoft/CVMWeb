@@ -30,9 +30,10 @@ _NS_.setConfirmFunction = function( customFunction ) {
 };
 
 /**
- * Debug flag
+ * Global flags
  */
 _NS_.debugLogging = false;
+_NS_.autoUpdate = true;
 
 /**
  * This is an overridable alert function, so the user can specify

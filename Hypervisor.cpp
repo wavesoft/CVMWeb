@@ -38,6 +38,7 @@
 using namespace std;
 
 /* Incomplete type placeholders */
+bool Hypervisor::waitTillReady ( )                                  { return false; }
 int Hypervisor::loadSessions()                                      { return HVE_NOT_IMPLEMENTED; }
 int Hypervisor::updateSession( HVSession * session )                { return HVE_NOT_IMPLEMENTED; }
 int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; }
@@ -551,7 +552,6 @@ Hypervisor * detectHypervisor() {
                 ((Virtualbox*)hv)->hvGuestAdditions = bin;
             }
             hv->detectVersion();
-            hv->loadSessions();
             hv->daemonBinPath = "";
             return hv;
         }
@@ -569,7 +569,6 @@ Hypervisor * detectHypervisor() {
                 ((Virtualbox*)hv)->hvGuestAdditions = bin;
             }
             hv->detectVersion();
-            hv->loadSessions();
             hv->daemonBinPath = "";
             return hv;
         }
@@ -597,7 +596,6 @@ Hypervisor * detectHypervisor() {
                 ((Virtualbox*)hv)->hvGuestAdditions = bin;
             }
             hv->detectVersion();
-            hv->loadSessions();
             hv->daemonBinPath = "";
             return hv;
         }

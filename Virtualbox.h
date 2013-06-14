@@ -61,10 +61,6 @@ public:
         std::string>        getMachineInfo      ();
     int                     startVM             ();
     int                     controlVM           ( std::string how );
-
-private:
-    
-    boost::regex            rxTemplates;
     
 };
 
@@ -73,6 +69,10 @@ private:
  */
 class Virtualbox : public Hypervisor {
 public:
+
+    Virtualbox() : Hypervisor() {
+        this->sessionLoaded = false;
+    };
 
     std::string             hvGuestAdditions;
     
@@ -88,6 +88,11 @@ public:
     virtual int             updateSession       ( HVSession * session );
     virtual HVSession *     allocateSession     ( std::string name, std::string key );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
+    virtual bool            waitTillReady       ( );
+
+private:
+    bool                    sessionLoaded;
+    
 };
 
 #endif /* end of include guard: VIRTUALBOX_H */

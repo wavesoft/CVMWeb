@@ -316,16 +316,15 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     std::map<std::string, std::string> * dataPtr = NULL;
     
     // Update user data if they are specified
-    if ( !(cfg.empty() || cfg.is_of_type<FB::FBVoid>() || cfg.is_of_type<FB::FBNull>()) && cfg.is_of_type<FB::VariantMap>() ) {
-        FB::VariantMap map = cfg.convert_cast<FB::VariantMap>();
-        std::string kk; FB::variant kv;
-        for (FB::VariantMap::iterator it=map.begin(); it!=map.end(); ++it) {
-            kk = (*it).first; kv = (*it).second;
-            try {
-                vmUserData[kk] = kv.convert_cast<std::string>();
-            } catch (const FB::bad_variant_cast &) { }
-        }
+    if ( cfg.is_of_type<FB::JSObjectPtr>() ) {
+        
+        // Convert object values to key/value pairs
+        CVMWA_LOG("Debug", "CFG argument is JSObjectPtr");
+        FB::JSObject::GetObjectValues< std::map<std::string, std::string> >(
+            cfg.cast<FB::JSObjectPtr>(),
+            vmUserData);
         dataPtr = &vmUserData;
+        
     }
     
     // Start session

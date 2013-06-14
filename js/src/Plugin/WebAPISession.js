@@ -13,6 +13,9 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     this.__daemonStatus = false;
     this.__systemStatus = false;
     
+    // Accessible function
+    this.autoUpdate = _NS_.autoUpdate;
+    
     // If we are activating debug logging, hook the 'debug' event
     // to the console log.
     if (_NS_.debugLogging) {
@@ -52,7 +55,8 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     setInterval( (function(){
         
         // Update session status
-        this.__session.update();
+        if (this.autoUpdate)
+            this.__session.update();
         
         // Update daemon status
         this.__checkDaemonUpdates();
@@ -173,7 +177,7 @@ _NS_.WebAPISession.prototype.start = function( values, cbOK, cbFail ) {
         this.__session.addEventListener('startError', cb_proxy_fail);
     
     // Start session
-    var res = this.__session.start();
+    var res = this.__session.start(values);
     if (res != HVE_SCHEDULED) {
         callError( cbFail, 'Could not start: '+error_string(res), res );
         return false;

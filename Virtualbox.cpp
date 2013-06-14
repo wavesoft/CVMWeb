@@ -34,7 +34,7 @@
 using namespace std;
 
 // Regex definitions
-const char* rdUserDataMacro = "\\${([^:}]+)(:[^}]+)?}";
+boost::regex rxUserDataMacro("\\$\\{([^:}]+)(:[^}]+)?\\}", boost::regex::perl | boost::regex::icase);
 
 // Where to mount the bootable CD-ROM
 #define BOOT_CONTROLLER     "IDE"
@@ -539,6 +539,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(this->daemonMinCap));
     this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(this->daemonMaxCap));
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(this->daemonFlags));
+    this->setProperty("/CVMWeb/userData", base64_encode(this->userData));
 
     /* Last callbacks */
     if (this->onProgress!=NULL) (this->onProgress)(110, 110, "Completed", this->cbObject);
@@ -552,64 +553,63 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 }
 
 /**
- * Regex replace
+ * Regex replace static function and variables
  */
-struct userDataReplaceProxy {
-public:
+std::string                         cb_userData;
+std::map<std::string,std::string> * cb_keyData;
+void regex_cb ( const boost::match_results<std::string::const_iterator>& what ) {
     
-    /**
-     * I/O String
-     */
-    std::string                         userData;
-    std::map<std::string,std::string> * keyData;
-
-    /**
-     * Iterator feed
-     */
-    void operator() ( const boost::match_results<std::string::const_iterator>& what ) {
-        
-        // Populate data
-        std::string vKey = what[1];
-        std::string vDefault = "";
-        size_t iMacroStart = what.position(1), iMacroLen = what.length(1);
-        if (what.size() >= 2) {
-            vDefault = what[2];
-        }
-        
-        // Fetch data
-        std::string vValue = vDefault;
-        if (keyData->find(vKey) != keyData->end())
-            vValue = keyData->at(vKey);
-        
-        // Replace data
-        userData = userData.substr(0, iMacroStart) + vValue + userData.substr(iMacroStart + iMacroLen);
-        
+    // Populate data
+    std::string vKey = what[1];
+    std::string vDefault = "";
+    size_t iMacroStart = what.position(1), iMacroLen = what.length(1);
+    if (what.size() >= 2) {
+        vDefault = what[2];
+        vDefault = vDefault.substr(1); // Skip ':'
     }
     
-};
+    // Fetch data
+    std::string vValue = vDefault;
+    if (cb_keyData != NULL)
+        if (cb_keyData->find(vKey) != cb_keyData->end())
+            vValue = cb_keyData->at(vKey);
+    
+    // Replace data
+    CVMWA_LOG("Debug", "Replacing '" << vKey << "' at " << iMacroStart << "[" << iMacroLen << "] with '" << vValue << "");
+    cb_userData = cb_userData.substr(0, iMacroStart) + vValue + cb_userData.substr(iMacroStart + iMacroLen);
+    
+}
 
 /**
  * Start VM with the given
  */
 int VBoxSession::start( std::map<std::string,std::string> *uData ) { 
     string vmContextDsk, vmPatchedUserData, kk, kv;
-    userDataReplaceProxy regexProxy;
+    vmPatchedUserData = this->userData;
     ostringstream args;
     int ans;
     
+    CVMWA_LOG("Debug", "userData: '" << vmPatchedUserData << "'");
+    CVMWA_LOG("Debug", "uData==NULL : " << ((uData == NULL) ? "true" : "false") );
+    if (uData != NULL)
+        CVMWA_LOG("Debug", "uData->empty() : " << (uData->empty() ? "true" : "false") );
+    CVMWA_LOG("Debug", "vmPatchedUserData.empty() : " << (vmPatchedUserData.empty() ? "true" : "false") );
+    
     /* Update local userData */
-    vmPatchedUserData = this->userData;
-    if ( (uData != NULL) && !uData->empty() && !vmPatchedUserData.empty() ) {
+    if ( !vmPatchedUserData.empty() ) {
 
-        boost::regex rxUserDataMacro(rdUserDataMacro);
+        CVMWA_LOG("Debug", "Going to perform regex replace");
+        CVMWA_LOG("Debug", "Replacing from '" << vmPatchedUserData << "'");
         
         /* Find and replace all macro matches */
-        regexProxy.userData = vmPatchedUserData;
-        regexProxy.keyData = uData;
+        cb_userData = vmPatchedUserData;
+        cb_keyData = uData;
         boost::sregex_iterator m1(vmPatchedUserData.begin(), vmPatchedUserData.end(), rxUserDataMacro);
         boost::sregex_iterator m2;
-        std::for_each(m1, m2, regexProxy);
-        vmPatchedUserData = regexProxy.userData;
+        std::for_each(m1, m2, &regex_cb);
+        vmPatchedUserData = cb_userData;
+
+        CVMWA_LOG("Debug", "Replaced to '" << vmPatchedUserData << "'");
 
     }
 
@@ -628,9 +628,12 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
             inSavedState = true;
         }
     }
+
+    CVMWA_LOG("Debug", "inSavedState : " << (inSavedState ? "true" : "false") );
     
     /* Touch context ISO only if we have user-data and the VM is not hibernated */
     if (!vmPatchedUserData.empty() && !(uData == NULL) && !inSavedState) {
+        CVMWA_LOG("Debug", "Going to attach User-Data with '" << vmPatchedUserData << "'");
         
         /* Check if we are using FloppyIO instead of contextualization CD */
         if ((this->flags & HVF_FLOPPY_IO) != 0) {
@@ -796,9 +799,6 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     /* Update parameters */
     if (this->onProgress!=NULL) (this->onProgress)(7, 7, "Completed", this->cbObject);
     this->state = STATE_STARTED;
-    
-    /* Store user-data to the properties */
-    this->setProperty("/CVMWeb/userData", base64_encode(this->userData));
     
     /* We don't know the IP address of the VM. During it's possible hibernation
        state the DHCP lease might have been released. */
@@ -1423,6 +1423,26 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     return tokenize( &lines, ':' );
 };
 
+/**
+ * Load sessions if they are not yet loaded
+ */
+bool Virtualbox::waitTillReady() {
+    
+    /**
+     * Session loading takes time, so instead of blocking the plugin
+     * at creation time, use this mechanism to delay-load it when first accessed.
+     */
+    if (!this->sessionLoaded) {
+        this->loadSessions();
+        this->sessionLoaded = true;
+    }
+    
+    /**
+     * All's good!
+     */
+    return true;
+    
+}
 
 /**
  * Return a property from the VirtualBox guest

@@ -215,6 +215,9 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         return;
     }
 
+    /* Wait for delaied hypervisor initiation */
+    p->hv->waitTillReady();
+
     /* Fetch domain info */
     std::string domain = this->getDomainName();
 
@@ -343,14 +346,14 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     }
     
     /* Update defaults on the session */
-    if (jsonHash.find("userData") != jsonHash.end())         session->userData = jsonHash["userData"].convert_cast<string>();
-    if (jsonHash.find("version") != jsonHash.end())          session->version = jsonHash["version"].convert_cast<string>();
-    if (jsonHash.find("cpus") != jsonHash.end())             session->cpus = jsonHash["cpus"].convert_cast<int>();
-    if (jsonHash.find("executionCap") != jsonHash.end())     session->executionCap = jsonHash["executionCap"].convert_cast<int>();
-    if (jsonHash.find("apiPort") != jsonHash.end())          session->apiPort = jsonHash["apiPort"].convert_cast<int>();
     if (jsonHash.find("ram") != jsonHash.end())              session->memory = jsonHash["ram"].convert_cast<int>();
+    if (jsonHash.find("cpus") != jsonHash.end())             session->cpus = jsonHash["cpus"].convert_cast<int>();
     if (jsonHash.find("disk") != jsonHash.end())             session->disk = jsonHash["disk"].convert_cast<int>();
     if (jsonHash.find("flags") != jsonHash.end())            session->flags = jsonHash["flags"].convert_cast<int>();
+    if (jsonHash.find("version") != jsonHash.end())          session->version = jsonHash["version"].convert_cast<string>();
+    if (jsonHash.find("apiPort") != jsonHash.end())          session->apiPort = jsonHash["apiPort"].convert_cast<int>();
+    if (jsonHash.find("userData") != jsonHash.end())         session->userData = jsonHash["userData"].convert_cast<string>();
+    if (jsonHash.find("executionCap") != jsonHash.end())     session->executionCap = jsonHash["executionCap"].convert_cast<int>();
     if (jsonHash.find("daemonControlled") != jsonHash.end()) session->daemonControlled = jsonHash["daemonControlled"].convert_cast<bool>();
     if (jsonHash.find("daemonMinCap") != jsonHash.end())     session->daemonMinCap = jsonHash["daemonMinCap"].convert_cast<int>();
     if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonControlled = jsonHash["daemonMaxCap"].convert_cast<int>();
@@ -374,7 +377,21 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         session->flags |= HVF_SYSTEM_64BIT;
         
     }
-
+    
+    CVMWA_LOG("Debug", "userData=" << session->userData);
+    CVMWA_LOG("Debug", "cpus=" << session->cpus);
+    CVMWA_LOG("Debug", "executionCap=" << session->executionCap);
+    CVMWA_LOG("Debug", "apiPort=" << session->apiPort);
+    CVMWA_LOG("Debug", "ram=" << session->memory);
+    CVMWA_LOG("Debug", "disk=" << session->disk);
+    CVMWA_LOG("Debug", "flags=" << session->flags);
+    CVMWA_LOG("Debug", "version/diskURL=" << session->version);
+    CVMWA_LOG("Debug", "daemonControlled=" << session->daemonControlled);
+    CVMWA_LOG("Debug", "daemonMinCap=" << session->daemonMinCap);
+    CVMWA_LOG("Debug", "daemonMaxCap=" << session->daemonMaxCap);
+    CVMWA_LOG("Debug", "daemonFlags=" << session->daemonFlags);
+    CVMWA_LOG("Debug", "diskChecksum=" << session->diskChecksum);
+    
     /* Call success callback */
     boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session );
     if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
@@ -441,6 +458,9 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
         return;
 
     } else {
+    
+        /* Wait for delaied hypervisor initiation */
+        p->hv->waitTillReady();
 
         /* Fetch info */
         string vmName = vm.convert_cast<string>();
