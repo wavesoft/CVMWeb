@@ -159,8 +159,8 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
     std::string sigData;
     
     // Open files
-    std::ifstream iData( dataFile.c_str() );
-    std::ifstream iSig( sigFile.c_str() );
+    std::ifstream iData( dataFile.c_str(), ifstream::binary  );
+    std::ifstream iSig( sigFile.c_str(), ifstream::binary );
     if (iData.fail()) return false;
     if (iSig.fail()) return false;
     

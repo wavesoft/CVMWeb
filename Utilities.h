@@ -299,6 +299,7 @@ typedef struct {
     unsigned char       osPackageManager;       // Package manager found on the system
     std::string         osDistID;               // Platform identification
     bool                hasGKSudo;              // If we have graphical SUDO display
+    bool                hasPKExec;              // Another GKSUDO approach
     bool                hasXDGOpen;
 
 } LINUX_INFO;

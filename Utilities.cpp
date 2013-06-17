@@ -297,7 +297,7 @@ int getKV( string line, string * key, string * value, unsigned char delim, int o
     if (a == string::npos) return 0;
     *key = line.substr(offset, a-offset);
     size_t b = a+1;
-    while ( ((line[b] == ' ') || (line[b] == '\t')) && (b<line.length())) b++;
+    while ( (b<line.length()) && ((line[b] == ' ') || (line[b] == '\t')) ) b++;
     *value = line.substr(b, string::npos);
     return a;
 }
@@ -1023,6 +1023,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
     
     // Check if we have gksudo
     info->hasGKSudo = file_exists("/usr/bin/gksudo");
+    info->hasPKExec = file_exists("/usr/bin/pkexec");
     info->hasXDGOpen = file_exists("/usr/bin/xdg-open");
     
     // Identify pakage manager

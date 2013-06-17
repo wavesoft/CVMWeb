@@ -17,8 +17,8 @@ var parseSessionFlags = function( o ) {
     return val;
 };
 var SessionFlags = function( o ) {
-    var vSet = function(v) { o.flags=v; console.log("Setting value =",v); },
-        vGet = function()  { console.log("Returning value =", o.flags); return o.flags; };
+    var vSet = function(v) { o.flags=v; },
+        vGet = function()  { return o.flags; };
     Object.defineProperties(this, {
         
         /* If the value is updated, trigger callback */
