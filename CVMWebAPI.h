@@ -67,7 +67,7 @@ public:
     {
 
         registerMethod("checkSession",        make_method(this, &CVMWebAPI::checkSession));
-        registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
+//        registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
         registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::requestDaemonAccess));
         registerMethod("requestControlAccess",make_method(this, &CVMWebAPI::requestControlAccess));
         registerMethod("requestSafeSession",  make_method(this, &CVMWebAPI::requestSafeSession));
