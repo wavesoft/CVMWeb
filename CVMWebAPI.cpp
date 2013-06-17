@@ -555,25 +555,50 @@ int CVMWebAPI::installHV( ) {
  * Show a confirmation dialog using browser's API
  */
 bool CVMWebAPI::unsafeConfirm( std::string msg ) {
+    FB::variant f;
     
     // Retrieve a reference to the DOM Window
     FB::DOM::WindowPtr window = m_host->getDOMWindow();
 
     // Check if the DOM Window has an alert property
     if (window && window->getJSObject()->HasProperty("window")) {
+
+        // Get window reference
+        FB::JSObjectPtr jsWin = window->getProperty<FB::JSObjectPtr>("window");
+        
+        /*
+        // Get a reference to the confirm function
+        f = jsWin->GetProperty("confirm");
+        FB::JSObjectPtr jsConfirm = f.convert_cast<FB::JSObjectPtr>();
+
+        // Get a reference to Function object
+        f = jsWin->GetProperty("Function");
+        FB::JSObjectPtr jsFunction = f.convert_cast<FB::JSObjectPtr>();
+
+        // Get a reference fo Function.prototype object
+        f = jsFunction->GetProperty("prototype");
+        FB::JSObjectPtr jsFunctionProto = f.convert_cast<FB::JSObjectPtr>();
+
+        // Get a reference to Object object
+        f = jsWin->GetProperty("Object");
+        FB::JSObjectPtr jsObject = f.convert_cast<FB::JSObjectPtr>();
     
-        // Create a reference to alert
-        FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr>("window");
-    
-        // Make sure the function is valid native function and not a hack 
-        FB::variant f = obj->GetProperty("confirm");
-        FB::JSObjectPtr fPtr = f.convert_cast<FB::JSObjectPtr>();
-        string fType = fPtr->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
-        if (fType.find("native") == string::npos)
+        // 1) First make sure alert's toString is not directly hijacked. However:
+        //    - Function.prototype.toString might be hijacked
+        if (jsObject->HasProperty("toString")) {
             return false;
+        }
     
-        // Invoke alert with some text
-        return obj->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
+        // Now make sure (using toString) that is native code
+        string fType = jsConfirm->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
+        CVMWA_LOG("Debug", "Function is '" << fType << "'");
+        if (fType.find("[native code]") == string::npos)
+            return false;
+        */
+    
+        // Invoke confirm with some text
+        return jsWin->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
+        
     } else {
         return false;
     }

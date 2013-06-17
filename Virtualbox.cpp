@@ -797,7 +797,11 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     
     /* Start VM */
     if (this->onProgress!=NULL) (this->onProgress)(6, 7, "Starting VM", this->cbObject);
-    ans = this->wrapExec("startvm " + this->uuid + " --type headless", NULL);
+    if ((this->flags & HVF_HEADFUL) != 0) {
+        ans = this->wrapExec("startvm " + this->uuid + " --type gui", NULL);
+    } else {
+        ans = this->wrapExec("startvm " + this->uuid + " --type headless", NULL);
+    }
     CVMWA_LOG( "Info", "Start VM=" << ans  );
     if (ans != 0) {
         this->state = STATE_OPEN;

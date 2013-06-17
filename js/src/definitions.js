@@ -35,6 +35,11 @@ var HVF_SYSTEM_64BIT = 1;
 var HVF_DEPLOYMENT_HDD = 2; 
 var HVF_GUEST_ADDITIONS = 4;
 var HVF_FLOPPY_IO = 8;
+var HVF_HEADFUL = 16;
+
+/* Daemon flags */
+var DF_SUSPEND = 1;
+var DF_AUTOSTART = 2;
 
 /**
  * Convert state to string

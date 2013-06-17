@@ -6,7 +6,7 @@ _NS_.EventDispatcher = function(e) {
 /**
  * Fire an event to the registered handlers
  */
-_NS_.EventDispatcher.prototype.fire = function( name ) {
+_NS_.EventDispatcher.prototype.__fire = function( name ) {
     var args = Array.prototype.slice.call(arguments),
         name = args.shift();
     window.console.log("Firing",name,"(", args, ")");
