@@ -45,9 +45,9 @@ void CVMInitializeDialogs()
     */
 }
 
+/*
 gboolean display_dialog( gpointer user_data )
 {
-    /*
     DialogData *dialog_data = (DialogData*) user_data;
     GtkWidget *dialog;
     
@@ -68,10 +68,10 @@ gboolean display_dialog( gpointer user_data )
 
     // Quit the main loop
     gtk_main_quit(); 
-    */
 
     return FALSE;
 }
+*/
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
     /*
