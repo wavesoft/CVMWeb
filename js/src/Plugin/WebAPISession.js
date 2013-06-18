@@ -52,7 +52,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     };
     
     // Schedule update probing timer
-    setInterval( (function(){
+    var __updateTimer = setInterval( (function(){
         
         // Update session status
         if (this.autoUpdate)
@@ -64,21 +64,22 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     }).bind(this), 5000);
     
     // Connect plugin properties with this object properties using getters/setters
+    var u = undefined;
     Object.defineProperties(this, {
-        "state"         :   {   get: function () { return this.__session.state;                 } },
-        "stateName"     :   {   get: function () { return state_string(this.__session.state );  } },
-        "ip"            :   {   get: function () { return this.__session.ip;                    } },
-        "ram"           :   {   get: function () { return this.__session.ram;                   } },
-        "disk"          :   {   get: function () { return this.__session.disk;                  } },
-        "apiURL"        :   {   get: function () { return this.__session.apiURL;                } },
-        "rdpURL"        :   {   get: function () { return this.__session.rdpURL;                } },
-        "executionCap"  :   {   get: function () { return this.__session.executionCap;          }, 
+        "state"         :   {   get: function () { if (!this.__valid) return u; return this.__session.state;                 } },
+        "stateName"     :   {   get: function () { if (!this.__valid) return u; return state_string(this.__session.state );  } },
+        "ip"            :   {   get: function () { if (!this.__valid) return u; return this.__session.ip;                    } },
+        "ram"           :   {   get: function () { if (!this.__valid) return u; return this.__session.ram;                   } },
+        "disk"          :   {   get: function () { if (!this.__valid) return u; return this.__session.disk;                  } },
+        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.apiURL;                } },
+        "rdpURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.rdpURL;                } },
+        "executionCap"  :   {   get: function () { if (!this.__valid) return u; return this.__session.executionCap;          }, 
                                 set: function(v) { this.__session.setExecutionCap(v);           } },
-        "daemonMinCap"  :   {   get: function () { return this.__session.daemonMinCap;          }, 
+        "daemonMinCap"  :   {   get: function () { if (!this.__valid) return u; return this.__session.daemonMinCap;          }, 
                                 set: function(v) { this.__session.daemonMinCap =v;              } },
-        "daemonMaxCap"  :   {   get: function () { return this.__session.daemonMaxCap;          }, 
+        "daemonMaxCap"  :   {   get: function () { if (!this.__valid) return u; return this.__session.daemonMaxCap;          }, 
                                 set: function(v) { this.__session.daemonMaxCap =v;              } },
-        "daemonControlled": {   get: function () { return this.__session.daemonControlled;      }, 
+        "daemonControlled": {   get: function () { if (!this.__valid) return u; return this.__session.daemonControlled;      }, 
                                 set: function(v) { 
                                     this.__session.daemonControlled=v;
                                     
@@ -92,10 +93,12 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
 
         /* Version/DiskURL switching */
         "version"       :     {   get: function () {
+                                        if (!this.__valid) return u; 
                                         return ((this.__session.flags & HVF_DEPLOYMENT_HDD) == 0) ? this.__session.version : "";               
                                     } 
                               }, 
         "diskURL"       :     {   get: function () {
+                                      if (!this.__valid) return u; 
                                       return ((this.__session.flags & HVF_DEPLOYMENT_HDD) != 0) ? this.__session.version : "";               
                                   } 
                               },
@@ -104,6 +107,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
           "flags"         :   {   get: function () {
                                     // Return a smart object with properties that when changed
                                     // they automatically update the session object.
+                                    if (!this.__valid) return u; 
                                     return new SessionFlags(this.__session);
                                   },
                                   set: function(v) {
@@ -120,6 +124,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
           "daemonFlags"   :   {   get: function () {
                                     // Return a smart object with properties that when changed
                                     // they automatically update the session object.
+                                    if (!this.__valid) return u; 
                                     return new DaemonFlags(this.__session);
                                   },
                                   set: function(v) {
@@ -134,15 +139,21 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
                                   } 
                               }
     });
+    
+    // Private function to do cleanup when the session is closed
+    var __cleanupCB = (function() {
+        clearInterval(__updateTimer);
+        this.__valid = false;
+    }).bind(this);
 
     // Bind events and delegate them to the event dispatcher
-    this.__session.addEventListener('open',           (function(){      this.__fire('sessionStateChange', STATE_OPEN);    this.__fire('open'); }).bind(this));
-    this.__session.addEventListener('close',          (function(){      this.__fire('sessionStateChange', STATE_CLOSED);  this.__fire('close'); }).bind(this));
-    this.__session.addEventListener('start',          (function(){      this.__fire('sessionStateChange', STATE_STARTED); this.__fire('start'); }).bind(this));
-    this.__session.addEventListener('stop',           (function(){      this.__fire('sessionStateChange', STATE_OPEN);    this.__fire('stop'); }).bind(this));
-    this.__session.addEventListener('pause',          (function(){      this.__fire('sessionStateChange', STATE_PAUSED);  this.__fire('pause'); }).bind(this));
-    this.__session.addEventListener('resume',         (function(){      this.__fire('sessionStateChange', STATE_STARTED); this.__fire('resume'); }).bind(this));
-    this.__session.addEventListener('hibernate',      (function(){      this.__fire('sessionStateChange', STATE_OPEN);    this.__fire('hibernate'); }).bind(this));
+    this.__session.addEventListener('open',           (function(){      this.__fire('sessionStateChange', STATE_OPEN);    this.__fire('open');                  }).bind(this));
+    this.__session.addEventListener('close',          (function(){      this.__fire('sessionStateChange', STATE_CLOSED);  this.__fire('close'); __cleanupCB();  }).bind(this));
+    this.__session.addEventListener('start',          (function(){      this.__fire('sessionStateChange', STATE_STARTED); this.__fire('start');                 }).bind(this));
+    this.__session.addEventListener('stop',           (function(){      this.__fire('sessionStateChange', STATE_OPEN);    this.__fire('stop');                  }).bind(this));
+    this.__session.addEventListener('pause',          (function(){      this.__fire('sessionStateChange', STATE_PAUSED);  this.__fire('pause');                 }).bind(this));
+    this.__session.addEventListener('resume',         (function(){      this.__fire('sessionStateChange', STATE_STARTED); this.__fire('resume');                }).bind(this));
+    this.__session.addEventListener('hibernate',      (function(){      this.__fire('sessionStateChange', STATE_OPEN);    this.__fire('hibernate');             }).bind(this));
     this.__session.addEventListener('error',          (function(a,b,c){ this.__fire('error',a,b,c); }).bind(this));
     this.__session.addEventListener('reset',          (function(a,b,c){ this.__fire('reset'); }).bind(this));
     this.__session.addEventListener('openError',      (function(a,b){   this.__fire('openError',a,b); }).bind(this));
