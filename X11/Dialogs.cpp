@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+/*
 #include <string>
 #include <gtk/gtk.h>
 #include "../Dialogs.h"
@@ -46,22 +47,22 @@ gboolean display_dialog( gpointer user_data )
     DialogData *dialog_data = (DialogData*) user_data;
     GtkWidget *dialog;
     
-    /* Create dialog */
+    // Create dialog
     dialog = gtk_message_dialog_new (NULL,
                                      GTK_DIALOG_DESTROY_WITH_PARENT,
                                      GTK_MESSAGE_QUESTION,
                                      GTK_BUTTONS_YES_NO,
                                      "%s", dialog_data->text);
 
-    /*  Prepare dialog */
+    //  Prepare dialog
     gtk_window_set_keep_above(GTK_WINDOW(dialog), true);
     gtk_window_set_title(GTK_WINDOW(dialog), "CernVM Web API");
 
-    /* Run and destroy when completed */
+    // Run and destroy when completed 
     dialog_data->result = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
 
-    /* Quit the main loop */
+    // Quit the main loop
     gtk_main_quit(); 
 
     return FALSE;
@@ -79,3 +80,4 @@ bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std
 
     return (dialog_data.result == GTK_RESPONSE_YES);
 }
+*/
