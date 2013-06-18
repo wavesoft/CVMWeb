@@ -101,6 +101,9 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                 __pluginSingleton.style.height = "1px";
                 document.body.appendChild( __pluginSingleton );
             }
+            
+            // Banner of the webAPI 
+            console.log("Using CernVM WebAPI " + __pluginSingleton.version);
 
         }
         
@@ -149,7 +152,6 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
             }
             
         } else {
-            console.log("Using CernVM WebAPI " + __pluginSingleton.version);
             
             // If we are told to check the environment, check if we have hypervisor
             if (setupEnvironment) {

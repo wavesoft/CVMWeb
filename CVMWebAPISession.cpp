@@ -539,28 +539,36 @@ void CVMWebAPISession::thread_update() {
     // Update session info from driver
     int ans = this->session->update();
     if (ans < 0) {
-        this->updating = false;
-        return;
+        
+        // Check if the session went away
+        if (ans == HVE_NOT_FOUND) {
+            
+            /* Stop probing timer */
+            this->probeTimer->stop();
+
+            /* Make it unavailable */
+            if (this->isAlive) {
+                this->isAlive = false;
+                this->fire_apiUnavailable();
+            }
+            
+            /* Session closed */
+            this->fire_close();
+            
+            /* Mark the session closed and exit */
+            this->session->state = STATE_CLOSED;
+            this->updating = false;
+            return;
+            
+        } else {
+            this->updating = false;
+            return;
+        }
     }
     
     // Check state differences
     if (oldState != this->session->state) {
         switch (this->session->state) {
-            
-            case STATE_CLOSED:
-            
-                /* Stop probing timer */
-                this->probeTimer->stop();
-
-                /* Make it unavailable */
-                if (this->isAlive) {
-                    this->isAlive = false;
-                    this->fire_apiUnavailable();
-                }
-                
-                /* Session closed */
-                this->fire_close();
-                break;
             
             case STATE_OPEN:
             

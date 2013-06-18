@@ -1613,6 +1613,8 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     
     /* Collect details */
     map<string, string> info = this->getMachineInfo( uuid );
+    if (info.empty()) 
+        return HVE_NOT_FOUND;
     
     /* Reset flags */
     session->flags = 0;
