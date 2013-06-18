@@ -52,6 +52,7 @@ public:
     virtual std::string     getIP();
 
     virtual int             update();
+    virtual int             updateFast();
     
     /* VirtualBox-specific functions */
     int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList );
@@ -85,7 +86,7 @@ public:
 
     /* Overloads */
     virtual int             loadSessions        ( );
-    virtual int             updateSession       ( HVSession * session );
+    virtual int             updateSession       ( HVSession * session, bool fast );
     virtual HVSession *     allocateSession     ( std::string name, std::string key );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
     virtual bool            waitTillReady       ( );

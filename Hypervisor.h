@@ -148,6 +148,7 @@ public:
     virtual bool            isAPIAlive();
 
     virtual int             update();
+    virtual int             updateFast();
 
     void *                  cbObject;
     void (*onProgress)      (int, int, std::string, void *);

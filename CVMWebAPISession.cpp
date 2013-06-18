@@ -30,6 +30,7 @@
 #include "DOM/Document.h"
 #include "global/config.h"
 
+#include "DaemonCtl.h"
 #include "Hypervisor.h"
 #include "CVMWebAPISession.h"
 #include <boost/thread.hpp>
@@ -330,7 +331,14 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
     // Start session
     ans = this->session->start( dataPtr );
     if (ans == 0) {
+
+        // Tell daemon to reload sessions
+        if (isDaemonRunning())
+            daemonGet( DIPC_RELOAD );
+
+        // Notify browser that the session has started
         this->fire_start();
+
     } else {
         this->fire_startError(hypervisorErrorStr(ans), ans);
         this->fire_error(hypervisorErrorStr(ans), ans, "start");

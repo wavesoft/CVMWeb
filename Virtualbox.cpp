@@ -1395,7 +1395,14 @@ std::string VBoxSession::getRDPHost() {
  * Update session information
  */
 int VBoxSession::update() {
-    return this->host->updateSession( this );
+    return this->host->updateSession( this, false );
+}
+
+/**
+ * Update session information (Fast version)
+ */
+int VBoxSession::updateFast() {
+    return this->host->updateSession( this, true );
 }
 
 /**
@@ -1595,7 +1602,7 @@ std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
 /**
  * Update session information from VirtualBox
  */
-int Virtualbox::updateSession( HVSession * session ) {
+int Virtualbox::updateSession( HVSession * session, bool fast ) {
     vector<string> lines;
     map<string, string> vms, diskinfo;
     string secret, kk, kv;
@@ -1739,38 +1746,40 @@ int Virtualbox::updateSession( HVSession * session ) {
     }
     
     /* Parse daemon information */
-    string strProp;
-    strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
-    if (strProp.empty()) {
-        session->daemonControlled = false;
-    } else {
-        session->daemonControlled = (strProp.compare("1") == 0);
+    if (!fast) {
+        string strProp;
+        strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
+        if (strProp.empty()) {
+            session->daemonControlled = false;
+        } else {
+            session->daemonControlled = (strProp.compare("1") == 0);
+        }
+        strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
+        if (strProp.empty()) {
+            session->daemonMinCap = 0;
+        } else {
+            session->daemonMinCap = ston<int>(strProp);
+        }
+        strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
+        if (strProp.empty()) {
+            session->daemonMaxCap = 100;
+        } else {
+            session->daemonMaxCap = ston<int>(strProp);
+        }
+        strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
+        if (strProp.empty()) {
+            session->daemonFlags = 0;
+        } else {
+            session->daemonFlags = ston<int>(strProp);
+        }
+        strProp = this->getProperty( uuid, "/CVMWeb/userData" );
+        if (strProp.empty()) {
+            session->userData = "";
+        } else {
+            session->userData = base64_decode(strProp);
+        }
     }
-    strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
-    if (strProp.empty()) {
-        session->daemonMinCap = 0;
-    } else {
-        session->daemonMinCap = ston<int>(strProp);
-    }
-    strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
-    if (strProp.empty()) {
-        session->daemonMaxCap = 100;
-    } else {
-        session->daemonMaxCap = ston<int>(strProp);
-    }
-    strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
-    if (strProp.empty()) {
-        session->daemonFlags = 0;
-    } else {
-        session->daemonFlags = ston<int>(strProp);
-    }
-    strProp = this->getProperty( uuid, "/CVMWeb/userData" );
-    if (strProp.empty()) {
-        session->userData = "";
-    } else {
-        session->userData = base64_decode(strProp);
-    }
-    
+
     /* Updated successfuly */
     return HVE_OK;
 }
@@ -1806,7 +1815,7 @@ int Virtualbox::loadSessions() {
             session->key = secret;
 
             /* Update session info */
-            updateSession( session );
+            updateSession( session, false );
 
             /* Register this session */
             CVMWA_LOG( "Info", "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state  );

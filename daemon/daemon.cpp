@@ -37,25 +37,35 @@
 
 using namespace std;
 
-#define             RELOAD_TIME     30
+// Delay between time-consuming operations
+#define             SLOW_TIMER      30
+
+// Delay between time-critical operations
+#define             FAST_TIMER       5
 
 ThinIPCEndpoint     * ipc;
 Hypervisor          * hv;
 time_t                reloadTimer;
+time_t                probeTimer;
 int                   idleTime;
 bool                  isIdle = false;
 bool                  isAlive = true;
 LocalConfig         * config;
+
+boost::mutex          sessionsMutex;
+boost::thread         reloadThread;
+bool                  reloadTriggered = false;
 
 /**
  * Switch the idle states of the VMs
  */
 void switchIdleStates( bool idle ) {
     map<string,string> emptyMap;
-    
+
     /* Pause all the VMs if we are not idle */
     if (!idle) {
         
+        sessionsMutex.lock();
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
@@ -89,9 +99,11 @@ void switchIdleStates( bool idle ) {
                 }
             }
         }
+        sessionsMutex.unlock();
         
     } else {
         
+        sessionsMutex.lock();
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
@@ -134,9 +146,81 @@ void switchIdleStates( bool idle ) {
                 }
             }
         }
+        sessionsMutex.unlock();
         
     }
     
+}
+
+/**
+ * Reload thread
+ */
+void reloadSessions_thread() {
+    sessionsMutex.lock();
+
+    cout << "INFO: Reloading sessions" << endl;
+    hv->loadSessions();
+    
+    // Check if we don't need the daemon any more
+    bool needsDaemon = false;
+    for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
+        HVSession* sess = *i;
+        if (sess->daemonControlled) {
+            needsDaemon = true;
+            break;
+        }
+    }
+
+    // Release mutex
+    sessionsMutex.unlock();
+
+    // If we don't need the daemon, Initiate graceful shutdown
+    if (!needsDaemon)
+        isAlive = false;
+
+    // Release reload lock
+    reloadTriggered = false;
+}
+
+/**
+ * Trigger a session reload on another thread
+ */
+void reloadSessions() {
+    if (reloadTriggered) return;
+    reloadTriggered = true;
+    reloadThread = boost::thread( &reloadSessions_thread );
+}
+
+/** 
+ * Reap dead sessions if they have the DF_AUTODESTROY flag
+ */
+void reapDead() {
+    bool needsUpdate = false;
+    cout << "[INFO] reapDead";
+    sessionsMutex.lock();
+    cout << " started" << endl;
+    for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
+        HVSession* sess = *i;
+        if (sess->daemonControlled && ((sess->daemonFlags & DF_AUTODESTROY) != 0) ) {
+            
+            // Update sesion status
+            sess->updateFast();
+
+            // If it's closed, destroy
+            if (sess->state == STATE_OPEN) {
+                needsUpdate = true;
+                sess->close();
+            }
+
+        }
+    }
+    sessionsMutex.unlock();
+
+    // If we need update, schedule sessions reload
+    if (needsUpdate) {
+        reloadSessions();
+    }
+
 }
 
 /**
@@ -145,7 +229,7 @@ void switchIdleStates( bool idle ) {
 void serverThread() {
     std::cout << "[UDP] Started listening on port " << DAEMON_PORT << std::endl;
     ipc = new ThinIPCEndpoint( DAEMON_PORT );
-    for (;;) {
+    while (isAlive) {
         
         /* Check if we have IPC data to read 
            (This also acts as our CPU throttling delay) */
@@ -180,6 +264,11 @@ void serverThread() {
             } else if (iAction == DIPC_GET_IDLETIME) { // Return the current idle time settings
                 ans.writeShort(DIPC_ANS_OK);
                 ans.writeShort(idleTime);
+                
+            } else if (iAction == DIPC_RELOAD) { // Manually reload sessions
+                ans.writeShort(DIPC_ANS_OK);
+                reloadTimer = time(NULL);
+                reloadSessions();
                 
             } else {
                 ans.writeShort(DIPC_ANS_ERROR);
@@ -235,6 +324,7 @@ int main( int argc, char ** argv ) {
     
     /* Reset state */
     reloadTimer = time( NULL );
+    probeTimer = time( NULL );
     
     /* Start server thread */
     boost::thread tServer(&serverThread);
@@ -242,14 +332,27 @@ int main( int argc, char ** argv ) {
     /* Main loop */
     std::cout << "[Main] Processing events" << std::endl;
     while (isAlive) {
+        time_t cTime = time( NULL );
         
-        /* Check for state reload times */
-        if ( time( NULL ) > ( reloadTimer + RELOAD_TIME ) ) {
-            if (isIdle) { // Reload only on IDLE state
+        /* Perform slow operations */
+        if ( cTime > ( reloadTimer + SLOW_TIMER ) ) {
+
+            // Do extensive reload only on idle
+            if (isIdle) {
                 cout << "INFO: Reloading sessions" << endl;
-                hv->loadSessions();
-                reloadTimer = time(NULL);
+                reloadSessions();
+                reloadTimer = cTime;
             }
+            
+        }
+
+        /* Perform probe operations */
+        if ( cTime > ( probeTimer + FAST_TIMER ) ) {
+            probeTimer = cTime;
+
+            // Reap dead sessions
+            reapDead();
+
         }
         
         /* Check for idle state switch */
@@ -263,7 +366,8 @@ int main( int argc, char ** argv ) {
             if ( platformIdleTime() >= idleTime ) {
                 isIdle = true;
                 cout << "INFO: Reloading sessions" << endl;
-                hv->loadSessions();
+                reloadSessions();
+
                 cout << "INFO: Switching to IDLE state" << endl;
                 switchIdleStates( true );
             }

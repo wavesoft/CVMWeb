@@ -15,6 +15,7 @@ typedef struct {
 #define DIPC_SHUTDOWN       0x0002
 #define DIPC_SET_IDLETIME   0x0003
 #define DIPC_GET_IDLETIME   0x0004
+#define DIPC_RELOAD         0x0008
 
 /* Daemon IPC Responses */
 #define DIPC_ANS_OK         0x0001
@@ -23,6 +24,7 @@ typedef struct {
 /* Daemon flags */
 #define DF_SUSPEND          0x01    // Suspend VM instead of pausing
 #define DF_AUTOSTART        0x02    // If the VM is down, start it with blank userData
+#define DF_AUTODESTROY      0x04    // If the VM is down, destroy it
 
 /* Config constants */
 #define DAEMON_PORT         58740

@@ -49,6 +49,7 @@ int HVSession::resume()                                             { return HVE
 int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
 int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
+int HVSession::updateFast()                                         { return HVE_NOT_IMPLEMENTED; }
 int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
                                                                     { return HVE_NOT_IMPLEMENTED; }
 int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
