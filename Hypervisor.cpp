@@ -176,7 +176,7 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
  * Download the specified CernVM version
  */
 int Hypervisor::cernVMDownload( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * fb ) {
-    string sURL = "http://cernvm.cern.ch/portal/sites/cernvm.cern.ch/files/ucernvm-" + version + ".iso";
+    string sURL = "http://cernvm.cern.ch/releases/ucernvm-" + version + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
     *filename = sOutput;
     if (file_exists(sOutput)) {
