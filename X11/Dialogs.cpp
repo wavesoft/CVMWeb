@@ -28,9 +28,11 @@ typedef struct {
     const char * text;
     GtkWidget * window;
 } DialogData;
+*/
 
 void CVMInitializeDialogs()
 {
+    /*
     // Initialize GTK
     if (!gtk_init_check(NULL, NULL)) {
         std::cerr << "[Dialogs] gtk_init_check failed" << std::endl;
@@ -40,10 +42,12 @@ void CVMInitializeDialogs()
     // Initialize GTK thread-safety
     g_thread_init(NULL);
     gdk_threads_init();
+    */
 }
 
 gboolean display_dialog( gpointer user_data )
 {
+    /*
     DialogData *dialog_data = (DialogData*) user_data;
     GtkWidget *dialog;
     
@@ -64,11 +68,13 @@ gboolean display_dialog( gpointer user_data )
 
     // Quit the main loop
     gtk_main_quit(); 
+    */
 
     return FALSE;
 }
 
 bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message) {
+    /*
 
     // Prepare dialog I/O
     DialogData dialog_data;
@@ -79,5 +85,6 @@ bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std
     gtk_main();
 
     return (dialog_data.result == GTK_RESPONSE_YES);
+    */
+    return false;
 }
-*/
