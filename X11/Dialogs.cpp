@@ -18,10 +18,11 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-/*
 #include <string>
-#include <gtk/gtk.h>
 #include "../Dialogs.h"
+
+/*
+#include <gtk/gtk.h>
 
 typedef struct {
     int result;
