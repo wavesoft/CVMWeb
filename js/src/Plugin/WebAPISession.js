@@ -206,8 +206,11 @@ _NS_.WebAPISession.prototype.start = function( values, cbOK, cbFail ) {
     if (typeof(values) == 'function') {
         cbFail = cbOK;
         cbOK = values;
-        values = undefined;
+        values = false;
     }
+    
+    // Invalid values is empty object
+    if (!values) values={ };
     
     // Setup proxies
     var cb_once=true,
