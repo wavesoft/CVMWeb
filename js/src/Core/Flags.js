@@ -13,7 +13,7 @@ var parseSessionFlags = function( o ) {
     if (o.useBootDisk) val |= HVF_DEPLOYMENT_HDD;
     if (o.useGuestAdditions) val |= HVF_GUEST_ADDITIONS;
     if (o.useFloppyIO) val |= HVF_FLOPPY_IO;
-    if (o.HVF_HEADFUL) valu |= HVF_HEADFUL;
+    if (o.HVF_HEADFUL) val |= HVF_HEADFUL;
     return val;
 };
 var SessionFlags = function( o ) {

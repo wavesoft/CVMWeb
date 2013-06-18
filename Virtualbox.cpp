@@ -1716,7 +1716,7 @@ int Virtualbox::updateSession( HVSession * session ) {
         
             /* Tokenize data */
             diskinfo = tokenize( &lines, ':' );
-            if (diskinfo.find("Logical size") != info.end()) {
+            if (diskinfo.find("Logical size") != diskinfo.end()) {
                 kk = diskinfo["Logical size"];
                 kk = kk.substr(0, kk.length()-7); // Strip " MBytes"
                 session->disk = ston<int>(kk);

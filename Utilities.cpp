@@ -208,6 +208,7 @@ CURLDownloadProvider::CURLDownloadProvider() {
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
     }
 }
 
@@ -766,13 +767,14 @@ void __provider_write_file( DownloadProvider * p, void * data, size_t dataLength
 int downloadFileEx( std::string url, std::string target, HVPROGRESS_FEEDBACK * fb, DownloadProvider * p ) {
     int res;
     
+    CVMWA_LOG("Info", "Downloading file '" << url << "' to '" << target << "' Using provider" << p );
+    
     // Try to open file
     FILE *fp = fopen(target.c_str(),"wb");
     if (fp == NULL) return HVE_IO_ERROR;
     
     // Use default provider if it's missing
-    //if (p == NULL) 
-    p = globalCURLProvider();
+    if (p == NULL) p = globalCURLProvider();
     if (p == NULL) return -2;
     
     // Setup provider
@@ -809,12 +811,13 @@ void __provider_write_string( DownloadProvider * p, void * data, size_t dataLeng
 int downloadTextEx( std::string url, std::string * buffer, HVPROGRESS_FEEDBACK * fb, DownloadProvider * p ) {
     int res;
 
+    CVMWA_LOG("Info", "Downloading Text from '" << url << "' Using provider" << p );
+
     // Reset string
     *buffer = "";
     
     // Use default provider if it's missing
-    //if (p == NULL) 
-    p = globalCURLProvider();
+    if (p == NULL) p = globalCURLProvider();
     if (p == NULL) return -2;
     
     // Setup provider
