@@ -40,7 +40,7 @@ public:
     /**
      * Constructor
      */
-    CVMBrowserProvider( FB::BrowserHostPtr host ) : 
+    CVMBrowserProvider( const FB::BrowserHostPtr& host ) : 
         DownloadProvider(), DefaultBrowserStreamHandler(), m_host(host)
     {
         CVMWA_LOG("Debug", "Initializing browser provider");
@@ -74,7 +74,7 @@ public:
     
 private:
     
-    FB::BrowserHostPtr              m_host;
+    FB::BrowserHostPtr				m_host;
     
     /**
      * Locking mechanism to make startDownload synchronous

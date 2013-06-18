@@ -19,6 +19,7 @@
  */
 
 #include "CVMBrowserProvider.h"
+#include <URI.h>
 
 /**
  * Data arrived callback -> Forward to DOWNLOAD_PROVIDER structure
@@ -100,6 +101,15 @@ int CVMBrowserProvider::startDownload( std::string url ) {
     return returnCode;
     */
     
-    CVMWA_LOG("WAT", "What-cha-doing?");
-    return returnCode;
+    //CVMWA_LOG("WAT", "What-cha-doing?");
+
+	FB::URI uri( url );
+	FB::HttpStreamResponsePtr res = FB::SimpleStreamHelper::SynchronousGet( m_host, uri );
+	if (res == NULL) {
+		return HVE_IO_ERROR;
+	} else {
+		this->callDataHandler( res->data.get(), res->size );
+		return HVE_OK;
+	}
+
 }

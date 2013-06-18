@@ -108,7 +108,7 @@ void CVMWeb::onPluginReady()
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {
         this->hv->daemonBinPath = this->getDaemonBin();
-        //CVMWA_LOG("Debug", "Setting browser download provider");
+        CVMWA_LOG("Debug", "Setting browser download provider");
         this->hv->setDownloadProvider( browserDownloadProvider );
     }
         
@@ -121,6 +121,10 @@ void CVMWeb::shutdown()
     // object should be released here so that this object can be safely
     // destroyed. This is the last point that shared_from_this and weak_ptr
     // references to this object will be valid
+
+	delete browserDownloadProvider;
+	browserDownloadProvider = NULL;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
