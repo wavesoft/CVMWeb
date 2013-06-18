@@ -42,6 +42,7 @@ include_platform()
 set( EXTERN_ZLIB "extern/zlib-1.2.8" )
 add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
 include_directories( ${CMAKE_BINARY_DIR}/extern/zlib )
+include_directories( ${EXTERN_ZLIB} )
 
 #this will build a Chrome package
 #add_chrome_package(${PLUGIN_NAME}
