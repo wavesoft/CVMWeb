@@ -91,8 +91,10 @@ template int hex_ston<int>( const std::string &Text );
 template long hex_ston<long>( const std::string &Text );
 template int ston<int>( const std::string &Text );
 template long ston<long>( const std::string &Text );
+template size_t ston<size_t>( const std::string &Text );
 template std::string ntos<int>( int &value );
 template std::string ntos<long>( long &value );
+template std::string ntos<size_t>( size_t &value );
 
 /**
  * Get the location of the platform-dependant application data folder
@@ -1008,7 +1010,7 @@ std::string urlEncode ( const std::string &s ) {
         {
             escaped.append("%");
             char buf[3];
-            sprintf(buf, "%.2X", s[i]);
+            sprintf(buf, "%.2x", s[i]);
             escaped.append(buf);
         }
     }

@@ -10,6 +10,8 @@
 #include "ThinIPC.h"
 #include "DaemonCtl.h"
 
+#include "DownloadProvider.h"
+
 #include <openssl/rand.h>
 
 void logUpdates(int curr, int tot, std::string msg, void * o) {
@@ -20,30 +22,24 @@ void logDebug( std::string line, void * o ) {
     std::cout << "DEBUG: " << line << std::endl;
 };
 
-std::string generateSalt() {
-    const unsigned char SALT_SIZE = 64;
-    const char saltChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+";
-    unsigned char randValue[SALT_SIZE];
-    std::string saltData = "";
-    
-    // Generate random bytes
-    RAND_bytes( randValue, SALT_SIZE );
-    
-    // Map random value to string
-    for (int i=0; i<SALT_SIZE; i++) {
-        saltData += saltChars[ randValue[i] % 0x3F ];
-    }
-    return saltData;
+void cb( const long a, const long f, const std::string& m ) {
+    std::cout << "*** CB " << a << "/" << f << " : " << m << " ***" << std::endl; 
 }
 
 int main( int argc, char ** argv ) {
     
-    std::string data;
-    for (int i=0; i<1000; i++) {
-        downloadTextEx("http://localhost/", &data, NULL, NULL);
-        std::cout << data << std::endl;
-        usleep( 100000 );
-    }
+    ProgressFeedback fb;
+    fb.min = 0;
+    fb.max = 100;
+    fb.total = 100;
+    fb.message = "Testing";
+    fb.callback = &cb;
+    
+    DownloadProviderPtr dp = _DownloadProvider::Default();
+    std::string buf = "";
+    dp->downloadFile( "https://cernvm.cern.ch/releases/19/cernvm-basic-2.7.1-2-3-x86.hdd.gz", "test.hdd.gz", &fb );
+    
+    std::cout << "Got buffer: '" << buf << "'" << std::endl;
     
     return 0;
 }
