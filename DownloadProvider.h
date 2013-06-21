@@ -41,6 +41,11 @@
 #include <curl/easy.h>
 
 /**
+ * Throttle timer delay
+ */
+#define DP_THROTTLE_TIMER   250
+
+/**
  * Callback typedef
  */
 typedef boost::function<void ( const boost::shared_array<uint8_t>&, const size_t)>  callbackData;

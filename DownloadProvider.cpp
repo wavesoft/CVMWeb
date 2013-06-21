@@ -45,7 +45,7 @@ void fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max ) {
     if (fb != NULL) {
         
         // Throttle events on 2 per second, unless that's the last one
-        if ((pos != max) && ((getMillis() - fb->__lastEventTime) < 500)) return;
+        if ((pos != max) && ((getMillis() - fb->__lastEventTime) < DP_THROTTLE_TIMER)) return;
         fb->__lastEventTime = getMillis();
 
         // Calculate percentage
