@@ -50,9 +50,8 @@ using namespace std;
 /**
  * Forward progress events
  */
-void __fwProgress( int step, int total, std::string msg, void * ptr ) {
-    CVMWebAPI * self = (CVMWebAPI * ) ptr;
-    self->fire_installProgress( step, total, msg );
+void CVMWebAPI::onInstallProgress( const size_t step, const size_t total, const std::string& msg ) {
+    this->fire_installProgress( step, total, msg );
 }
 
 /**
@@ -259,7 +258,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     
     /* Download data from URL */
     std::string jsonString;
-    int res = downloadTextEx( newURL, &jsonString, NULL, p->browserDownloadProvider );
+    int res = p->browserDownloadProvider->downloadText( newURL, &jsonString );
     if (res < 0) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
         return;
@@ -528,7 +527,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
  */
 void CVMWebAPI::thread_install() {
     CVMWebPtr p = this->getPlugin();
-    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, &__fwProgress, this, p->browserDownloadProvider );
+    int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, boost::bind(&CVMWebAPI::onInstallProgress, this, _1, _2, _3), p->browserDownloadProvider );
     if (ans == HVE_OK) {
         this->fire_install();
     } else {

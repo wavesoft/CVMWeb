@@ -200,7 +200,7 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
 /**
  * Download the updated version of the authorized keystore
  */
-int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider ) {
+int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider ) {
     bool needsReload = true;
     time_t currTime;
     time( &currTime );
@@ -241,12 +241,12 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProvider * downloadProvider 
     if (needsReload) {
         // Download the authorized keystore
         CVMWA_LOG( "Crypto", "Downloading updated keystore" );
-        int res = downloadFileEx( CRYPTO_URL_STORE, localKeystore, NULL, downloadProvider );
+        int res = downloadProvider->downloadFile( CRYPTO_URL_STORE, localKeystore );
         if ( res != HVE_OK ) return res;
 
         // Download the keystore signature
         CVMWA_LOG( "Crypto", "Downloading store signature" );
-        res = downloadFileEx( CRYPTO_URL_SIGNATURE, localKeystoreSig, NULL, downloadProvider );
+        res = downloadProvider->downloadFile( CRYPTO_URL_SIGNATURE, localKeystoreSig );
         if ( res != HVE_OK ) return res;
     
         // Validate files

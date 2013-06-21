@@ -411,45 +411,38 @@ std::string CVMWebAPISession::get_apiEntryPoint() {
     }
 }
 
-void CVMWebAPISession::onProgress(int v, int tot, std::string msg, void * p) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_progress(v,tot,msg);
+void CVMWebAPISession::onProgress(const size_t v, const size_t tot, const std::string& msg) {
+    this->fire_progress(v,tot,msg);
 }
 
-void CVMWebAPISession::onOpen( void * p) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_open();
+void CVMWebAPISession::onOpen() {
+    this->fire_open();
 }
 
-void CVMWebAPISession::onError(std::string msg, int code, std::string category, void * p) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_error(msg, code, category);
-    if (category.compare("open") == 0) self->fire_openError(msg, code);
-    if (category.compare("start") == 0) self->fire_startError(msg, code);
-    if (category.compare("stop") == 0) self->fire_stopError(msg, code);
-    if (category.compare("pause") == 0) self->fire_pauseError(msg, code);
-    if (category.compare("resume") == 0) self->fire_resumeError(msg, code);
-    if (category.compare("reset") == 0) self->fire_resetError(msg, code);
+void CVMWebAPISession::onError( const std::string& msg, const int code, const std::string& category) {
+    this->fire_error(msg, code, category);
+    if (category.compare("open") == 0) this->fire_openError(msg, code);
+    if (category.compare("start") == 0) this->fire_startError(msg, code);
+    if (category.compare("stop") == 0) this->fire_stopError(msg, code);
+    if (category.compare("pause") == 0) this->fire_pauseError(msg, code);
+    if (category.compare("resume") == 0) this->fire_resumeError(msg, code);
+    if (category.compare("reset") == 0) this->fire_resetError(msg, code);
 }
 
-void CVMWebAPISession::onDebug( std::string line, void * p ) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_debug( line );
+void CVMWebAPISession::onDebug( const std::string& line ) {
+    this->fire_debug( line );
 }
 
-void CVMWebAPISession::onStart( void * p ) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_start();
+void CVMWebAPISession::onStart() {
+    this->fire_start();
 }
 
-void CVMWebAPISession::onClose( void * p ) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_close();
+void CVMWebAPISession::onClose() {
+    this->fire_close();
 }
 
-void CVMWebAPISession::onStop( void * p ) {
-    CVMWebAPISession * self = (CVMWebAPISession*)p;
-    self->fire_stop();
+void CVMWebAPISession::onStop() {
+    this->fire_stop();
 }
 
 std::string CVMWebAPISession::toString() {

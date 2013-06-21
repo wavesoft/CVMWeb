@@ -21,7 +21,10 @@
 #ifndef HVENV_H
 #define HVENV_H
 
+#include "DownloadProvider.h"
 #include "Utilities.h"
+
+#include <boost/function.hpp>
 
 /* Hypervisor types */
 #define HV_NONE                 0
@@ -68,6 +71,11 @@
 #define DEFAULT_CERNVM_VERSION  "1.4"
 #define DEFAULT_API_PORT        80
 
+/* Callback function definitions */
+typedef boost::function< void () >                                                   callbackVoid;
+typedef boost::function< void (const std::string&) >                                 callbackDebug;
+typedef boost::function< void (const std::string&, const int, const std::string&) >  callbackError;
+
 /**
  * A hypervisor session is actually a VM instance.
  * This is where the actual I/O happens
@@ -75,14 +83,7 @@
 class HVSession {
 public:
     
-    HVSession() {
-        this->onProgress = NULL;
-        this->onOpen = NULL;
-        this->onStart = NULL;
-        this->onClose = NULL;
-        this->onError = NULL;
-        this->onStop = NULL;
-        this->onDebug = NULL;
+    HVSession() : onProgress(), onError(), onDebug(), onOpen(), onStart(), onStop(), onClose() {
         
         this->cpus = 1;
         this->memory = 256;
@@ -90,7 +91,6 @@ public:
         this->executionCap = 100;
         this->state = 0;
         this->internalID = 0;
-        this->cbObject = NULL;
         this->uuid = "";
         this->ip = "";
         this->key = "";
@@ -150,14 +150,13 @@ public:
     virtual int             update();
     virtual int             updateFast();
 
-    void *                  cbObject;
-    void (*onProgress)      (int, int, std::string, void *);
-    void (*onError)         (std::string, int, std::string, void *);
-    void (*onDebug)         (std::string, void *);
-    void (*onOpen)          (void *);
-    void (*onStart)         (void *);
-    void (*onStop)          (void *);
-    void (*onClose )        (void *);
+    callbackDebug           onDebug;
+    callbackVoid            onOpen;
+    callbackVoid            onStart;
+    callbackVoid            onStop;
+    callbackVoid            onClose;
+    callbackError           onError;
+    callbackProgress        onProgress;
     
 };
 
@@ -244,16 +243,16 @@ public:
     /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList );
     void                    detectVersion       ( );
-    int                     cernVMDownload      ( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * feedback );
+    int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback );
     int                     cernVMCached        ( std::string version, std::string * filename );
     std::string             cernVMVersion       ( std::string filename );
-    int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, HVPROGRESS_FEEDBACK * fb );
+    int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb );
     int                     buildContextISO     ( std::string userData, std::string * filename );
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
     
     /* Control functions (called externally) */
     int                     checkDaemonNeed ();
-    void                    setDownloadProvider( DownloadProvider * p );
+    void                    setDownloadProvider( DownloadProviderPtr p );
     
     /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
              the Hypervisor class in order to use the checkDaemonNeed() function. It's
@@ -263,7 +262,7 @@ public:
     
 private:
     int                     sessionID;
-    DownloadProvider *      downloadProvider;
+    DownloadProviderPtr     downloadProvider;
     
 };
 
@@ -272,7 +271,7 @@ private:
  */
 Hypervisor *                    detectHypervisor    ( );
 void                            freeHypervisor      ( Hypervisor * );
-int                             installHypervisor   ( std::string clientVersion, void(*cbProgress)(int, int, std::string, void*), void * cbData, DownloadProvider * provider );
+int                             installHypervisor   ( std::string clientVersion, callbackProgress progress, DownloadProviderPtr downloadProvider );
 std::string                     hypervisorErrorStr  ( int error );
 
 

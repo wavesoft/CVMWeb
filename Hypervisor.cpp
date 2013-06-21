@@ -175,35 +175,34 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
 /**
  * Download the specified CernVM version
  */
-int Hypervisor::cernVMDownload( std::string version, std::string * filename, HVPROGRESS_FEEDBACK * fb ) {
+int Hypervisor::cernVMDownload( std::string version, std::string * filename, ProgressFeedback * fb ) {
     string sURL = "http://cernvm.cern.ch/releases/ucernvm-" + version + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
     *filename = sOutput;
     if (file_exists(sOutput)) {
         return 0;
     } else {
-        return downloadFileEx(sURL, sOutput, fb, downloadProvider);
+        return downloadProvider->downloadFile(sURL, sOutput, fb);
     }
 };
 
 /**
  * Download the specified generic, compressed disk image
  */
-int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::string * filename, HVPROGRESS_FEEDBACK * fb ) {
+int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb ) {
     string sURL = url;
     int res;
     
-    // Create a custom HVPROGRESS_FEEDBACK in order to 
+    // Create a custom ProgressFeedback in order to 
     // use the higher part for the extracting.
-    HVPROGRESS_FEEDBACK nfb;
+    ProgressFeedback nfb;
     if (fb != NULL) {
         nfb.min = fb->min;
         nfb.max = fb->max - 1;
         nfb.total = fb->total;
-        nfb.data = fb->data;
         nfb.message = fb->message;
-        nfb.lastEventTime = fb->lastEventTime;
         nfb.callback = fb->callback;
+        nfb.__lastEventTime = fb->__lastEventTime;
     } else {
         nfb.callback = NULL;
     }
@@ -238,7 +237,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
         } else {
             
             // Notify progress
-            if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk", fb->data );
+            if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk" );
             res = decompressFile( sGZOutput, sOutput );
             if (res != HVE_OK) 
                 return res;
@@ -259,11 +258,11 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     // (Nothing is there, download it now)
     
     // Download the file to sGZOutput
-    res = downloadFileEx(sURL, sGZOutput, &nfb, downloadProvider);
+    res = downloadProvider->downloadFile(sURL, sGZOutput, &nfb);
     if (res != HVE_OK) return res;
     
     // Decompress
-    if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk", fb->data );
+    if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk" );
     res = decompressFile( sGZOutput, sOutput );
     if (res != HVE_OK) 
         return res;
@@ -305,7 +304,7 @@ Hypervisor::Hypervisor() {
     this->dirDataCache = this->dirData + "/cache";
     
     /* Unless overriden use the default downloadProvider */
-    this->downloadProvider = NULL;
+    this->downloadProvider.reset();
     
 };
 
@@ -505,7 +504,7 @@ int Hypervisor::checkDaemonNeed() {
 /**
  * Change the default download provider
  */
-void Hypervisor::setDownloadProvider( DownloadProvider * p ) { 
+void Hypervisor::setDownloadProvider( DownloadProviderPtr p ) { 
     this->downloadProvider = p;
 };
 
@@ -618,15 +617,15 @@ void freeHypervisor( Hypervisor * hv ) {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string, void*), void * cbData, DownloadProvider * downloadProvider ) {
+int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider ) {
     
     /**
      * Contact the information point
      */
     string requestBuf;
     CVMWA_LOG( "Info", "Fetching data" );
-    if (cbProgress!=NULL) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system", cbData);
-    int res = downloadTextEx( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf, NULL, downloadProvider );
+    if (cbProgress) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system");
+    int res = downloadProvider->downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
     if ( res != HVE_OK ) return res;
     
     /**
@@ -710,21 +709,20 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     /**
      * Prepare download feedback
      */
-    HVPROGRESS_FEEDBACK feedback;
+    ProgressFeedback feedback;
     feedback.total = 100;
     feedback.min = 2;
     feedback.max = 90;
     feedback.callback = cbProgress;
-    feedback.data = cbData;
     feedback.message = "Downloading hypervisor";
 
     /**
      * Download
      */
     string tmpHypervisorInstall = getTmpFile( kFileExt );
-    if (cbProgress!=NULL) (cbProgress)(2, 100, "Downloading hypervisor", cbData);
+    if (cbProgress) (cbProgress)(2, 100, "Downloading hypervisor");
     CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
-    res = downloadFileEx( data[kDownloadUrl], tmpHypervisorInstall, &feedback, downloadProvider );
+    res = downloadProvider->downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
     CVMWA_LOG( "Info", "    : Got " << res  );
     if ( res != HVE_OK ) return res;
     
@@ -733,7 +731,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
      */
     string checksum;
     sha256_file( tmpHypervisorInstall, &checksum );
-    if (cbProgress!=NULL) (cbProgress)(90, 100, "Validating download", cbData);
+    if (cbProgress) (cbProgress)(90, 100, "Validating download");
     CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kChecksum]  );
     if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
     
@@ -743,7 +741,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     #if defined(__APPLE__) && defined(__MACH__)
 
 		CVMWA_LOG( "Info", "Attaching" );
-		if (cbProgress!=NULL) (cbProgress)(94, 100, "Mounting hypervisor DMG disk", cbData);
+		if (cbProgress) (cbProgress)(94, 100, "Mounting hypervisor DMG disk");
 		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
 		if (res != 0) {
 			remove( tmpHypervisorInstall.c_str() );
@@ -755,7 +753,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
 		CVMWA_LOG( "Info", "Got disk '" << dskDev << "', volume: '" << dskVolume  );
     
-		if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
+		if (cbProgress) (cbProgress)(97, 100, "Starting installer");
 		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
 		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
 		if (res != 0) {
@@ -765,14 +763,14 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 			return HVE_EXTERNAL_ERROR;
 		}
 		CVMWA_LOG( "Info", "Detaching" );
-		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
+		if (cbProgress) (cbProgress)(100, 100, "Cleaning-up");
 		res = sysExec("hdiutil detach " + dskDev, NULL);
 		remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(_WIN32)
 
 		/* Start installer */
-		if (cbProgress!=NULL) (cbProgress)(97, 100, "Starting installer", cbData);
+		if (cbProgress) (cbProgress)(97, 100, "Starting installer");
 		CVMWA_LOG( "Info", "Starting installer" );
 
 		/* CreateProcess does not work because we need elevated permissions,
@@ -799,13 +797,13 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
 		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
 
 		/* Cleanup */
-		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
+		if (cbProgress) (cbProgress)(100, 100, "Cleaning-up");
 		remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(__linux__)
 
         /* Check if our environment has what the installer needs */
-		if (cbProgress!=NULL) (cbProgress)(92, 100, "Validating OS environment", cbData);
+		if (cbProgress) (cbProgress)(92, 100, "Validating OS environment");
         if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
             cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
 			remove( tmpHypervisorInstall.c_str() );
@@ -813,7 +811,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         }
 
         /* (1) If we have xdg-open, use it to prompt the user using the system's default GUI */
-		if (cbProgress!=NULL) (cbProgress)(94, 100, "Installing hypervisor", cbData);
+		if (cbProgress) (cbProgress)(94, 100, "Installing hypervisor");
         if (linuxInfo.hasXDGOpen) {
             string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
             res = system( cmdline.c_str() );
@@ -825,7 +823,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
         
             /* TODO: Currently we don't do it, but we must wait until the package is installed
              *       and then do hypervisor probing again. */
-     		if (cbProgress!=NULL) (cbProgress)(100, 100, "Passing control to the user", cbData);
+     		if (cbProgress) (cbProgress)(100, 100, "Passing control to the user");
             return HVE_SCHEDULED;
         
         /* (2) If we have GKSudo, do directly dpkg/yum install */
@@ -847,7 +845,7 @@ int installHypervisor( string versionID, void(*cbProgress)(int, int, std::string
     		}
 
             /* Cleanup */
-    		if (cbProgress!=NULL) (cbProgress)(100, 100, "Cleaning-up", cbData);
+    		if (cbProgress) (cbProgress)(100, 100, "Cleaning-up");
         	remove( tmpHypervisorInstall.c_str() );
     	
         /* (3) Otherwise create a bash script and prompt the user */

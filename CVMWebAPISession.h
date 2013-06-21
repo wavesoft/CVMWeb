@@ -98,13 +98,12 @@ public:
         if (this->session != NULL) {
 
             /* Callback bindings */
-            this->session->cbObject = (void *) this;
-            this->session->onProgress = &CVMWebAPISession::onProgress;
-            this->session->onDebug = &CVMWebAPISession::onDebug;
-            this->session->onError = &CVMWebAPISession::onError;
-            this->session->onOpen = &CVMWebAPISession::onOpen;
-            this->session->onStart = &CVMWebAPISession::onStart;
-            this->session->onClose = &CVMWebAPISession::onClose;
+            this->session->onProgress = boost::bind(&CVMWebAPISession::onProgress, this, _1, _2, _3);
+            this->session->onError = boost::bind(&CVMWebAPISession::onError, this, _1, _2, _3);
+            this->session->onDebug = boost::bind(&CVMWebAPISession::onDebug, this, _1);
+            this->session->onOpen = boost::bind(&CVMWebAPISession::onOpen, this);
+            this->session->onStart = boost::bind(&CVMWebAPISession::onStart, this);
+            this->session->onClose = boost::bind(&CVMWebAPISession::onClose, this);
             
         }
     }
@@ -186,13 +185,13 @@ public:
     void set_daemonControlled( bool controled );
     
     // Callback forwards
-    static void onProgress(int, int, std::string, void *);
-    static void onError(std::string, int, std::string, void *);
-    static void onDebug(std::string, void * );
-    static void onOpen( void * );
-    static void onStart( void * );
-    static void onClose( void * );
-    static void onStop( void * );
+    void onProgress( const size_t, const size_t, const std::string&);
+    void onError(const std::string&, const int, const std::string&);
+    void onDebug(const std::string&);
+    void onOpen();
+    void onStart();
+    void onClose();
+    void onStop();
     
     // Timer implementation
     FB::TimerPtr    probeTimer;

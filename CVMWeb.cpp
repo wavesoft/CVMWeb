@@ -103,7 +103,7 @@ void CVMWeb::onPluginReady()
     // this point.
 
     // Allocate a download provider that uses browser for I/O
-    browserDownloadProvider = NULL; //new CVMBrowserProvider( m_host );
+    browserDownloadProvider = DownloadProvider::Default(); //new CVMBrowserProvider( m_host );
     
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {
@@ -121,9 +121,6 @@ void CVMWeb::shutdown()
     // object should be released here so that this object can be safely
     // destroyed. This is the last point that shared_from_this and weak_ptr
     // references to this object will be valid
-
-	delete browserDownloadProvider;
-	browserDownloadProvider = NULL;
 
 }
 

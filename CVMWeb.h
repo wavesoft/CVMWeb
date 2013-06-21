@@ -66,7 +66,7 @@ public:
     CVMWebCrypto *                      crypto;
     
     // Browser-based download system
-    DownloadProvider *                  browserDownloadProvider;
+    DownloadProviderPtr                 browserDownloadProvider;
 
     /* Always windowless */
     virtual bool isWindowless() { return true; }

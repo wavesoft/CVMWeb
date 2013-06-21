@@ -138,6 +138,9 @@ public:
     // Common configuration class
     LocalConfig         config;    
     
+    // Event delegates
+    void        onInstallProgress( const size_t step, const size_t total, const std::string& msg );
+
 private:
     
     CVMWebWeakPtr       m_plugin;

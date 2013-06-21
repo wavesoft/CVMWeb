@@ -19,13 +19,14 @@
  */
 
 #include "DownloadProvider.h"
+#include "Hypervisor.h"
 
 DownloadProviderPtr systemProvider;
 
 /**
  * Get system-wide download provider singleton
  */
-DownloadProviderPtr _DownloadProvider::Default() {
+DownloadProviderPtr DownloadProvider::Default() {
     if (!systemProvider)
         systemProvider = boost::make_shared< CURLProvider >();
     return systemProvider;
@@ -34,7 +35,7 @@ DownloadProviderPtr _DownloadProvider::Default() {
 /**
  * Set system-wide default provider singleton
  */
-void _DownloadProvider::setDefault( const DownloadProviderPtr& provider ) {
+void DownloadProvider::setDefault( const DownloadProviderPtr& provider ) {
     systemProvider = provider;
 }
 

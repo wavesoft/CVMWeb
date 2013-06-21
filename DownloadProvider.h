@@ -21,7 +21,6 @@
 #ifndef DOWNLOADPROVIDERS_H
 #define DOWNLOADPROVIDERS_H
 
-#include "Hypervisor.h"
 #include "Utilities.h"
 
 #include <ostream>
@@ -54,10 +53,10 @@ typedef boost::function<void ( const size_t, const size_t, const std::string& )>
 /**
  * Forward decleration of pointer types
  */
-class _DownloadProvider; 
+class DownloadProvider; 
 class CURLProvider; 
-typedef boost::shared_ptr< _DownloadProvider >       DownloadProviderPtr;
-typedef boost::shared_ptr< CURLProvider >            CURLProviderPtr;
+typedef boost::shared_ptr< DownloadProvider >       DownloadProviderPtr;
+typedef boost::shared_ptr< CURLProvider >           CURLProviderPtr;
 
 /**
  * Progress feedback structure
@@ -81,12 +80,12 @@ typedef struct {
 /**
  * Base class of the download provider
  */
-class _DownloadProvider : public boost::enable_shared_from_this< _DownloadProvider > {
+class DownloadProvider : public boost::enable_shared_from_this< DownloadProvider > {
 public:
     
     // Constructor & Destructor
-    _DownloadProvider()          { };
-    virtual ~_DownloadProvider() { };
+    DownloadProvider()          { };
+    virtual ~DownloadProvider() { };
     
     // Public interface
     virtual int                 downloadFile( const std::string &URL, const std::string &destination, ProgressFeedback * feedback = NULL   ) = 0;
@@ -101,11 +100,11 @@ public:
 /**
  * Interface to the CURL provider
  */
-class CURLProvider : public _DownloadProvider {
+class CURLProvider : public DownloadProvider {
 public:
 
     // Constructor & Destructor
-    CURLProvider() : _DownloadProvider(), feedbackPtr(), fStream(), sStream() {
+    CURLProvider() : DownloadProvider(), feedbackPtr(), fStream(), sStream() {
         curl = curl_easy_init();
         if (curl) {
             curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);

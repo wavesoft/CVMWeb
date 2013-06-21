@@ -27,6 +27,7 @@
 #include "DOM/Document.h"
 #include "global/config.h"
 
+#include "DownloadProvider.h"
 #include "Utilities.h"
 #include "Hypervisor.h"
 #include "LocalConfig.h"
@@ -65,7 +66,7 @@ public:
     /**
      * Update the authorized domain keystore from out webserers.
      */
-    int     updateAuthorizedKeystore    ( DownloadProvider * );
+    int     updateAuthorizedKeystore    ( DownloadProviderPtr );
 
     /**
      * Verify the authenticity of the contextualization information received form the given domain
