@@ -95,12 +95,10 @@ size_t __curl_headerfunc( void *ptr, size_t size, size_t nmemb, CURLProvider * s
     
     // Move data to std::String
     std::string cppString( (char *) ptr, dataLen );
-    size_t iLenPos = cppString.find("Content-Length: ");
-    if (iLenPos != std::string::npos) {
-        iLenPos += 16;
-        size_t iEndPos = cppString.find("\r\n", iLenPos);
-        CVMWA_LOG("Debug", "Found Content-Length: '" << cppString.substr(iLenPos, iEndPos-iLenPos ) << "'");
-        self->maxStreamSize = ston<size_t>( cppString.substr(iLenPos, iEndPos-iLenPos ) );
+    if ((cppString.length() > 16) &&  (cppString.substr(0,16).compare("Content-Length: ") == 0)) {
+        cppString = cppString.substr(16, cppString.length()-18 );
+        CVMWA_LOG("Debug", "Found Content-Length: '" << cppString << "'");
+        self->maxStreamSize = ston<size_t>( cppString );
     }
     
     return dataLen;
@@ -154,11 +152,11 @@ int CURLProvider::downloadFile( const std::string& url, const std::string& desti
         feedback->__lastEventTime = getMillis();
     
     // Setup callbacks
-    CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
+    //CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, __curl_headerfunc);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_datacb_file);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, sharedPtr.get() );
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, sharedPtr.get() );
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, this); //sharedPtr.get() );
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, this); //sharedPtr.get() );
     
     // Open local file
     CVMWA_LOG("Debug", "Oppening local output stream '" << destination << "'");
@@ -202,11 +200,11 @@ int CURLProvider::downloadText( const std::string& url, std::string * destinatio
         feedback->__lastEventTime = getMillis();
     
     // Setup callbacks
-    CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
+    //CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, __curl_headerfunc);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_datacb_string);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, sharedPtr.get() );
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, sharedPtr.get() );
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, this); //sharedPtr.get() );
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, this); //sharedPtr.get() );
     
     // Reset string stream
     CVMWA_LOG("Debug", "Resetting string stream");

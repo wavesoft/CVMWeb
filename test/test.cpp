@@ -35,9 +35,9 @@ int main( int argc, char ** argv ) {
     fb.message = "Testing";
     fb.callback = &cb;
     
-    DownloadProviderPtr dp = _DownloadProvider::Default();
+    DownloadProviderPtr dp = DownloadProvider::Default();
     std::string buf = "";
-    dp->downloadFile( "https://cernvm.cern.ch/releases/19/cernvm-basic-2.7.1-2-3-x86.hdd.gz", "test.hdd.gz", &fb );
+    dp->downloadFile( "http://localhost/planetME/backup-drunk-1.tgz", "test.hdd.gz", &fb );
     
     std::cout << "Got buffer: '" << buf << "'" << std::endl;
     

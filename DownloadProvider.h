@@ -80,7 +80,7 @@ typedef struct {
 /**
  * Base class of the download provider
  */
-class DownloadProvider : public boost::enable_shared_from_this< DownloadProvider > {
+class DownloadProvider {
 public:
     
     // Constructor & Destructor
