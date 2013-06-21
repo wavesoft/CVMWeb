@@ -83,7 +83,7 @@ typedef boost::function< void (const std::string&, const int, const std::string&
 class HVSession {
 public:
     
-    HVSession() : onProgress(), onError(), onDebug(), onOpen(), onStart(), onStop(), onClose() {
+    HVSession() : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress() {
         
         this->cpus = 1;
         this->memory = 256;

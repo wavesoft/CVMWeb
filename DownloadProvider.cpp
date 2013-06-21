@@ -162,6 +162,7 @@ int CURLProvider::downloadFile( const std::string& url, const std::string& desti
     
     // Open local file
     CVMWA_LOG("Debug", "Oppening local output stream '" << destination << "'");
+    fStream.clear();
     fStream.open( destination.c_str(), std::ofstream::binary );
     if (fStream.fail()) {
         CVMWA_LOG("Error", "OFStream error" );
@@ -175,11 +176,11 @@ int CURLProvider::downloadFile( const std::string& url, const std::string& desti
         return HVE_IO_ERROR;
     } else {
         CVMWA_LOG("Info", "cURL Download completed" );
-        return HVE_OK;
     }
     
     // Close stream
     fStream.close();
+    return HVE_OK;
     
 }
 

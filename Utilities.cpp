@@ -811,7 +811,7 @@ std::string urlEncode ( const std::string &s ) {
         {
             escaped.append("%");
             char buf[3];
-            sprintf(buf, "%.2x", s[i]);
+            sprintf(buf, "%.2X", s[i]);
             escaped.append(buf);
         }
     }
