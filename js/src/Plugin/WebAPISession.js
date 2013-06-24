@@ -16,14 +16,6 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     // Accessible function
     this.autoUpdate = _NS_.autoUpdate;
     
-    // If we are activating debug logging, hook the 'debug' event
-    // to the console log.
-    if (_NS_.debugLogging) {
-        this.__session.addEventListener('debug', function(log) {
-            console.log("[Debug] " + log);
-        });
-    }
-    
     // Local function to check for updates in the daemon
     this.__checkDaemonUpdates = function() {
         

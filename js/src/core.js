@@ -11,18 +11,28 @@ var __pluginSingleton = null,
  * The user can specify his own (more beautiful) confirmation dialog using
  * the .setConfirmFunction( ).
  */
-var confirmFunction = function( message, callback ) { callback( window.confirm(message) ); };
+var confirmFunction = _NS_.__globalConfirm = function( message, callback ) { 
+    if (!callback) {
+        if (__pluginSingleton!=null) __pluginSingleton.confirmCallback( window.confirm(message) );
+    } else {
+        callback( window.confirm(message) ); 
+    }
+};
 _NS_.setConfirmFunction = function( customFunction ) {
     
     // Small script that will forward callback messages from
     // the user's function only once! 
     var messagePending = false;
-    confirmFunction = function(message, callback) {
+    confirmFunction = _NS_.__globalConfirm = function(message, callback) {
         messagePending = true;
         customFunction( message, function(response) {
             if (messagePending) {
                 messagePending = false;
-                callback(response);
+                if (!callback) {
+                    if (__pluginSingleton!=null) __pluginSingleton.confirmCallback( response );
+                } else {
+                    callback(response);
+                }
             }
         });
     };
@@ -47,6 +57,81 @@ _NS_.setAlertFunction = function( customFunction ) { alertFunction = customFunct
  */
 var globalErrorHandler = function(msg, code) { };
 _NS_.setGlobalErrorHandler = function( customFunction ) { globalErrorHandler = customFunction; };
+
+/**
+ * Global progress handlers
+ */
+var globalProgressBegin = function() { },
+    globalProgressEnd = function() { },
+    globalProgressEvent = function(percent, message) { };
+_NS_.setGlobalProgressHandlers = function( onProgress, onBegin, onEnd ) {
+    if (onProgress) globalProgressEvent=onProgress;
+    if (onBegin) globalProgressBegin=onBegin;
+    if (onEnd) globalProgressEnd=onEnd;
+};
+
+/**
+ * High-level progress forwarding functions
+ */
+var currentProgressTotal = 0,
+    lastProgressID = 0,
+    progressGroups = { },
+    completeTimer = 0,
+    notifyGlobalBeginProgress = function( total ) {
+        
+        // Fore ProgressBegin if that's a new progress event
+        if (currentProgressTotal == 0) {
+            if (_NS_.debugLogging) console.log("[Progress] Started");
+            globalProgressBegin();
+        }
+        
+        // Abort globalProgressEnd event if it hasn't timed out yet
+        if (completeTimer != 0) { 
+            clearTimeout(completeTimer); 
+            completeTimer=0
+        };
+        
+        // Stack total progress
+        currentProgressTotal+=total;
+        
+        // Allocate a progress group
+        var id = ++lastProgressID;
+        progressGroups['i'+id] = {'t':Number(total),'s': 0};
+        return id;
+        
+    }, notifyGlobalEndProgress = function( i ) {
+        
+        // Update the total progress from the progress group
+        currentProgressTotal-=progressGroups['i'+i].t;
+        delete progressGroups['i'+i];
+
+        // Check if that was the last progress
+        if (currentProgressTotal == 0) {
+            
+            // Fire globalProgressEnd with a delay of 100ms, giving
+            // enough time for the second progress event to jump-in
+            
+            if (completeTimer == 0) {
+                completeTimer = setTimeout(function() {
+                    completeTimer = 0;
+                    if (_NS_.debugLogging) console.log("[Progress] Completed");
+                    globalProgressEnd();
+                }, 100);
+            }
+        }
+        
+    }, notifyGlobalProgress = function( step, total, message, i ) {
+        var s=0,t=0;
+        progressGroups['i'+i].s = Number(step);
+        for (var k in progressGroups) {
+            if (k.substr(0,1) == 'i') {
+                s+= progressGroups['i'+i].s;
+                t+= progressGroups['i'+i].t;
+            }
+        }
+        if (_NS_.debugLogging) console.log("[Progress] " + s + "/" + t + ": " + message);
+        globalProgressEvent( Math.round(100 * s / t), message );
+    }
 
 /**
  * Shorthand function to call both the global error handler and the user-specified
@@ -134,7 +219,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                         if (confirmed) {
                             // Check the browser
                             if (BrowserDetect.browser == "Firefox") {
-                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.1.xpi";
+                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.2.xpi";
                             } else if (BrowserDetect.browser == "Chrome") {
                                 window.location = "https://chrome.google.com/webstore/detail/cernvm-web-api/iakpghcolokcngbhjiihjcomioihjnfm";
                             } else {

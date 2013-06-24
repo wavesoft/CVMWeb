@@ -71,8 +71,10 @@ print "Compressing...";
 if ($? == 0) {
     print "ok\n";
 } else {
+    system("cat -n ~tmp-dump.js");
     print "failed\n";
 }
 
 # Remove temp file
-unlink "~tmp-dump.js";
+rename "~tmp-dump.js", "cvmwebapi-$VERSION-src.js";
+

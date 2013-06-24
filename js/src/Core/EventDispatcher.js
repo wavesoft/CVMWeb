@@ -9,7 +9,7 @@ _NS_.EventDispatcher = function(e) {
 _NS_.EventDispatcher.prototype.__fire = function( name ) {
     var args = Array.prototype.slice.call(arguments),
         name = args.shift();
-    window.console.log("Firing",name,"(", args, ")");
+    if (_NS_.debugLogging) console.log("Firing",name,"(", args, ")");
     if (this.events[name] == undefined) return;
     var callbacks = this.events[name];
     for (var i=0; i<callbacks.length; i++) {
