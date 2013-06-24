@@ -228,6 +228,17 @@ int CVMWebAPISession::open( const FB::variant& o ){
     return HVE_SCHEDULED;
 }
 
+/**
+ * Helper for thread_open, to check if the user was granted permissions
+ * to override particular variables from javascript.
+ */
+bool __canOverride( const std::string& vname, HVSession * sess ) {
+    return (std::find(sess->overridableVars.begin(), sess->overridableVars.end(), vname) != sess->overridableVars.end());
+}
+
+/**
+ * Asynchronous function to open a new session
+ */
 void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     int cpus = this->session->cpus;
     int ram = this->session->memory;
@@ -235,24 +246,26 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     int flags = this->session->flags;
     std::string ver = this->session->version;
     int ans = 0;
+    
+    // If the user has provided an object, process overridable parameters
     if (oConfigHash.is_of_type<FB::JSObjectPtr>()) {
         FB::JSObjectPtr o = oConfigHash.cast<FB::JSObjectPtr>();
         
-        if (o->HasProperty("cpus")) cpus = o->GetProperty("cpus").convert_cast<int>();
-        if (o->HasProperty("ram")) ram = o->GetProperty("ram").convert_cast<int>();
-        if (o->HasProperty("disk")) disk = o->GetProperty("disk").convert_cast<int>();
+        // Check basic overridable: options
+        if (o->HasProperty("cpus")  && __canOverride("cpus", this->session)) cpus = o->GetProperty("cpus").convert_cast<int>();
+        if (o->HasProperty("ram")   && __canOverride("ram", this->session))  ram = o->GetProperty("ram").convert_cast<int>();
+        if (o->HasProperty("disk")  && __canOverride("disk", this->session)) disk = o->GetProperty("disk").convert_cast<int>();
         
-        // Check for flags
-        if (o->HasProperty("flags")) {
+        // Check for overridable: flags
+        if (o->HasProperty("flags") && __canOverride("flags", this->session)) {
             try {
                 flags = o->GetProperty("flags").convert_cast<int>();
             } catch ( const FB::bad_variant_cast &) {
             }
         }
         
-        // If we use 'disk' field instead of 'version', we instruct the plugin to 
-        // use the classic, disk-based installation.
-        if (o->HasProperty("diskURL")) {
+        // Check for overridable: diskURL
+        if (o->HasProperty("diskURL") && __canOverride("diskURL", this->session)) {
             ver = o->GetProperty("diskURL").convert_cast<std::string>();
             flags |= HVF_DEPLOYMENT_HDD;
             
@@ -268,18 +281,16 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
             if (is64bit)
                 flags |= HVF_SYSTEM_64BIT;
             
-        } else if (o->HasProperty("version")) {
+        // Check for overridable: version
+        } else if (o->HasProperty("version") && __canOverride("version", this->session)) {
             ver = o->GetProperty("version").convert_cast<std::string>();
             if (!isSanitized(&ver, "01234567890.")) ver=DEFAULT_CERNVM_VERSION;
-            flags |= HVF_SYSTEM_64BIT; // Micro is currently only 64-bit
-            
-        } else {
-            ver = DEFAULT_CERNVM_VERSION;
             flags |= HVF_SYSTEM_64BIT; // Micro is currently only 64-bit
 
         }
     }
     
+    // Open session with the given flags
     ans = this->session->open( cpus, ram, disk, ver, flags );
     if (ans == 0) {
         this->fire_open();
@@ -289,11 +300,12 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
         // Close session in case of a problem
         this->session->close();
         
+        // Then fire errors
         this->fire_openError(hypervisorErrorStr(ans), ans);
         this->fire_error(hypervisorErrorStr(ans), ans, "open");
     }
     
-    /* The needs of having a daemon might have changed */
+    // The requirements of having a daemon might have changed
     CVMWebPtr p = this->getPlugin();
     if (p->hv != NULL) p->hv->checkDaemonNeed();
     

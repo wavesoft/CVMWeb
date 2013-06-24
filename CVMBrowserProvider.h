@@ -74,6 +74,11 @@ private:
     FB::BrowserHostPtr				m_host;
     
     /**
+     * Local delegates
+     */
+    void AsyncSessionRequest        ( const FB::BrowserStreamRequest& req, FB::BrowserStreamPtr * streamPtr );
+    
+    /**
      * Locking mechanism to make startDownload synchronous
      */
     boost::condition_variable       m_cond;

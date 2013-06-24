@@ -186,11 +186,55 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, Pro
 };
 
 /**
+ * Decompress phase
+ */
+int __diskExtract( const std::string& sGZOutput, const std::string& checksum, const std::string& sOutput, ProgressFeedback * fb ) {
+    std::string sChecksum;
+    int res;
+    
+    // Validate file integrity
+    sha256_file( sGZOutput, &sChecksum );
+    if (sChecksum.compare( checksum ) != 0) {
+        
+        // Invalid checksum, remove file
+        CVMWA_LOG("Info", "Invalid local checksum (" << sChecksum << ")");
+        remove( sGZOutput.c_str() );
+        
+        // (Let the next block re-download the file)
+        return HVE_SCHEDULED;
+        
+    } else {
+        
+        // Notify progress
+        if ((fb != NULL) && (fb)) fb->callback( fb->max, fb->max, "Extracting compressed disk" );
+        CVMWA_LOG("Info", "File exists and checksum valid, decompressing " << sGZOutput << " to " << sOutput );
+        res = decompressFile( sGZOutput, sOutput );
+        if (res != HVE_OK) 
+            return res;
+    
+        // Delete sGZOutput if sOutput is there
+        if (file_exists(sOutput)) {
+            CVMWA_LOG("Info", "File is in place" );
+            remove( sGZOutput.c_str() );
+        } else {
+            CVMWA_LOG("Info", "Could not find the extracted file!" );
+            return HVE_EXTERNAL_ERROR;
+        }
+    
+        // We got the filename
+        return HVE_OK;
+
+    }
+}
+
+/**
  * Download the specified generic, compressed disk image
  */
 int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb ) {
     string sURL = url;
     int res;
+    
+    CVMWA_LOG("Info", "Downloading disk image from " << url);
     
     // Create a custom ProgressFeedback in order to 
     // use the higher part for the extracting.
@@ -202,8 +246,6 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
         nfb.message = fb->message;
         nfb.callback = fb->callback;
         nfb.__lastEventTime = fb->__lastEventTime;
-    } else {
-        nfb.callback = NULL;
     }
     
     // Calculate the SHA256 checksum of the URL
@@ -213,10 +255,12 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     // Use the checksum as index
     string sGZOutput = this->dirDataCache + "/disk-" + sChecksum + ".vdi.gz";
     string sOutput = this->dirDataCache + "/disk-" + sChecksum + ".vdi";
+    CVMWA_LOG("Info", "Target disk file " << sGZOutput);
 
     // Check if we have the uncompressed image in place
     *filename = sOutput;
     if (file_exists(sOutput)) {
+        CVMWA_LOG("Info", "Uncompressed file already exists");
         return HVE_ALREADY_EXISTS;
 
     }
@@ -224,57 +268,19 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     // Try again if we failed/aborted the image decompression
     if (file_exists(sGZOutput)) {
         
-        // Validate file integrity
-        sha256_file( sGZOutput, &sChecksum );
-        if (sChecksum.compare( checksum ) != 0) {
-            
-            // Invalid checksum, remove file
-            remove( sGZOutput.c_str() );
-            
-            // (Let the next block re-download the file)
-            
-        } else {
-            
-            // Notify progress
-            if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk" );
-            res = decompressFile( sGZOutput, sOutput );
-            if (res != HVE_OK) 
-                return res;
-        
-            // Delete sGZOutput if sOutput is there
-            if (file_exists(sOutput)) {
-                remove( sGZOutput.c_str() );
-            } else {
-                return HVE_EXTERNAL_ERROR;
-            }
-        
-            // We got the filename
-            return HVE_OK;
+        // Check decompressing file
+        res = __diskExtract( sGZOutput, checksum, sOutput, fb );
+        if (res != HVE_SCHEDULED) return res;
 
-        }
     }
     
-    // (Nothing is there, download it now)
-    
     // Download the file to sGZOutput
+    CVMWA_LOG("Info", "Performing download from '" << sURL << "' to '" << sGZOutput << "'" );
     res = downloadProvider->downloadFile(sURL, sGZOutput, &nfb);
     if (res != HVE_OK) return res;
     
-    // Decompress
-    if ((fb != NULL) && (fb->callback != NULL)) fb->callback( fb->max, fb->max, "Extracting compressed disk" );
-    res = decompressFile( sGZOutput, sOutput );
-    if (res != HVE_OK) 
-        return res;
-    
-    // Delete sGZOutput if sOutput is there
-    if (file_exists(sOutput)) {
-        remove( sGZOutput.c_str() );
-    } else {
-        return HVE_EXTERNAL_ERROR;
-    }
-    
-    // We got the filename
-    return HVE_OK;
+    // Validate & Decompress
+    return __diskExtract( sGZOutput, checksum, sOutput, fb );
 
 };
 

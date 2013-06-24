@@ -113,6 +113,7 @@ public:
     std::string             key;
     std::string             name;
     std::string             userData;
+    std::vector<std::string> overridableVars;
     
     int                     cpus;
     int                     memory;

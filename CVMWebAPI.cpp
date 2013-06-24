@@ -430,6 +430,11 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         
     }
     
+    /* Get the overridable vars */
+    session->overridableVars.clear();
+    if (jsonHash.find("canOverride") != jsonHash.end())
+        explode(jsonHash["canOverride"].convert_cast<string>(), ',', &session->overridableVars );
+    
     CVMWA_LOG("Debug", "userData=" << session->userData);
     CVMWA_LOG("Debug", "cpus=" << session->cpus);
     CVMWA_LOG("Debug", "executionCap=" << session->executionCap);

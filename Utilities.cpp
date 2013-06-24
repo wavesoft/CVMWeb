@@ -818,6 +818,18 @@ std::string urlEncode ( const std::string &s ) {
     return escaped;
 }
 
+/**
+ * Explode the given string on the given character as separator
+ */
+void explode( std::string const &input, char sep, std::vector<std::string> * output ) {
+    std::istringstream buffer(input);
+    std::string temp;
+    while (std::getline(buffer, temp, sep))
+        output->push_back(temp);
+}
+
+// Initialize template
+
 #ifdef __linux__
 
 /**

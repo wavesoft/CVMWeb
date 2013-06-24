@@ -243,6 +243,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         /* (3) Download the disk image specified by the URL */
         string masterDisk;
         if (this->onProgress) (this->onProgress)(20, 110, "Downloading VM Disk");
+        CVMWA_LOG("Info", "Downloading VM '" << cvmVersion << "' (SHA256=" << this->diskChecksum << ") to " << masterDisk);
         ans = this->host->diskImageDownload( cvmVersion, this->diskChecksum, &masterDisk, &feedback );
         if (ans < HVE_OK) {
             this->state = STATE_ERROR;
@@ -291,6 +292,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         
         /* If we must attach the disk, do it now */
         if (needsUpdate) {
+            CVMWA_LOG("Info", "Disk needs to be updated");
             
             /* Get a list of the disks in order to properly compute multi-attach */
             string masterDiskID = "\"" + masterDisk + "\"";
@@ -303,6 +305,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                     if ( (iface["Type"].compare("multiattach") == 0) && (iface["Parent UUID"].compare("base") == 0) && (iface["Location"].compare(masterDisk) == 0) ) {
                         
                         /* Use the master UUID instead of the filename */
+                        CVMWA_LOG("Info", "Found master with UUID " << iface["UUID"]);
                         masterDiskID = "{" + iface["UUID"] + "}";
                         break;
                         

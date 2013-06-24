@@ -213,6 +213,12 @@ int                                                 decompressFile  ( std::strin
  */
 std::string                                         urlEncode       ( const std::string& url );
 
+/**
+ * Explode function
+ */
+void                                                explode         ( std::string const &input, char sep, std::vector<std::string> * output );
+
+
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
 /* ======================================================== */

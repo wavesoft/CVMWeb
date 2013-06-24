@@ -66,6 +66,14 @@ bool CVMBrowserProvider::onStreamFailedOpen(FB::StreamFailedOpenEvent *evt, FB::
 }
 
 /**
+ * Asynchronous call to the system 
+ */
+void CVMBrowserProvider::AsyncSessionRequest( const FB::BrowserStreamRequest& req, FB::BrowserStreamPtr * streamPtr ) {
+    FB::BrowserStreamPtr stream(m_host->createStream(req, false));
+    *streamPtr = stream;
+}
+
+/**
  * Download a string using BrowserStreams
  */
 int CVMBrowserProvider::downloadText( const std::string& url, std::string * destination, ProgressFeedback * feedback ) {
@@ -88,16 +96,20 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
 
     // Initiate asynchronous download
     CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
+    FB::BrowserStreamPtr stream;
     FB::BrowserStreamRequest req(url, "GET");
     req.setCacheable(true);
     req.setEventSink( this->FB::DefaultBrowserStreamHandler::shared_from_this() );
-    FB::BrowserStreamPtr stream(m_host->createStream(req, false));
+    m_host->CallOnMainThread( boost::bind( &CVMBrowserProvider::AsyncSessionRequest, this, req, &stream ) );
 
     // Wait for mutex
     CVMWA_LOG("Debug", "Waiting for condition variable");
     boost::unique_lock<boost::mutex> lock(m_mutex);
     m_cond.wait(lock);
     CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+
+    // Release browser stream
+    stream.reset();
 
     // Check if download was successful
     if (this->returnCode != 0) {
@@ -143,16 +155,20 @@ int CVMBrowserProvider::downloadFile( const std::string& url, const std::string&
 
     // Initiate asynchronous download
     CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
+    FB::BrowserStreamPtr stream;
     FB::BrowserStreamRequest req(url, "GET");
     req.setCacheable(true);
     req.setEventSink( this->FB::DefaultBrowserStreamHandler::shared_from_this() );
-    FB::BrowserStreamPtr stream(m_host->createStream(req, false));
+    m_host->CallOnMainThread( boost::bind( &CVMBrowserProvider::AsyncSessionRequest, this, req, &stream ) );
 
     // Wait for mutex
     CVMWA_LOG("Debug", "Waiting for condition variable");
     boost::unique_lock<boost::mutex> lock(m_mutex);
     m_cond.wait(lock);
     CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+
+    // Release browser stream
+    stream.reset();
     
     // Close stream
     fStream.close();
