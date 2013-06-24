@@ -48,6 +48,43 @@ using namespace std;
 \** =========================================== **/
 
 /**
+ * Delegate function to forward progress events to a javascript object
+ */
+class ProgressDelegate {
+public:
+
+    FB::JSObjectPtr         jsFunction;
+    bool                    available;
+
+    /**
+     * Initialize delegate class
+     */
+    ProgressDelegate( const FB::variant& o ) {
+        available = false;
+        if (IS_CB_AVAILABLE(o)) {
+            available = true;
+            jsFunction = o.cast<FB::JSObjectPtr>();
+        }
+    }
+
+    /**
+     * Delegate function
+     */
+    void fire(const size_t v, const size_t tot, const std::string& msg) {
+        if (available) 
+            jsFunction->InvokeAsync("", FB::variant_list_of(v)(tot)(msg));
+    }
+
+    /**
+     * Get access to the function
+     */
+    callbackProgress getFunction() {
+        return boost::bind( &ProgressDelegate::fire, this, _1, _2, _3 );
+    }
+
+};
+
+/**
  * Forward progress events
  */
 void CVMWebAPI::onInstallProgress( const size_t step, const size_t total, const std::string& msg ) {
@@ -184,18 +221,21 @@ FB::variant CVMWebAPI::checkSession( const FB::variant& vm, const FB::variant& s
 /**
  * Request a new session using the safe URL
  */
-FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb ) {
+FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB ) {
     
     /* Block requests when reached throttled state */
-    if (this->throttleBlock) return CVME_ACCESS_DENIED;
-    
+    if (this->throttleBlock) {
+        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+        return CVME_ACCESS_DENIED;
+    }
+
     /* Check for invalid plugin */
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) return CVME_UNSUPPORTED;
     
     /* Schedule thread exec */
-    boost::thread t(boost::bind(&CVMWebAPI::requestSafeSession_thread,
-         this, vmcpURL, successCb, failureCb));
+    lastThread = boost::thread(boost::bind(&CVMWebAPI::requestSafeSession_thread,
+         this, vmcpURL, successCb, failureCb, progressCB));
 
     /* Scheduled for creation */
     return HVE_SCHEDULED;
@@ -205,7 +245,7 @@ FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB:
 /**
  * The thread of requesting new session
  */
-void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb ) {
+void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB ) {
 
     /* Handle request */
     CVMWebPtr p = this->getPlugin();
@@ -214,6 +254,10 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         return;
     }
 
+    /* Create a progress delegate */
+    ProgressDelegate onProgress( progressCB );
+    onProgress.fire( 1, 7, "Initializing hypervisor" );
+
     /* Wait for delaied hypervisor initiation */
     p->hv->waitTillReady();
 
@@ -221,6 +265,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     std::string domain = this->getDomainName();
 
     /* Try to update authorized keystore if it's in an invalid state */
+    onProgress.fire( 2, 7, "Initializing crypto store" );
     if (!isDomainPrivileged()) {
         
         // Trigger update in the keystore (if it's nessecary)
@@ -241,6 +286,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     }
     
     /* Validate arguments */
+    onProgress.fire( 3, 7, "Contacting configuration server" );
     std::string sURL = vmcpURL.convert_cast<std::string>();
     if (sURL.empty()) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
@@ -287,6 +333,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     };
     
     /* Validate signature */
+    onProgress.fire( 4, 7, "Validating server identity" );
     res = p->crypto->signatureValidate( domain, salt, jsonHash );
     if (res < 0) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
@@ -307,7 +354,8 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     
     /* Check if the session is new and prompt the user */
     if (res == 0) {
-        
+        onProgress.fire( 5, 7, "Starting new session" );
+
         // Newline-specific split
         string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine. This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
 
@@ -315,6 +363,9 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         // (It is safe to use unsafe confirm, since we trust the domain - Therefore we also get rid of all the platform-dependant code)
         if (!this->unsafeConfirm(msg)) {
             
+            /* If we were aborted due to shutdown, exit */
+            if (this->shuttingDown) return;
+
             /* Manage throttling */
             if ((getMillis() - this->throttleTimestamp) <= THROTTLE_TIMESPAN) {
                 if (++this->throttleDenies >= THROTTLE_TRIES)
@@ -324,6 +375,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
                 this->throttleTimestamp = getMillis();
             }
             
+            onProgress.fire( 7, 7, "User aborted" );
             if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
             return;
             
@@ -338,6 +390,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     }
     
     /* Open/resume session */
+    onProgress.fire( 6, 7, "Oppening session" );
     HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
     if (session == NULL) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
@@ -392,6 +445,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     CVMWA_LOG("Debug", "diskChecksum=" << session->diskChecksum);
     
     /* Call success callback */
+    onProgress.fire( 7, 7, "Session ready" );
     boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session );
     if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
         
@@ -399,7 +453,6 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     p->hv->checkDaemonNeed();
     
 }
-
 
 /**
  * Create and return a session object. 
@@ -551,9 +604,28 @@ int CVMWebAPI::installHV( ) {
 };
 
 /**
+ * Javascript confirmation callback for unsafeConfirm + CVM library
+ */
+void CVMWebAPI::confirmCallback( const FB::variant& status ) {
+    if (!status.is_of_type<bool>()) return;
+
+    // Fetch mapping info
+    bool result = status.convert_cast<bool>();
+
+    // Lookup callback info
+    {
+        boost::lock_guard<boost::mutex> lock(confirmMutex);
+        confirmResult = result;
+    }
+    confirmCond.notify_one();
+
+};
+
+/**
  * Show a confirmation dialog using browser's API
  */
 bool CVMWebAPI::unsafeConfirm( std::string msg ) {
+    CVMWebPtr p = this->getPlugin();
     FB::variant f;
     
     // Retrieve a reference to the DOM Window
@@ -565,39 +637,72 @@ bool CVMWebAPI::unsafeConfirm( std::string msg ) {
         // Get window reference
         FB::JSObjectPtr jsWin = window->getProperty<FB::JSObjectPtr>("window");
         
-        /*
-        // Get a reference to the confirm function
-        f = jsWin->GetProperty("confirm");
-        FB::JSObjectPtr jsConfirm = f.convert_cast<FB::JSObjectPtr>();
+        // Check if we have CVM library in place
+        if (jsWin->HasProperty("CVM")) {
 
-        // Get a reference to Function object
-        f = jsWin->GetProperty("Function");
-        FB::JSObjectPtr jsFunction = f.convert_cast<FB::JSObjectPtr>();
+            // Get a reference to CVM
+            f = jsWin->GetProperty("CVM");
+            FB::JSObjectPtr jsCVM = f.convert_cast<FB::JSObjectPtr>();
 
-        // Get a reference fo Function.prototype object
-        f = jsFunction->GetProperty("prototype");
-        FB::JSObjectPtr jsFunctionProto = f.convert_cast<FB::JSObjectPtr>();
+            // Fire callback
+            jsCVM->InvokeAsync("__globalConfirm", FB::variant_list_of(msg));
 
-        // Get a reference to Object object
-        f = jsWin->GetProperty("Object");
-        FB::JSObjectPtr jsObject = f.convert_cast<FB::JSObjectPtr>();
+            // Cancel previous confirm
+            if (pendingConfirm) {
+                {
+                    boost::lock_guard<boost::mutex> lock(confirmMutex);
+                    confirmResult = false;
+                }
+                confirmCond.notify_one();
+            }
+
+            // Lock while waiting for response
+            pendingConfirm = true;
+            confirmResult = false;
+            boost::unique_lock<boost::mutex> lock(confirmMutex);
+            confirmCond.wait(lock);
+            pendingConfirm = false;
+
+            // Return status
+            return confirmResult;
+
+        } else {
+
+            /*
+            // Get a reference to the confirm function
+            f = jsWin->GetProperty("confirm");
+            FB::JSObjectPtr jsConfirm = f.convert_cast<FB::JSObjectPtr>();
+
+            // Get a reference to Function object
+            f = jsWin->GetProperty("Function");
+            FB::JSObjectPtr jsFunction = f.convert_cast<FB::JSObjectPtr>();
+
+            // Get a reference fo Function.prototype object
+            f = jsFunction->GetProperty("prototype");
+            FB::JSObjectPtr jsFunctionProto = f.convert_cast<FB::JSObjectPtr>();
+
+            // Get a reference to Object object
+            f = jsWin->GetProperty("Object");
+            FB::JSObjectPtr jsObject = f.convert_cast<FB::JSObjectPtr>();
     
-        // 1) First make sure alert's toString is not directly hijacked. However:
-        //    - Function.prototype.toString might be hijacked
-        if (jsObject->HasProperty("toString")) {
-            return false;
-        }
+            // 1) First make sure alert's toString is not directly hijacked. However:
+            //    - Function.prototype.toString might be hijacked
+            if (jsObject->HasProperty("toString")) {
+                return false;
+            }
     
-        // Now make sure (using toString) that is native code
-        string fType = jsConfirm->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
-        CVMWA_LOG("Debug", "Function is '" << fType << "'");
-        if (fType.find("[native code]") == string::npos)
-            return false;
-        */
+            // Now make sure (using toString) that is native code
+            string fType = jsConfirm->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
+            CVMWA_LOG("Debug", "Function is '" << fType << "'");
+            if (fType.find("[native code]") == string::npos)
+                return false;
+            */
     
-        // Invoke confirm with some text
-        return jsWin->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
+            // Invoke confirm with some text
+            return jsWin->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
         
+        }
+
     } else {
         return false;
     }

@@ -1625,6 +1625,8 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
             session->state = STATE_STARTED;
         } else if (state.find("paused") != string::npos) {
             session->state = STATE_PAUSED;
+        } else if (state.find("saved") != string::npos) {
+            session->state = STATE_OPEN;
         }
     }
     

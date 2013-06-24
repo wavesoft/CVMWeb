@@ -72,7 +72,7 @@ public:
         registerMethod("requestControlAccess",make_method(this, &CVMWebAPI::requestControlAccess));
         registerMethod("requestSafeSession",  make_method(this, &CVMWebAPI::requestSafeSession));
         
-        registerMethod("authenticate",        make_method(this, &CVMWebAPI::authenticate));
+//        registerMethod("authenticate",        make_method(this, &CVMWebAPI::authenticate));
         registerMethod("installHypervisor",   make_method(this, &CVMWebAPI::installHV));
 
         // Read-only property
@@ -83,12 +83,14 @@ public:
         
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPI::toString));
-        
+        registerMethod("confirmCallback",   make_method(this, &CVMWebAPI::confirmCallback));
+
         // Reset AuthType
         this->m_authType = 0;
         this->throttleTimestamp = 0;
         this->throttleDenies = 0;
         this->throttleBlock = false;
+        this->shuttingDown = false;
         
     }
 
@@ -102,6 +104,29 @@ public:
     virtual ~CVMWebAPI() {
     };
 
+    ///////////////////////////////////////////////////////////////////////////////
+    // Called when the plugin is about to shutdown -> Abort any confirmation process
+    ///////////////////////////////////////////////////////////////////////////////
+    virtual void shutdown() {
+        this->shuttingDown = true;
+        
+        // If we are pending confirm, cleanup thread
+        if (pendingConfirm) {
+
+            // Release condition variable
+            {
+                boost::lock_guard<boost::mutex> lock(confirmMutex);
+                confirmResult = false;
+            }
+            confirmCond.notify_one();
+
+            // Wait thead to complete
+            this->lastThread.join();
+
+        }
+
+    }
+
     CVMWebPtr getPlugin();
 
     // Read-only property ${PROPERTY.ident}
@@ -112,12 +137,15 @@ public:
     // Threads
     void thread_install( );
     void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::variant &successCb, const FB::variant &failureCb );
-    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb );
+    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB );
+
+    // JS Callbacks
+    void confirmCallback( const FB::variant& status );
 
     // Methods
     FB::variant checkSession( const FB::variant& vm, const FB::variant& code );
     FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::variant &successCb, const FB::variant &failureCb );
-    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb );
+    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB );
     FB::variant requestDaemonAccess( const FB::variant &successCb, const FB::variant &failureCb );
     FB::variant requestControlAccess( const FB::variant &successCb, const FB::variant &failureCb );
     std::string getDomainName();
@@ -154,8 +182,17 @@ private:
     int                 throttleDenies;
     bool                throttleBlock;
     
+    // Host ID calculation
     std::string         calculateHostID( std::string& domain );
     
+    // Synchronization
+    boost::mutex                confirmMutex;
+    boost::condition_variable   confirmCond;
+    bool                        confirmResult;
+    bool                        pendingConfirm;
+    bool                        shuttingDown;
+    boost::thread               lastThread;
+
 };
 
 #endif // H_CVMWebAPI

@@ -123,6 +123,9 @@ void CVMWeb::shutdown()
     // destroyed. This is the last point that shared_from_this and weak_ptr
     // references to this object will be valid
 
+    boost::shared_ptr<CVMWebAPI> rAPI = FB::ptr_cast<CVMWebAPI>(getRootJSAPI());
+    if (rAPI) rAPI->shutdown();
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////

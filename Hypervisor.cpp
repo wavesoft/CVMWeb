@@ -108,7 +108,6 @@ int Hypervisor::getUsage( HVINFO_RES * resCount ) {
     return HVE_OK;
 }
 
-
 /**
  * Use LibcontextISO to create a cd-rom for this VM
  */
