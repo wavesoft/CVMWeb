@@ -90,11 +90,8 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
     CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
     FB::BrowserStreamRequest req(url, "GET");
     req.setCacheable(true);
-
-    //std::shared_ptr< FB::DefaultBrowserStreamHandler > wDerived = SmartPtrBuilder::CreateSharedPtr< Def, FB::DefaultBrowserStreamHandler >( this );
-
-    req.setEventSink( this->DownloadProvider::shared_from_this() );
-    //FB::BrowserStreamPtr stream(m_host->createStream(req, false));
+    req.setEventSink( this->FB::DefaultBrowserStreamHandler::shared_from_this() );
+    FB::BrowserStreamPtr stream(m_host->createStream(req, false));
 
     // Wait for mutex
     CVMWA_LOG("Debug", "Waiting for condition variable");
@@ -123,9 +120,6 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
  * Download a file using BrowserStreams
  */
 int CVMBrowserProvider::downloadFile( const std::string& url, const std::string& destination, ProgressFeedback * feedback ) {
-    
-    // Setup CURL url
-    CVMWA_LOG("Debug", "Downloading file from '" << url << "'");
     
     // Store a local pointer
     this->feedbackPtr = feedback;
