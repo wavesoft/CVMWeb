@@ -42,7 +42,7 @@ void DownloadProvider::setDefault( const DownloadProviderPtr& provider ) {
 /**
  * Local function to fire the progress event accordingly
  */
-void fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max ) {
+void DownloadProvider::fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max ) {
     if (fb != NULL) {
         
         // Throttle events on 2 per second, unless that's the last one
@@ -69,7 +69,7 @@ void fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max ) {
 /**
  * Local function to write data to osstream
  */
-inline void writeToStream( std::ostream * stream, CURL * curl, ProgressFeedback * feedbackPtr, long max_size, const char * ptr, size_t data ) {
+void DownloadProvider::writeToStream( std::ostream * stream, ProgressFeedback * feedbackPtr, long max_size, const char * ptr, size_t data ) {
     
     // Write data to the file
     stream->write( ptr, data );
@@ -82,7 +82,7 @@ inline void writeToStream( std::ostream * stream, CURL * curl, ProgressFeedback 
         
         // Fire progress update
         if (feedbackPtr != NULL)
-            fireProgressEvent( feedbackPtr, cur_size, max_size );
+            DownloadProvider::fireProgressEvent( feedbackPtr, cur_size, max_size );
     }
 
 }
@@ -113,7 +113,7 @@ size_t __curl_datacb_file(void *ptr, size_t size, size_t nmemb, CURLProvider * s
     //CVMWA_LOG("Debug", "cURL File callback (size=" << dataLen << ")");
 
     // Write to file stream
-    writeToStream( &(self->fStream), self->curl, self->feedbackPtr, self->maxStreamSize, (const char *) ptr, dataLen );
+    DownloadProvider::writeToStream( &(self->fStream), self->feedbackPtr, self->maxStreamSize, (const char *) ptr, dataLen );
     
     // Return data len
     return dataLen;
@@ -128,7 +128,7 @@ size_t __curl_datacb_string(void *ptr, size_t size, size_t nmemb, CURLProvider *
     CVMWA_LOG("Debug", "cURL String callback (size=" << dataLen << ")");
 
     // Write to string stream
-    writeToStream( &(self->sStream), self->curl, self->feedbackPtr, self->maxStreamSize, (const char *) ptr, dataLen );
+    DownloadProvider::writeToStream( &(self->sStream), self->feedbackPtr, self->maxStreamSize, (const char *) ptr, dataLen );
 
     // Return data len
     return dataLen;
@@ -215,6 +215,7 @@ int CURLProvider::downloadText( const std::string& url, std::string * destinatio
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         CVMWA_LOG("Error", "cURL Error #" << res );
+        sStream.str("");
         return HVE_IO_ERROR;
     }
     

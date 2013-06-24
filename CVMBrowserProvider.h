@@ -28,7 +28,68 @@
 #include "DefaultBrowserStreamHandler.h"
 
 #include "Hypervisor.h"
+#include "DownloadProvider.h"
 #include "Utilities.h"
 
+/**
+ * Stream handler event delegate to DOWNLOAD_PROVIDER
+ */
+class CVMBrowserProvider : public DownloadProvider, public FB::DefaultBrowserStreamHandler
+{
+public:
+
+    /**
+     * Constructor
+     */
+    CVMBrowserProvider( const FB::BrowserHostPtr& host ) : 
+        DownloadProvider(), DefaultBrowserStreamHandler(), m_host(host)
+    {
+        CVMWA_LOG("Debug", "Initializing browser provider");
+    };
+    
+    /**
+     * Destructor
+     */
+    virtual ~CVMBrowserProvider()
+    {
+        CVMWA_LOG("Debug", "Destroying browser provider");
+    };
+
+    /**
+     * DefaultBrowserStreamHandler overrides
+     */
+    bool onStreamDataArrived        ( FB::StreamDataArrivedEvent *evt, FB::BrowserStream * );
+    bool onStreamOpened             ( FB::StreamOpenedEvent *evt, FB::BrowserStream * s);
+    bool onStreamCompleted          ( FB::StreamCompletedEvent *evt, FB::BrowserStream *);
+    bool onStreamFailedOpen         ( FB::StreamFailedOpenEvent *evt, FB::BrowserStream *);
+
+    /**
+     * DownloadProvider Implementation
+     */
+    virtual int downloadFile        ( const std::string &URL, const std::string &destination, ProgressFeedback * feedback = NULL  ) ;
+    virtual int downloadText        ( const std::string &URL, std::string *buffer, ProgressFeedback * feedback = NULL );
+
+private:
+    
+    FB::BrowserHostPtr				m_host;
+    
+    /**
+     * Locking mechanism to make startDownload synchronous
+     */
+    boost::condition_variable       m_cond;
+    boost::mutex                    m_mutex;
+    int                             returnCode;
+
+    /**
+     * Progress feedback information
+     */
+    ProgressFeedback            * feedbackPtr;
+    long                        maxStreamSize;
+    std::ofstream               fStream;
+    std::ostringstream          sStream;
+    short                       targetStream;
+
+
+};
 
 #endif /* end of include guard: CVMWEBSTREAMS_H_3W0U079V */

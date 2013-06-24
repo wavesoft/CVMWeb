@@ -95,6 +95,10 @@ public:
     static DownloadProviderPtr  Default();
     static void                 setDefault( const DownloadProviderPtr& provider );
 
+    // Helper functions
+    static void                 fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max );
+    static void                 writeToStream( std::ostream * stream, ProgressFeedback * feedbackPtr, long max_size, const char * ptr, size_t data );
+
 };
 
 /**

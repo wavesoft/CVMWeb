@@ -29,6 +29,7 @@
 
 #include "CVMWeb.h"
 #include "CVMWebAPI.h"
+#include "CVMBrowserProvider.h"
 
 #include "Hypervisor.h"
 #include "DaemonCtl.h"
@@ -103,7 +104,7 @@ void CVMWeb::onPluginReady()
     // this point.
 
     // Allocate a download provider that uses browser for I/O
-    browserDownloadProvider = DownloadProvider::Default(); //new CVMBrowserProvider( m_host );
+    browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
     
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {

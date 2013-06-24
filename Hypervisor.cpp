@@ -304,7 +304,7 @@ Hypervisor::Hypervisor() {
     this->dirDataCache = this->dirData + "/cache";
     
     /* Unless overriden use the default downloadProvider */
-    this->downloadProvider.reset();
+    this->downloadProvider = DownloadProvider::Default();
     
 };
 
