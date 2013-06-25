@@ -66,6 +66,7 @@
 #define HVF_GUEST_ADDITIONS     4       // Include a guest additions CD-ROM
 #define HVF_FLOPPY_IO           8       // Use floppyIO instead of contextualization CD-ROM
 #define HVF_HEADFUL            16       // Start the VM in headful mode
+#define HVF_GRAPHICAL          32       // Enable graphical extension (like drag-n-drop)
 
 /* Default CernVM Version */
 #define DEFAULT_CERNVM_VERSION  "1.4"

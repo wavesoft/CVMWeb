@@ -186,6 +186,14 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     string bootMedium = "dvd";
     if ((flags & HVF_DEPLOYMENT_HDD) != 0) bootMedium = "disk";
     
+    /* Pick the appropriate values for GUI components */
+    string vDragDrop = "disabled";
+    string vClipboard = "disabled";
+    if ((flags & HVF_GRAPHICAL) != 0) {
+        vDragDrop = "hosttoguest";
+        vClipboard = "bidirectional";
+    }
+    
     /* (2) Set parameters */
     args.str("");
     args << "modifyvm "
@@ -206,6 +214,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         << " --boot4 "                  << "none"
         << " --nic1 "                   << "nat"
         << " --natdnshostresolver1 "    << "on"
+        << " --draganddrop "            << vDragDrop
+        << " --clipboard "              << vClipboard
         << " --nic2 "                   << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
     
     if (this->onProgress) (this->onProgress)(15, 110, "Setting up VM");
