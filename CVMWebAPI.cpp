@@ -675,6 +675,7 @@ bool CVMWebAPI::unsafeConfirm( std::string msg ) {
                 return confirmResult;
 
             }
+        }
 
         /*
         // Get a reference to the confirm function
