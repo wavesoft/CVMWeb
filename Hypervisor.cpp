@@ -27,6 +27,8 @@
 #include <vector>
 #include <cmath>
 
+#include <boost/thread.hpp>
+
 #include "Utilities.h"
 #include "Hypervisor.h"
 #include "Virtualbox.h"
@@ -205,12 +207,17 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
         
     } else {
         
-        // Notify progress
-        if ((fb != NULL) && (fb)) (fb->callback)( fb->max, fb->max, "Extracting compressed disk" );
+        // Notify progress (from another thread)
+        boost::thread * t = NULL;
+        if ((fb != NULL) && (fb)) t = new boost::thread( boost::bind( fb->callback, fb->max, fb->total, "Extracting compressed disk" ) );
+
+        // Decompress the file
         CVMWA_LOG("Info", "File exists and checksum valid, decompressing " << sGZOutput << " to " << sOutput );
         res = decompressFile( sGZOutput, sOutput );
-        if (res != HVE_OK) 
+        if (res != HVE_OK) {
+            if (t != NULL) { t->join(); delete t; }
             return res;
+        }
     
         // Delete sGZOutput if sOutput is there
         if (file_exists(sOutput)) {
@@ -218,10 +225,12 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
             remove( sGZOutput.c_str() );
         } else {
             CVMWA_LOG("Info", "Could not find the extracted file!" );
+            if (t != NULL) { t->join(); delete t; }
             return HVE_EXTERNAL_ERROR;
         }
     
         // We got the filename
+        if (t != NULL) { t->join(); delete t; }
         return HVE_OK;
 
     }
@@ -259,7 +268,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
 
     // Check if we have the uncompressed image in place
     *filename = sOutput;
-    if (file_exists(sOutput)) {
+    if (file_exists(sOutput) && !file_exists(sGZOutput)) {
         CVMWA_LOG("Info", "Uncompressed file already exists");
         return HVE_ALREADY_EXISTS;
 
