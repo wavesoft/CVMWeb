@@ -301,7 +301,6 @@ inline long getMillis() {
 /**
  * Debug macro
  */
-#define LOGGING 1
 #if defined(DEBUG) || defined(LOGGING)
     #ifdef _WIN32
         #define CVMWA_LOG(kind, ...) \
