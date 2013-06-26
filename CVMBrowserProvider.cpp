@@ -21,56 +21,30 @@
 #include "CVMBrowserProvider.h"
 #include <URI.h>
 
-/**
- * Data arrived callback -> Forward to DOWNLOAD_PROVIDER structure
- */
-bool CVMBrowserProvider::onStreamDataArrived( FB::StreamDataArrivedEvent *evt, FB::BrowserStream * ) {
-    CVMWA_LOG("Info", "Data arrived. Calling handler (len=" << evt->getLength() << ")" );
+void CVMBrowserProvider::httpDataArrived ( const void * ptr, size_t length ) {
+    CVMWA_LOG("Info", "Data arrived. Calling handler (len=" << length << ")" );
     if (this->targetStream == 0) {
-        DownloadProvider::writeToStream( &this->fStream, this->feedbackPtr, this->maxStreamSize, (const char*) evt->getData(), evt->getLength() );
+        DownloadProvider::writeToStream( &this->fStream, NULL, 0, (const char*) ptr, length );
     } else {
-        DownloadProvider::writeToStream( &this->sStream, this->feedbackPtr, this->maxStreamSize, (const char*) evt->getData(), evt->getLength() );
+        DownloadProvider::writeToStream( &this->sStream, NULL, 0, (const char*) ptr, length );
     }
-    return true;
 }
 
-/**
- * Stream oppened arrived callback -> Setup length
- */
-bool CVMBrowserProvider::onStreamOpened( FB::StreamOpenedEvent *evt, FB::BrowserStream * s) {
-    this->maxStreamSize = s->getLength();
-    CVMWA_LOG("Info", "Stream open. Data length: " << this->maxStreamSize );
-    return true; 
+void CVMBrowserProvider::httpProgress ( size_t current, size_t total ) {
+    this->maxStreamSize = total;
+    if (this->feedbackPtr != NULL)
+        DownloadProvider::fireProgressEvent( this->feedbackPtr, current, total);
+           
 }
 
-/**
- * Notify then download trigger when the file is downloaded
- */
-bool CVMBrowserProvider::onStreamCompleted(FB::StreamCompletedEvent *evt, FB::BrowserStream *) {
-    returnCode = 0;
-    CVMWA_LOG("Info", "Stream completed");
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+void CVMBrowserProvider::httpCompleted ( bool status, const FB::HeaderMap& headers ) {
+    returnCode = status ? 0 : 1;
+    CVMWA_LOG("Info", "Stream completed. Status : " << returnCode);
+    {
+        boost::lock_guard<boost::mutex> lock(m_mutex);
+        m_downloadCompleted = true;
+    }
     m_cond.notify_all();
-    return true;
-}
-
-/**
- * Notify the download trigger if something failed
- */
-bool CVMBrowserProvider::onStreamFailedOpen(FB::StreamFailedOpenEvent *evt, FB::BrowserStream *) {
-    returnCode = HVE_IO_ERROR;
-    CVMWA_LOG("Error", "Failed to open stream");
-    boost::lock_guard<boost::mutex> lock(m_mutex);
-    m_cond.notify_all();
-    return true;
-}
-
-/**
- * Asynchronous call to the system 
- */
-void CVMBrowserProvider::AsyncSessionRequest( const FB::BrowserStreamRequest& req, FB::BrowserStreamPtr * streamPtr ) {
-    FB::BrowserStreamPtr stream(m_host->createStream(req, false));
-    *streamPtr = stream;
 }
 
 /**
@@ -95,21 +69,30 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
     this->targetStream = 1;
 
     // Initiate asynchronous download
-    CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
-    FB::BrowserStreamPtr stream;
-    FB::BrowserStreamRequest req(url, "GET");
-    req.setCacheable(true);
-    req.setEventSink( this->FB::DefaultBrowserStreamHandler::shared_from_this() );
-    m_host->CallOnMainThread( boost::bind( &CVMBrowserProvider::AsyncSessionRequest, this, req, &stream ) );
+    {
+        CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
+        FB::BrowserStreamRequest req(url, "GET");
+        req.setCacheable(true);
+        req.setSeekable( false );
+        req.setBufferSize( 128*1024 );
+        req.setProgressCallback( boost::bind( &CVMBrowserProvider::httpProgress, this, _1, _2 ) );
+        req.setCompletedCallback( boost::bind( &CVMBrowserProvider::httpCompleted, this, _1, _2 ) );
+        req.setChunkCallback( boost::bind( &CVMBrowserProvider::httpDataArrived, this, _1, _2 ) );
 
-    // Wait for mutex
-    CVMWA_LOG("Debug", "Waiting for condition variable");
-    boost::unique_lock<boost::mutex> lock(m_mutex);
-    m_cond.wait(lock);
-    CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+        // Open stream
+        FB::SimpleStreamHelper::AsyncRequest( m_host, req );
 
-    // Release browser stream
-    stream.reset();
+        // Wait for mutex
+        CVMWA_LOG("Debug", "Waiting for condition variable");
+        {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
+            m_downloadCompleted = false;
+            while (!m_downloadCompleted)
+                m_cond.wait(lock);
+        }
+        CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+
+    }
 
     // Check if download was successful
     if (this->returnCode != 0) {
@@ -121,6 +104,9 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
     // Copy to output and clear buffer
     *destination = sStream.str();
     sStream.str("");
+
+    // Release feedback
+    this->feedbackPtr = NULL;
 
     CVMWA_LOG("Info", "BrowserStreams download completed" );
     return HVE_OK;
@@ -154,21 +140,33 @@ int CVMBrowserProvider::downloadFile( const std::string& url, const std::string&
     this->targetStream = 0;
 
     // Initiate asynchronous download
-    CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
-    FB::BrowserStreamPtr stream;
-    FB::BrowserStreamRequest req(url, "GET");
-    req.setCacheable(true);
-    req.setEventSink( this->FB::DefaultBrowserStreamHandler::shared_from_this() );
-    m_host->CallOnMainThread( boost::bind( &CVMBrowserProvider::AsyncSessionRequest, this, req, &stream ) );
+    {
+        CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
+        FB::BrowserStreamRequest req(url, "GET");
+        req.setCacheable(true);
+        req.setSeekable( false );
+        req.setBufferSize( 128*1024 );
+        req.setProgressCallback( boost::bind( &CVMBrowserProvider::httpProgress, this, _1, _2 ) );
+        req.setCompletedCallback( boost::bind( &CVMBrowserProvider::httpCompleted, this, _1, _2 ) );
+        req.setChunkCallback( boost::bind( &CVMBrowserProvider::httpDataArrived, this, _1, _2 ) );
 
-    // Wait for mutex
-    CVMWA_LOG("Debug", "Waiting for condition variable");
-    boost::unique_lock<boost::mutex> lock(m_mutex);
-    m_cond.wait(lock);
-    CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+        // Open stream
+        FB::SimpleStreamHelper::AsyncRequest( m_host, req );
 
-    // Release browser stream
-    stream.reset();
+        // Wait for mutex
+        CVMWA_LOG("Debug", "Waiting for condition variable");
+        {
+            boost::unique_lock<boost::mutex> lock(m_mutex);
+            m_downloadCompleted = false;
+            while (!m_downloadCompleted)
+                m_cond.wait(lock);
+        }
+        CVMWA_LOG("Debug", "Mutex released. Result = " << returnCode);
+
+    }
+
+    // Release feedback
+    this->feedbackPtr = NULL;
     
     // Close stream
     fStream.close();

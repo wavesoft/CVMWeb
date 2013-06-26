@@ -283,7 +283,7 @@ inline long getMillis() {
     gettimeofday(&tv, NULL);
     return (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
     #else
-    return GetTickCount() / 1000;
+    return GetTickCount();
     #endif
 }
 
@@ -303,15 +303,15 @@ inline long getMillis() {
  */
 #define LOGGING 1
 #if defined(DEBUG) || defined(LOGGING)
-#ifdef _WIN32
-    #define CVMWA_LOG(kind, ...) \
-         do { std::cerr << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; } while(0);
+    #ifdef _WIN32
+        #define CVMWA_LOG(kind, ...) \
+            do { std::stringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0);
+    #else
+        #define CVMWA_LOG(kind, ...) \
+             do { std::cerr << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0);
+    #endif
 #else
-    #define CVMWA_LOG(kind, ...) \
-         do { std::cerr << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0);
-#endif
-#else
-#define CVMWA_LOG(...) ;
+    #define CVMWA_LOG(...) ;
 #endif
 #define WTF_LOG(sth) \
      std::cerr << "[WTF][" << __func__ << "](" << __FILE__ << ":" << __LINE__ << ") " << sth << std::endl;

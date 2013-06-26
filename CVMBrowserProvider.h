@@ -34,7 +34,7 @@
 /**
  * Stream handler event delegate to DOWNLOAD_PROVIDER
  */
-class CVMBrowserProvider : public DownloadProvider, public FB::DefaultBrowserStreamHandler
+class CVMBrowserProvider : public DownloadProvider
 {
 public:
 
@@ -42,7 +42,7 @@ public:
      * Constructor
      */
     CVMBrowserProvider( const FB::BrowserHostPtr& host ) : 
-        DownloadProvider(), DefaultBrowserStreamHandler(), m_host(host)
+        DownloadProvider(), m_host(host)
     {
         CVMWA_LOG("Debug", "Initializing browser provider");
     };
@@ -58,10 +58,9 @@ public:
     /**
      * DefaultBrowserStreamHandler overrides
      */
-    bool onStreamDataArrived        ( FB::StreamDataArrivedEvent *evt, FB::BrowserStream * );
-    bool onStreamOpened             ( FB::StreamOpenedEvent *evt, FB::BrowserStream * s);
-    bool onStreamCompleted          ( FB::StreamCompletedEvent *evt, FB::BrowserStream *);
-    bool onStreamFailedOpen         ( FB::StreamFailedOpenEvent *evt, FB::BrowserStream *);
+    void httpDataArrived            ( const void * ptr, size_t data );
+    void httpProgress               ( size_t current, size_t total );
+    void httpCompleted              ( bool status, const FB::HeaderMap& headers );
 
     /**
      * DownloadProvider Implementation
@@ -74,15 +73,11 @@ private:
     FB::BrowserHostPtr				m_host;
     
     /**
-     * Local delegates
-     */
-    void AsyncSessionRequest        ( const FB::BrowserStreamRequest& req, FB::BrowserStreamPtr * streamPtr );
-    
-    /**
      * Locking mechanism to make startDownload synchronous
      */
     boost::condition_variable       m_cond;
     boost::mutex                    m_mutex;
+    bool                            m_downloadCompleted;
     int                             returnCode;
 
     /**

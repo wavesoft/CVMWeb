@@ -257,7 +257,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         ans = this->host->diskImageDownload( cvmVersion, this->diskChecksum, &masterDisk, &feedback );
         if (ans < HVE_OK) {
             this->state = STATE_ERROR;
-            return HVE_IO_ERROR;
+            return ans;
         }
         
         /* Store the source URL */

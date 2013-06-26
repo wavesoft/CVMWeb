@@ -49,14 +49,20 @@ void DownloadProvider::fireProgressEvent( ProgressFeedback * fb, size_t pos, siz
         if ((pos != max) && ((getMillis() - fb->__lastEventTime) < DP_THROTTLE_TIMER)) return;
         fb->__lastEventTime = getMillis();
 
+        CVMWA_LOG("Debug", "Calculating progress in range " << pos << "/" << max );
+
         // Calculate percentage
         size_t ipos = fb->min;
         if (max != 0) {
             
-            double v1 = ((fb->max - fb->min) * pos);
-            double v2 = v1 / max;
+            double dMax = static_cast<double>(fb->max);
+            double dMin = static_cast<double>(fb->min);
+            double dPos = static_cast<double>(pos);
+            double dTotal = static_cast<double>(max);
+            double v1 = ((dMax - dMin) * dPos);
+            double v2 = v1 / dTotal;
             
-            ipos += (size_t)v2;
+            ipos += static_cast<size_t>(v2);
         }
         CVMWA_LOG("Debug", "Calling progress function with " << ipos << " in (" << fb->min << "-" << fb->max << "/" << fb->total << ")" );
         

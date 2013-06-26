@@ -201,12 +201,12 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
         remove( sGZOutput.c_str() );
         
         // (Let the next block re-download the file)
-        return HVE_SCHEDULED;
+        return HVE_NOT_VALIDATED;
         
     } else {
         
         // Notify progress
-        if ((fb != NULL) && (fb)) fb->callback( fb->max, fb->max, "Extracting compressed disk" );
+        if ((fb != NULL) && (fb)) (fb->callback)( fb->max, fb->max, "Extracting compressed disk" );
         CVMWA_LOG("Info", "File exists and checksum valid, decompressing " << sGZOutput << " to " << sOutput );
         res = decompressFile( sGZOutput, sOutput );
         if (res != HVE_OK) 
@@ -270,7 +270,9 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
         
         // Check decompressing file
         res = __diskExtract( sGZOutput, checksum, sOutput, fb );
-        if (res != HVE_SCHEDULED) return res;
+
+        // If checksum is invalid, re-download the file
+        if (res != HVE_NOT_VALIDATED) return res;
 
     }
     
