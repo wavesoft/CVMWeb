@@ -699,6 +699,10 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         CVMWA_LOG( "Error", "ERROR: No extensions package URL found" );
         return HVE_EXTERNAL_ERROR;
     }
+    if (data.find( "extpackChecksum" ) == data.end()) {
+        CVMWA_LOG( "Error", "ERROR: No extensions package checksum found" );
+        return HVE_EXTERNAL_ERROR;
+    }
     
     #ifdef __linux__
     // Pick an extension and installation type based on the installer= parameter

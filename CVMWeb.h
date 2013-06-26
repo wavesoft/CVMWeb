@@ -58,9 +58,10 @@ public:
     void                                onPluginReady();
     void                                shutdown();
     virtual FB::JSAPIPtr                createJSAPI();
-    std::string                         getFilesystemPath();
     std::string                         getDataFolderPath();
+    std::string                         getPluginFolderPath();
     std::string                         getDaemonBin();
+    std::string                         getPluginBin();
 
     // Cryptography class
     CVMWebCrypto *                      crypto;

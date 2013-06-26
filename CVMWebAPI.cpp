@@ -648,65 +648,66 @@ bool CVMWebAPI::unsafeConfirm( std::string msg ) {
             // Get a reference to CVM
             f = jsWin->GetProperty("CVM");
             FB::JSObjectPtr jsCVM = f.convert_cast<FB::JSObjectPtr>();
+            
+            // Only use global confirm function if CVM provides it
+            if (jsCVM->HasProperty("__globalConfirm")) {
+            
+                // Fire callback
+                jsCVM->InvokeAsync("__globalConfirm", FB::variant_list_of(msg));
 
-            // Fire callback
-            jsCVM->InvokeAsync("__globalConfirm", FB::variant_list_of(msg));
-
-            // Cancel previous confirm
-            if (pendingConfirm) {
-                {
-                    boost::lock_guard<boost::mutex> lock(confirmMutex);
-                    confirmResult = false;
+                // Cancel previous confirm
+                if (pendingConfirm) {
+                    {
+                        boost::lock_guard<boost::mutex> lock(confirmMutex);
+                        confirmResult = false;
+                    }
+                    confirmCond.notify_one();
                 }
-                confirmCond.notify_one();
+
+                // Lock while waiting for response
+                pendingConfirm = true;
+                confirmResult = false;
+                boost::unique_lock<boost::mutex> lock(confirmMutex);
+                confirmCond.wait(lock);
+                pendingConfirm = false;
+
+                // Return status
+                return confirmResult;
+
             }
 
-            // Lock while waiting for response
-            pendingConfirm = true;
-            confirmResult = false;
-            boost::unique_lock<boost::mutex> lock(confirmMutex);
-            confirmCond.wait(lock);
-            pendingConfirm = false;
+        /*
+        // Get a reference to the confirm function
+        f = jsWin->GetProperty("confirm");
+        FB::JSObjectPtr jsConfirm = f.convert_cast<FB::JSObjectPtr>();
 
-            // Return status
-            return confirmResult;
+        // Get a reference to Function object
+        f = jsWin->GetProperty("Function");
+        FB::JSObjectPtr jsFunction = f.convert_cast<FB::JSObjectPtr>();
 
-        } else {
+        // Get a reference fo Function.prototype object
+        f = jsFunction->GetProperty("prototype");
+        FB::JSObjectPtr jsFunctionProto = f.convert_cast<FB::JSObjectPtr>();
 
-            /*
-            // Get a reference to the confirm function
-            f = jsWin->GetProperty("confirm");
-            FB::JSObjectPtr jsConfirm = f.convert_cast<FB::JSObjectPtr>();
+        // Get a reference to Object object
+        f = jsWin->GetProperty("Object");
+        FB::JSObjectPtr jsObject = f.convert_cast<FB::JSObjectPtr>();
 
-            // Get a reference to Function object
-            f = jsWin->GetProperty("Function");
-            FB::JSObjectPtr jsFunction = f.convert_cast<FB::JSObjectPtr>();
-
-            // Get a reference fo Function.prototype object
-            f = jsFunction->GetProperty("prototype");
-            FB::JSObjectPtr jsFunctionProto = f.convert_cast<FB::JSObjectPtr>();
-
-            // Get a reference to Object object
-            f = jsWin->GetProperty("Object");
-            FB::JSObjectPtr jsObject = f.convert_cast<FB::JSObjectPtr>();
-    
-            // 1) First make sure alert's toString is not directly hijacked. However:
-            //    - Function.prototype.toString might be hijacked
-            if (jsObject->HasProperty("toString")) {
-                return false;
-            }
-    
-            // Now make sure (using toString) that is native code
-            string fType = jsConfirm->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
-            CVMWA_LOG("Debug", "Function is '" << fType << "'");
-            if (fType.find("[native code]") == string::npos)
-                return false;
-            */
-    
-            // Invoke confirm with some text
-            return jsWin->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
-        
+        // 1) First make sure alert's toString is not directly hijacked. However:
+        //    - Function.prototype.toString might be hijacked
+        if (jsObject->HasProperty("toString")) {
+            return false;
         }
+
+        // Now make sure (using toString) that is native code
+        string fType = jsConfirm->Invoke("toString", FB::variant_list_of( msg )).convert_cast<string>();
+        CVMWA_LOG("Debug", "Function is '" << fType << "'");
+        if (fType.find("[native code]") == string::npos)
+            return false;
+        */
+
+        // Invoke confirm with some text
+        return jsWin->Invoke("confirm", FB::variant_list_of( msg )).convert_cast<bool>();
 
     } else {
         return false;

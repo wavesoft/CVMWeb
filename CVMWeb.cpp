@@ -183,16 +183,16 @@ bool CVMWeb::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
 /**
  * Return the path of the DLL
  */
-std::string CVMWeb::getFilesystemPath() {
+std::string CVMWeb::getPluginBin() {
     // Return the path where the DLL is
     return m_filesystemPath;
 }
 
 /**
- * Get the root folder where the plugin data is located.
- * On the XPI build that's the root folder of the extracted XPI contents
+ * Get the root folder where the plugin binary is located.
+ * On the XPI build that's the 'plugin' folder
  */
-std::string CVMWeb::getDataFolderPath() {
+std::string CVMWeb::getPluginFolderPath() {
 
     /* Practically dirname() */
     std::string dPath = stripComponent( m_filesystemPath );
@@ -204,11 +204,19 @@ std::string CVMWeb::getDataFolderPath() {
         dPath = stripComponent( dPath );
     #endif
     
-    /* One folder parent to the DLL */
-    dPath = stripComponent( dPath );
-    
-    /* Return path component */
+    /* Return the folder where the .dll/.so/.plugin file resides */
     return dPath;
+}
+
+/**
+ * Get the root folder where the plugin data is located.
+ * On the XPI build that's the root folder of the extracted XPI contents
+ */
+std::string CVMWeb::getDataFolderPath() {
+    
+    /* One folder parent to the DLL */
+    return stripComponent( getPluginFolderPath() );
+    
 }
 
 /**
@@ -216,24 +224,33 @@ std::string CVMWeb::getDataFolderPath() {
  */
 std::string CVMWeb::getDaemonBin() {
     
-    /* Get the data folder location */
-    std::string dPath = this->getDataFolderPath();
-    
     /* Pick a daemon name according to platform */
     #ifdef _WIN32
-    dPath += "/daemon/CVMWADaemon.exe";
+    std::string dBin = "CVMWADaemon.exe";
     #endif
     #if defined(__APPLE__) && defined(__MACH__)
-    dPath += "/daemon/CVMWADaemonOSX";
+    std::string dBin = "CVMWADaemonOSX";
     #endif
     #ifdef __linux__
         #if defined(__LP64__) || defined(_LP64)
-            dPath += "/daemon/CVMWADaemonLinux64";
+            std::string dBin = "CVMWADaemonLinux64";
         #else
-            dPath += "/daemon/CVMWADaemonLinux";
+            std::string dBin = "CVMWADaemonLinux";
         #endif
     #endif
     
-    /* Return it */
-    return dPath;
+    /* Check for a daemon on the same directory as the plugin */
+    std::string dPath = this->getPluginFolderPath();
+    if (file_exists(dPath + "/" + dBin)) {
+        return dPath + "/" + dBin;
+    }
+    
+    /* Check the default data location */
+    dPath = this->getDataFolderPath();
+    if (file_exists(dPath + "/daemon" + dBin)) {
+        return dPath + "/daemon" + dBin;
+    }
+    
+    /* Did not find anything :( */
+    return "";
 }
