@@ -219,7 +219,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                         if (confirmed) {
                             // Check the browser
                             if (BrowserDetect.browser == "Firefox") {
-                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.2.xpi";
+                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.3.xpi";
                             } else if (BrowserDetect.browser == "Chrome") {
                                 window.location = "https://chrome.google.com/webstore/detail/cernvm-web-api/iakpghcolokcngbhjiihjcomioihjnfm";
                             } else {
