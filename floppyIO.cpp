@@ -32,7 +32,7 @@
 FloppyIO::FloppyIO(const char * filename) {
     
   // Open file
-  fstream *fIO = new fstream(filename, fstream::in | fstream::out | fstream::trunc);
+  fstream *fIO = new fstream(filename, fstream::in | fstream::out | fstream::trunc | fstream::binary );
   
   // Prepare floppy info
   this->fIO = fIO;
