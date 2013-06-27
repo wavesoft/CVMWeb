@@ -9,7 +9,6 @@ set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
 
 # External libraries
 set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
-include_directories( ${EXTERN_ZLIB} )
 
 # Static build
 SET(BUILD_SHARED_LIBS OFF)
@@ -97,7 +96,7 @@ ENDIF(WIN32)
 
 # Build zlib statically from the resources
 add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
-include_directories( $${CMAKE_BINARY_DIR}/extern/zlib )
+include_directories( ${CMAKE_BINARY_DIR}/extern/zlib ${EXTERN_ZLIB} )
 set( LIBZ_LIBRARIES zlibstatic )
 
 # Sources
