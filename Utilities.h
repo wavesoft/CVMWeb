@@ -80,6 +80,9 @@
 #define _EOL "\n"
 #endif
 
+// GZip decompression block size (64k)
+#define GZ_BLOCK_SIZE 0x10000
+
 /**
  * Mutex configuration for multi-threaded openssl
  */ 
@@ -206,7 +209,7 @@ bool                                                isSanitized     ( std::strin
 /**
  * Decompress a GZipped file from src and write it to dst
  */
-int                                                 decompressFile  ( std::string filename, std::string output );
+int                                                 decompressFile  ( const std::string& filename, const std::string& output );
 
 /**
  * Encode the given string for URL

@@ -89,6 +89,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
 
             // Forward progress events in percentage
             notifyGlobalProgress( a,b,c, pGroupID );
+            console.log("[DBG] ",a,"==",b);
 
             // Notify when total equals current
             if (a == b) {
@@ -123,7 +124,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
                 session.removeEventListener( 'open', f_open );
                 cbOK( new _NS_.WebAPISession( this.__plugin, this.__daemon, session ) );
             }).bind(this);
-            var f_error = (function( code ) {
+            var f_error = (function( msg, code ) {
                 if (once) { once=false } else { return };
                 session.removeEventListener( 'error', f_error );
                 callError( cbFail, "Could not open session: " + error_string(code) + ".", code )

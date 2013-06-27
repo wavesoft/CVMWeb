@@ -5,7 +5,7 @@ use Data::Dumper;
 
 # The namespace of the plugin
 my $NS = "CVM";
-my $VERSION = "1.0";
+my $VERSION = "1.1";
 
 # Accepts one argument: the full path to a directory.
 # Returns: A list of files that reside in that path.

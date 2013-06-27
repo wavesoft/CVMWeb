@@ -28,18 +28,10 @@ void cb( const long a, const long f, const std::string& m ) {
 
 int main( int argc, char ** argv ) {
     
-    ProgressFeedback fb;
-    fb.min = 0;
-    fb.max = 100;
-    fb.total = 100;
-    fb.message = "Testing";
-    fb.callback = &cb;
-    
-    DownloadProviderPtr dp = DownloadProvider::Default();
-    std::string buf = "";
-    dp->downloadFile( "http://localhost/planetME/backup-drunk-1.tgz", "test.hdd.gz", &fb );
-    
-    std::cout << "Got buffer: '" << buf << "'" << std::endl;
+    decompressFile(
+            "/Users/icharala/Downloads/cernvm-basic-2.7.1-2-2-x86.vdi.gz",
+            "/Users/icharala/Downloads/cernvm-basic-2.7.1-2-2-x86.vdi"
+        );
     
     return 0;
 }

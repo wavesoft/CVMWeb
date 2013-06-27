@@ -64,7 +64,7 @@ _NS_.setGlobalErrorHandler = function( customFunction ) { globalErrorHandler = c
 var globalProgressBegin = function() { },
     globalProgressEnd = function() { },
     globalProgressEvent = function(percent, message) { };
-_NS_.setGlobalProgressHandlers = function( onProgress, onBegin, onEnd ) {
+_NS_.setGlobalProgressHandler = _NS_.setGlobalProgressHandlers = function( onProgress, onBegin, onEnd ) {
     if (onProgress) globalProgressEvent=onProgress;
     if (onBegin) globalProgressBegin=onBegin;
     if (onEnd) globalProgressEnd=onEnd;
@@ -140,6 +140,7 @@ var currentProgressTotal = 0,
 function callError( userCallback, message, code ) {
     if (userCallback)
         if (userCallback(message, code)) return;
+    console.error("[CernVM Web API] Error #" + code + ": " + message);
     globalErrorHandler( message, code );
 };
 

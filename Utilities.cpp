@@ -33,8 +33,8 @@
 #include <sstream>
 
 #include <openssl/sha.h>
+#include "zlib.h"
 
-#include "gzstream.h"
 #include "Utilities.h"
 #include "Hypervisor.h"
 
@@ -742,52 +742,68 @@ bool isSanitized( std::string * check, const char * chars ) {
 /**
  * Decompress a GZipped file from src and write it to dst
  */
-int decompressFile( std::string src, std::string dst ) {
-
-    // check alternate way of opening file
-    igzstream    in2;
-    in2.open( src.c_str() );
-    if ( ! in2.good()) {
-        CVMWA_LOG("Error", "Opening gz-file `" << src << "' failed.");
-	    return HVE_NOT_FOUND;
+int decompressFile( const std::string& src, const std::string& dst ) {
+    
+    // Try to open gzfile
+    gzFile file;
+    file = gzopen ( src.c_str(), "rb" );
+    if (!file) {
+        CVMWA_LOG("Error", "Unable to open GZ-Compressed file " << src);
+        return HVE_NOT_FOUND;
     }
-    in2.close();
-    if ( ! in2.good()) {
-        CVMWA_LOG("Error", "Closing gz-file `" << src << "' failed.");
-	    return HVE_NOT_FOUND;
+    std::ofstream  out( dst.c_str(), std::ofstream::binary );
+    if ( ! out.good()) {
+        CVMWA_LOG("Error", "Unable to open file file `" << dst << "' for writing.");
+	    return HVE_IO_ERROR;
     }
     
-    // now use the shorter way with the constructor to open the same file
-    igzstream in(  src.c_str() );
-    if ( ! in.good()) {
-        CVMWA_LOG("Error", " Opening file `" << src << "' failed.");
-	    return HVE_NOT_FOUND;
-    }
-    std::ofstream  out( dst.c_str() );
-    if ( ! out.good()) {
-        CVMWA_LOG("Error", " Opening file `" << dst << "' failed.");
-	    return HVE_NOT_FOUND;
-    }
+    // Tune buffer for input speed
+    gzbuffer( file, GZ_BLOCK_SIZE );
     
     // Decompress
-    char c;
-    while ( in.get(c))
-	    out << c;
-    in.close();
+    int bytes_written = 0;
+    while (1) {
+        int err;                    
+        int bytes_read;
+        unsigned char buffer[GZ_BLOCK_SIZE];
+        
+        // Read block
+        bytes_read = gzread (file, buffer, GZ_BLOCK_SIZE - 1);
+        if (bytes_read > 0) bytes_written+=bytes_read;
+        
+        // Write block
+        out.write( (const char *) buffer, bytes_read );
+        
+        // Check for error/completion
+        if (bytes_read < GZ_BLOCK_SIZE - 1) {
+            if (gzeof(file)) {
+                // File is completed
+                break;
+                
+            } else {
+                // Handle errors
+                const char * error_string;
+                error_string = gzerror(file, &err);
+                if (err) {
+                    CVMWA_LOG("Error", "GZError '" << error_string << "'");
+                    return HVE_IO_ERROR;
+                }
+                
+            }
+        }
+    }
+    
+    // Close streams
     out.close();
+    gzclose(file);
     
-    // Check if everything went as expected
-    if ( ! in.eof()) {
-        CVMWA_LOG("Error", " Reading file `" << src << "' failed.");
-	    return EXIT_FAILURE;
+    // If we did not read something, the file
+    // was not in GZ-format
+    if (bytes_written == 0) {
+        return HVE_NOT_SUPPORTED;
+    } else {
+        return HVE_OK;
     }
-    if ( ! out.good()) {
-        CVMWA_LOG("Error", " Writing file `" << dst << "' failed.");
-	    return EXIT_FAILURE;
-    }
-    
-    // OK!
-    return HVE_OK;
     
 }
 
