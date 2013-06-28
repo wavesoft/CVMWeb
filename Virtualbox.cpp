@@ -249,6 +249,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         feedback.max = 90;
         feedback.callback = this->onProgress;
         feedback.message = "Downloading VM Disk";
+        feedback.__lastEventTime = getMillis();
         
         /* (3) Download the disk image specified by the URL */
         string masterDisk;

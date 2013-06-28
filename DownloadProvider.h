@@ -109,6 +109,8 @@ public:
 
     // Constructor & Destructor
     CURLProvider() : DownloadProvider(), feedbackPtr(), fStream(), sStream() {
+        
+        // Initialize curl
         curl = curl_easy_init();
         if (curl) {
             curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1);
@@ -116,6 +118,10 @@ public:
             curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         }
+
+        // Reset vars
+        this->maxStreamSize = 0;
+
     };
     virtual ~CURLProvider() {
         curl_easy_cleanup(curl);

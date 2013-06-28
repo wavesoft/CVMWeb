@@ -418,7 +418,7 @@ std::string CVMWebAPISession::get_apiEntryPoint() {
         return "";
     } else {
         char numstr[21]; // enough to hold all numbers up to 64-bits
-        sprintf(numstr, "%d", this->session->apiPort);
+        sprintf(numstr, "%d", (unsigned int) this->session->apiPort);
         return "http://" + ip + ":" + numstr;
     }
 }

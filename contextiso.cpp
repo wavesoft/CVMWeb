@@ -116,7 +116,7 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     // Update CONTEXT.SH record
     isosetl(lDataSize, descFile.size);      // <-- File size
     size_t i=0; for (;i<strlen(filename);i++) {    // <-- File name
-        if (i>=12) break;
+        if (i>=10) break;
         char c = toupper(filename[i]);
         if (c==' ') c='_';
         descFile.name[i]=c;

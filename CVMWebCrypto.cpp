@@ -121,10 +121,10 @@ int cryptoCleanup(void) {
     MUTEX_CLEANUP(mutex_buf[i]);
     free(mutex_buf);
     mutex_buf = NULL;
-    return 1;
     
     // Free the public key
     EVP_PKEY_free( cvmPublicKey );
+    return 1;
     
 }
 

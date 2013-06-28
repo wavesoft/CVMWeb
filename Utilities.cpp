@@ -647,17 +647,18 @@ bool isPortOpen( const char * host, int port ) {
     client.sin_port = htons( port );
     client.sin_addr.s_addr = inet_addr( host );
     
-    sock = (int) socket(AF_INET, SOCK_STREAM, 0);
+    sock = (SOCKET) socket(AF_INET, SOCK_STREAM, 0);
     int result = connect(sock, (struct sockaddr *) &client,sizeof(client));
+
+    #ifdef _WIN32
+        closesocket(sock);
+    #else
+        ::close(sock);
+    #endif
 
     if (result < 0) {
         return false;
     } else {
-        #ifdef _WIN32
-            closesocket(sock);
-        #else
-            ::close(sock);
-        #endif
         return true;
     }
 }
@@ -782,8 +783,7 @@ int decompressFile( const std::string& src, const std::string& dst ) {
                 
             } else {
                 // Handle errors
-                const char * error_string;
-                error_string = gzerror(file, &err);
+                const char * error_string = gzerror(file, &err);
                 if (err) {
                     CVMWA_LOG("Error", "GZError '" << error_string << "'");
                     return HVE_IO_ERROR;
@@ -827,7 +827,7 @@ std::string urlEncode ( const std::string &s ) {
         {
             escaped.append("%");
             char buf[3];
-            sprintf(buf, "%.2X", s[i]);
+            sprintf(buf, "%.2X", (unsigned char) s[i]);
             escaped.append(buf);
         }
     }

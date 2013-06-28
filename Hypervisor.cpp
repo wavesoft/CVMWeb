@@ -322,6 +322,11 @@ Hypervisor::Hypervisor() {
     /* Unless overriden use the default downloadProvider */
     this->downloadProvider = DownloadProvider::Default();
     
+    /* Reset vars */
+    this->verMajor = 0;
+    this->verMinor = 0;
+    this->type = 0;
+
 };
 
 /**
@@ -329,7 +334,7 @@ Hypervisor::Hypervisor() {
  */
 void Hypervisor::detectVersion() {
     vector<string> out;
-    if (this->type = HV_VIRTUALBOX) {
+    if (this->type == HV_VIRTUALBOX) {
         this->exec("--version", &out);
         
     } else {
@@ -886,6 +891,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
         return HVE_NOT_VALIDATED;
     };
+    freeHypervisor(hv);
     
     /**
      * Completed

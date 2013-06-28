@@ -42,7 +42,7 @@ public:
      * Constructor
      */
     CVMBrowserProvider( const FB::BrowserHostPtr& host ) : 
-        DownloadProvider(), m_host(host)
+        DownloadProvider(), m_host(host), feedbackPtr()
     {
         CVMWA_LOG("Debug", "Initializing browser provider");
     };

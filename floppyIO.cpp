@@ -68,7 +68,11 @@ FloppyIO::FloppyIO(const char * filename, int flags) {
   ios_base::openmode fOpenFlags = fstream::in | fstream::out;
   if ((flags & F_NOCREATE) == 0) fOpenFlags = fstream::trunc;
   fstream *fIO = new fstream(filename, fOpenFlags);
-  
+  if (!fIO) {
+      this->fIO = NULL;
+      return;
+  }
+
   // Check for errors while F_NOCREATE is there
   if ((flags & F_NOCREATE) != 0) {
       if ( (fIO->rdstate() & ifstream::failbit ) != 0 ) {
@@ -114,6 +118,10 @@ FloppyIO::FloppyIO(const char * filename, int flags) {
 // Closes the file descriptor and releases used memory
 
 FloppyIO::~FloppyIO() {
+
+    // Make sure we are initialized
+    if (this->fIO == NULL) return;
+
     // Close file
     this->fIO->close();
     
@@ -125,16 +133,24 @@ FloppyIO::~FloppyIO() {
 // This function zeroes-out the contents of the FD image
  
 void FloppyIO::reset() {
-  this->fIO->seekp(0);
-  char * buffer = new char[this->szFloppy];
-  this->fIO->write(buffer, this->szFloppy);
-  delete[] buffer;      
+    // Make sure we are initialized
+    if (this->fIO == NULL) return;
+
+    // Reset buffers
+    this->fIO->seekp(0);
+    char * buffer = new char[this->szFloppy];
+    this->fIO->write(buffer, this->szFloppy);
+    delete[] buffer;      
 }
 
 // Send data to the floppy image I/O
 // @param data
 // @return 
 void FloppyIO::send(string strData) {
+
+    // Make sure we are initialized
+    if (this->fIO == NULL) return;
+
     // Prepare send buffer
     char * dataToSend = new char[this->szOutput];
     memset(dataToSend, 0, this->szOutput);
@@ -159,7 +175,9 @@ void FloppyIO::send(string strData) {
     // Notify the client that we placed data (Client should clear this on read)
     this->fIO->seekp(this->ofsCtrlByteOut);
     this->fIO->write("\x01", 1);
-    
+
+    // Delete buffer
+    delete dataToSend;
 }
 
 
@@ -167,6 +185,10 @@ void FloppyIO::send(string strData) {
 // @return Returns a string object with the file contents
 
 string FloppyIO::receive() {
+    // Make sure we are initialized
+    if (this->fIO == NULL) return;
+
+    // Prepare buffers
     static string ansBuffer;
     char * dataToReceive = new char[this->szInput];
     int dataLength = this->szInput;
@@ -189,6 +211,7 @@ string FloppyIO::receive() {
     
     // Copy input data to string object
     ansBuffer = dataToReceive;
+    delete dataToReceive;
     return ansBuffer;
     
 }
