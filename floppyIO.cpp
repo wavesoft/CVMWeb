@@ -186,7 +186,7 @@ void FloppyIO::send(string strData) {
 
 string FloppyIO::receive() {
     // Make sure we are initialized
-    if (this->fIO == NULL) return;
+    if (this->fIO == NULL) return "";
 
     // Prepare buffers
     static string ansBuffer;
