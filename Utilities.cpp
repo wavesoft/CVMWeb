@@ -389,7 +389,7 @@ std::string getTmpFile( string suffix, string folder ) {
             folder = "/tmp";
 
         /* Append template */
-        folder += "/tmpXXXXXX"
+        folder += "/tmpXXXXXX";
 
         /* Copy to pointer */
         char * fName = new char[ folder.length()+1 ];
