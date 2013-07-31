@@ -212,6 +212,14 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
             // Check if we are told to take care of setting up the environment for the user
             if (setupEnvironment) {
                 
+                // For chrome, we must add a link on head in advance
+                if (BrowserDetect.browser == "Chrome") {
+                    var linkElm = document.createElement('link');
+                    linkElm.setAttribute("rel", "chrome-webstore-item");
+                    linkElm.setAttribute("href", "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm");
+                    document.head.appendChild(linkElm);
+                }
+                
                 // Prompt the user for plugin installation
                 // (We are using the overridable, asynchronous confirm function)
                 confirmFunction(
@@ -220,9 +228,21 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                         if (confirmed) {
                             // Check the browser
                             if (BrowserDetect.browser == "Firefox") {
-                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.3.xpi";
+                                
+                                // For firefox, just point to the XPI, the user will be prompted
+                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.4.xpi";
+                                
                             } else if (BrowserDetect.browser == "Chrome") {
-                                window.location = "https://chrome.google.com/webstore/detail/cernvm-web-api/iakpghcolokcngbhjiihjcomioihjnfm";
+                                
+                                // And then trigger the installation
+                                chrome.webstore.install("https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm", function() {
+                                    // Installed, reload
+                                    location.reload();
+                                }, function(e) {
+                                    // Automatic installation failed, try manual
+                                    window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
+                                });
+                                
                             } else {
                                 window.location = "http://cernvm.cern.ch/portal/webapi";
                             }
