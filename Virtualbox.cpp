@@ -125,8 +125,8 @@ std::string VBoxSession::getDataFolder() {
         return "";
 
     // Find configuration folder
-    if (info.find("Guest OS") != info.end()) {
-        string settingsFolder = info["Settings file"];
+    if (info.find("Config file") != info.end()) {
+        string settingsFolder = info["Config file"];
 
         // Strip quotation marks
         if ((settingsFolder[0] == '"') || (settingsFolder[0] == '\''))
@@ -392,7 +392,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         if (machineInfo.find( SCRATCH_DSK ) == machineInfo.end()) {
 
             /* Create a hard disk for this VM */
-            string vmDisk = getTmpFile(".vdi", this->dataPath);
+            string vmDisk = getTmpFile(".vdi", this->getDataFolder());
 
             /* (4) Create disk */
             args.str("");
