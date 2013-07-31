@@ -389,7 +389,7 @@ std::string getTmpFile( string suffix, string folder ) {
             folder = "/tmp";
 
         /* Append template */
-        folder += "/tmpXXXXXXXXXX." + suffix;
+        folder += "/tmpXXXXXX"
 
         /* Copy to pointer */
         char * fName = new char[ folder.length()+1 ];
@@ -399,9 +399,14 @@ std::string getTmpFile( string suffix, string folder ) {
         /* Make unique name */
         int i = mkstemp(fName);
         if (i < 0) return "";
-        close(i);
 
+        /* Close and cleanup file */
+        close(i);
+        remove( fName );
+
+        /* Copy to std::string and cleanup */
         string tmpFile( fName );
+        tmpFile += "." + suffix;
         delete[] fName;
 
         /* Return std::string version of the filename */
