@@ -397,7 +397,10 @@ std::string getTmpFile( string suffix, string folder ) {
         fName[ folder.length() ] = '\0';
 
         /* Make unique name */
-        mkstemp(fName);
+        int i = mkstemp(fName);
+        if (i < 0) return HVE_IO_ERROR;
+        close(i);
+
         string tmpFile( fName );
         delete[] fName;
 
