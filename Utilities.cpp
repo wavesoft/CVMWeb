@@ -367,7 +367,7 @@ std::string getTmpFile( string suffix, string folder ) {
             if (wRet == 0) return "";
         } else {
             folder.copy( tmpPath, folder.length() );
-            folder[ folder.length() ] = '\0';
+            tmpPath[ folder.length() ] = '\0';
         }
 
         /* Get temporary file name */
