@@ -177,7 +177,7 @@ void FloppyIO::send(string strData) {
     this->fIO->write("\x01", 1);
 
     // Delete buffer
-    delete dataToSend;
+    delete[] dataToSend;
 }
 
 
@@ -211,7 +211,9 @@ string FloppyIO::receive() {
     
     // Copy input data to string object
     ansBuffer = dataToReceive;
-    delete dataToReceive;
+    delete[] dataToReceive;
+
+    // Return answer buffer
     return ansBuffer;
     
 }

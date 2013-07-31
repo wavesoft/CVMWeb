@@ -219,22 +219,22 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
         
         // Check for external modifications
         time_t storeTime = config.getLastModified("domainkeys.lst");
+
+        // Check if we are still within the  validity period
+        if (currTime - storeTime < CRYPTO_STORE_VALIDITY) {
+            // We are still within it's validity time
+            CVMWA_LOG( "Crypto", "Store still valid" );
+            needsReload = false;
+        }
+            
+        // Check if the file was changed externally
         if (storeTime != keystoreTimestamp) {
             if (validateSignature( localKeystore, localKeystoreSig )) {
-                // Crypto store is still valid (sombody touched it)
                 CVMWA_LOG( "Crypto", "Store timestamp changed but is still valid" );
                 needsReload = false;
             }
-        } else {
-
-            // Check if we are still within the thresshold
-            if (currTime - storeTime < CRYPTO_STORE_VALIDITY) {
-                // We are still within it's validity time
-                CVMWA_LOG( "Crypto", "Store still valid" );
-                needsReload = false;
-            }
-            
         }
+
     }
     
     // If we need reload, do it now
@@ -373,13 +373,3 @@ int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB:
     return validateDomainData( domain, dataSignature, (const unsigned char * ) strHash.c_str(), strHash.length() );
     
 }
-
-/*
-core.requestSafeSession( "http://localhost/temp/sign.php", function(s){
-    window.session=s;
-    s.addEventListener('debug', function(l){console.log(l);});
-    s.addEventListener('progress', function(vc,vt,a){console.log('['+vc+'/'+vt+'] '+a);});
-    s.addEventListener('error', function(msg,id,cat){console.error('['+cat+'] '+msg);});
-    console.log("OK!");
-}, function(e){console.error("Error "+e);})
-*/

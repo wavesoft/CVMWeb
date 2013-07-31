@@ -56,12 +56,15 @@ public:
     
     /* VirtualBox-specific functions */
     int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList );
-    int                     getMachineUUID( std::string mname, std::string * ans_uuid, int flags );
+    int                     getMachineUUID( std::string mname, std::string * ans_uuid,  int flags );
+    std::string             getDataFolder       ();
     std::string             getHostOnlyAdapter  ();
     std::map<std::string, 
         std::string>        getMachineInfo      ();
     int                     startVM             ();
     int                     controlVM           ( std::string how );
+
+    std::string             dataPath;
     
 };
 
@@ -76,7 +79,10 @@ public:
     };
 
     std::string             hvGuestAdditions;
-    
+
+    bool                    hasExtPack          ();
+    int                     installExtPack      ( std::string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
+
     /* Internal parameters */
     int                     prepareSession      ( VBoxSession * session );
     std::map<std::string, 

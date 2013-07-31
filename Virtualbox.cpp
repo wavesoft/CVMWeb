@@ -110,6 +110,38 @@ std::string changeUpperIP( std::string baseIP, int value ) {
 \** =========================================== **/
 
 /**
+ * Return the location of the folder where we can create disks and other
+ * non-volatile files.
+ */
+std::string VBoxSession::getDataFolder() {
+
+    // If we already have a path, return it
+    if (!this->dataPath.empty())
+        return this->dataPath;
+
+    // Get machine info
+    map<string, string> info = this->getMachineInfo();
+    if (info.empty()) 
+        return "";
+
+    // Find configuration folder
+    if (info.find("Guest OS") != info.end()) {
+        string settingsFolder = info["Settings file"];
+
+        // Strip quotation marks
+        if ((settingsFolder[0] == '"') || (settingsFolder[0] == '\''))
+            settingsFolder = settingsFolder.substr( 1, settingsFolder.length() - 2);
+
+        // Strip the settings file (leave path) and store it on dataPath
+        this->dataPath = stripComponent( settingsFolder );
+    }
+
+    // Return folder
+    return this->dataPath;
+
+}
+
+/**
  * Execute command and log debug message
  */
 int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList ) {
@@ -360,7 +392,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         if (machineInfo.find( SCRATCH_DSK ) == machineInfo.end()) {
 
             /* Create a hard disk for this VM */
-            string vmDisk = getTmpFile(".vdi");
+            string vmDisk = getTmpFile(".vdi", this->dataPath);
 
             /* (4) Create disk */
             args.str("");
@@ -620,8 +652,9 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     
     CVMWA_LOG("Debug", "userData: '" << vmPatchedUserData << "'");
     CVMWA_LOG("Debug", "uData==NULL : " << ((uData == NULL) ? "true" : "false") );
-    if (uData != NULL)
+    if (uData != NULL) {
         CVMWA_LOG("Debug", "uData->empty() : " << (uData->empty() ? "true" : "false") );
+    }
     CVMWA_LOG("Debug", "vmPatchedUserData.empty() : " << (vmPatchedUserData.empty() ? "true" : "false") );
     
     /* Update local userData */
@@ -1506,6 +1539,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->key = key;
     sess->host = this;
     sess->rdpPort = 0;
+    sess->dataPath = "";
     return sess;
 }
 
@@ -1656,7 +1690,19 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
             session->flags |= HVF_SYSTEM_64BIT;
         }
     }
-    
+
+    /* Find configuration folder */
+    if (info.find("Guest OS") != info.end()) {
+        string settingsFolder = info["Settings file"];
+
+        // Strip quotation marks
+        if ((settingsFolder[0] == '"') || (settingsFolder[0] == '\''))
+            settingsFolder = settingsFolder.substr( 1, settingsFolder.length() - 2);
+
+        // Strip the settings file (leave path) and store it on dataPath
+        ((VBoxSession*)session)->dataPath = stripComponent( settingsFolder );
+    }
+
     /* Parse RDP info */
     if (info.find("VRDE") != info.end()) {
         string rdpInfo = info["VRDE"];
@@ -1841,4 +1887,111 @@ int Virtualbox::loadSessions() {
     }
 
     return 0;
+}
+
+/**
+ * Check if the hypervisor has the extension pack installed (used for the more advanced RDP)
+ */
+bool Virtualbox::hasExtPack() {
+    
+    /**
+     * Check for extension pack
+     */
+    vector<string> lines;
+    this->exec("list extpacks", &lines);
+    for (std::vector<std::string>::iterator l = lines.begin(); l != lines.end(); l++) {
+        if (l->find("Oracle VM VirtualBox Extension Pack") != string::npos) {
+            return true;
+        }
+    }
+
+    // Not found
+    return false;
+
+}
+
+/**
+ * Install extension pack
+ *
+ * This function is used in combination with the installHypervisor function from Hypervisor class, but it can also be used
+ * on it's own.
+ *
+ */
+int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin, int progressMax, int progressTotal ) {
+
+    /* Notify extension pack installation */
+    int currProgress = progressMin;
+    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Downloading extension pack configuration");
+    
+    /* Contact the information point */
+    string requestBuf;
+    string checksum;
+    CVMWA_LOG( "Info", "Fetching data" );
+    int res = downloadProvider->downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
+    if ( res != HVE_OK ) return res;
+    
+    /* Extract information */
+    vector<string> lines;
+    splitLines( requestBuf, &lines );
+    map<string, string> data = tokenize( &lines, '=' );
+    
+    /* Get the version of Virtualbox currently installed */
+    unsigned verPart = this->verString.find(" ");
+    if (verPart == string::npos) verPart = this->verString.length();
+
+    /* Build version string (it will be something like "vbox-2.4.12") */
+    string verstring = "vbox-" + this->verString.substr(0, verPart);
+
+    /* Prepare name constants to be looked up on the configuration url */
+    string kExtpackUrl = verString      + "-extpack";
+    string kExtpackChecksum = verString + "-extpackChecksum";
+    string kExtpackExt = ".vbox-extpack";
+
+    /* Verify integrity of the data */
+    if (data.find( kExtpackUrl ) == data.end()) {
+        CVMWA_LOG( "Error", "ERROR: No extensions package URL found" );
+        return HVE_EXTERNAL_ERROR;
+    }
+    if (data.find( kExtpackChecksum ) == data.end()) {
+        CVMWA_LOG( "Error", "ERROR: No extensions package checksum found" );
+        return HVE_EXTERNAL_ERROR;
+    }
+
+    /* Divide progress in 5 steps */
+    int progressStep = (int)( ((float) progressMax - (float)progressMin) / 5.0f );
+
+    /* Update progres */
+    ProgressFeedback feedback;
+    feedback.total = progressTotal;
+    feedback.min = currProgress;
+    feedback.max = currProgress + 2*progressStep;
+    feedback.callback = cbProgress;
+    feedback.message = "Downloading extension pack";
+
+    /* Download extension pack */
+    string tmpExtpackFile = getTmpFile( kExtpackExt );
+    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Downloading extension pack");
+    CVMWA_LOG( "Info", "Downloading " << data[kExtpackUrl] << " to " << tmpExtpackFile  );
+    res = downloadProvider->downloadFile( data[kExtpackUrl], tmpExtpackFile, &feedback );
+    CVMWA_LOG( "Info", "    : Got " << res  );
+    if ( res != HVE_OK ) return res;
+    
+    /* Validate checksum */
+    currProgress += 3*progressStep;
+    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Validating extension integrity");
+    sha256_file( tmpExtpackFile, &checksum );
+    CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kExtpackChecksum]  );
+    if (checksum.compare( data[kExtpackChecksum] ) != 0) return HVE_NOT_VALIDATED;
+
+    /* Install extpack on virtualbox */
+    currProgress += progressStep;
+    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Installing extension pack");
+    res = this->exec("extpack install \"" + tmpExtpackFile + "\\", NULL);
+    if (res != HVE_OK) return HVE_EXTERNAL_ERROR;
+
+    /* Cleanup */
+    if (cbProgress) (cbProgress)(progressMax, progressTotal, "Cleaning up extension");
+  	remove( tmpExtpackFile.c_str() );
+    return HVE_OK;
+
 }

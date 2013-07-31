@@ -157,7 +157,7 @@ int                                                 sysExec         ( std::strin
 /**
  * Return the name of a system-temporary file, appending the given suffix to it.
  */
-std::string                                         getTmpFile      ( std::string suffix );
+std::string                                         getTmpFile      ( std::string suffix, std::string folder = "" );
 
 /**
  * Convert a hexadecimal int, short or long from string to it's numeric representation

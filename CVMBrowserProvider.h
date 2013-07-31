@@ -83,11 +83,11 @@ private:
     /**
      * Progress feedback information
      */
-    ProgressFeedback            * feedbackPtr;
-    long                        maxStreamSize;
-    std::ofstream               fStream;
-    std::ostringstream          sStream;
-    short                       targetStream;
+    ProgressFeedback                * feedbackPtr;
+    long                            maxStreamSize;
+    std::ofstream                   fStream;
+    std::ostringstream              sStream;
+    short                           targetStream;
 
 
 };

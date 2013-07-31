@@ -639,13 +639,14 @@ void freeHypervisor( Hypervisor * hv ) {
  * Install hypervisor
  */
 int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider ) {
-    
+    const int maxSteps = 200;
+
     /**
      * Contact the information point
      */
     string requestBuf;
     CVMWA_LOG( "Info", "Fetching data" );
-    if (cbProgress) (cbProgress)(1, 100, "Checking the appropriate hypervisor for your system");
+    if (cbProgress) (cbProgress)(1, maxSteps, "Checking the appropriate hypervisor for your system");
     int res = downloadProvider->downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
     if ( res != HVE_OK ) return res;
     
@@ -709,14 +710,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         CVMWA_LOG( "Error", "ERROR: No installer program data found" );
         return HVE_EXTERNAL_ERROR;
     }
-    if (data.find( "extpack" ) == data.end()) {
-        CVMWA_LOG( "Error", "ERROR: No extensions package URL found" );
-        return HVE_EXTERNAL_ERROR;
-    }
-    if (data.find( "extpackChecksum" ) == data.end()) {
-        CVMWA_LOG( "Error", "ERROR: No extensions package checksum found" );
-        return HVE_EXTERNAL_ERROR;
-    }
+    
     
     #ifdef __linux__
     // Pick an extension and installation type based on the installer= parameter
@@ -735,7 +729,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
      * Prepare download feedback
      */
     ProgressFeedback feedback;
-    feedback.total = 100;
+    feedback.total = maxSteps;
     feedback.min = 2;
     feedback.max = 90;
     feedback.callback = cbProgress;
@@ -745,7 +739,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
      * Download
      */
     string tmpHypervisorInstall = getTmpFile( kFileExt );
-    if (cbProgress) (cbProgress)(2, 100, "Downloading hypervisor");
+    if (cbProgress) (cbProgress)(2, maxSteps, "Downloading hypervisor");
     CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
     res = downloadProvider->downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
     CVMWA_LOG( "Info", "    : Got " << res  );
@@ -756,7 +750,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
      */
     string checksum;
     sha256_file( tmpHypervisorInstall, &checksum );
-    if (cbProgress) (cbProgress)(90, 100, "Validating download");
+    if (cbProgress) (cbProgress)(90, maxSteps, "Validating download");
     CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kChecksum]  );
     if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
     
@@ -766,7 +760,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     #if defined(__APPLE__) && defined(__MACH__)
 
 		CVMWA_LOG( "Info", "Attaching" );
-		if (cbProgress) (cbProgress)(94, 100, "Mounting hypervisor DMG disk");
+		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
 		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
 		if (res != 0) {
 			remove( tmpHypervisorInstall.c_str() );
@@ -778,7 +772,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
 		CVMWA_LOG( "Info", "Got disk '" << dskDev << "', volume: '" << dskVolume  );
     
-		if (cbProgress) (cbProgress)(97, 100, "Starting installer");
+		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
 		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
 		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
 		if (res != 0) {
@@ -788,14 +782,14 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 			return HVE_EXTERNAL_ERROR;
 		}
 		CVMWA_LOG( "Info", "Detaching" );
-		if (cbProgress) (cbProgress)(100, 100, "Cleaning-up");
+		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
 		res = sysExec("hdiutil detach " + dskDev, NULL);
 		remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(_WIN32)
 
 		/* Start installer */
-		if (cbProgress) (cbProgress)(97, 100, "Starting installer");
+		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
 		CVMWA_LOG( "Info", "Starting installer" );
 
 		/* CreateProcess does not work because we need elevated permissions,
@@ -822,13 +816,13 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
 
 		/* Cleanup */
-		if (cbProgress) (cbProgress)(100, 100, "Cleaning-up");
+		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
 		remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(__linux__)
 
         /* Check if our environment has what the installer needs */
-		if (cbProgress) (cbProgress)(92, 100, "Validating OS environment");
+		if (cbProgress) (cbProgress)(92, maxSteps, "Validating OS environment");
         if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
             cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
 			remove( tmpHypervisorInstall.c_str() );
@@ -836,7 +830,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         }
 
         /* (1) If we have xdg-open, use it to prompt the user using the system's default GUI */
-		if (cbProgress) (cbProgress)(94, 100, "Installing hypervisor");
+		if (cbProgress) (cbProgress)(94, maxSteps, "Installing hypervisor");
         if (linuxInfo.hasXDGOpen) {
             string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
             res = system( cmdline.c_str() );
@@ -848,7 +842,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         
             /* TODO: Currently we don't do it, but we must wait until the package is installed
              *       and then do hypervisor probing again. */
-     		if (cbProgress) (cbProgress)(100, 100, "Passing control to the user");
+     		if (cbProgress) (cbProgress)(100, maxSteps, "Passing control to the user");
             return HVE_SCHEDULED;
         
         /* (2) If we have GKSudo, do directly dpkg/yum install */
@@ -870,7 +864,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		}
 
             /* Cleanup */
-    		if (cbProgress) (cbProgress)(100, 100, "Cleaning-up");
+    		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
         	remove( tmpHypervisorInstall.c_str() );
     	
         /* (3) Otherwise create a bash script and prompt the user */
@@ -891,8 +885,27 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
         return HVE_NOT_VALIDATED;
     };
+
+    /**
+     * If we are installing VirtualBox, make sure the VBOX Extension pack are installed
+     */
+    if (hv->type == HV_VIRTUALBOX) {
+        if ( !((Virtualbox*)hv)->hasExtPack() ) {
+
+            // Install extension pack, and fail on error
+            if ( (res = ((Virtualbox*)hv)->installExtPack( versionID, downloadProvider, cbProgress, 110, maxSteps, maxSteps )) != HVE_OK ) {
+                freeHypervisor(hv);
+                return res;
+            };
+
+        }
+    }
+
+    /**
+     * Release hypervisor
+     */
     freeHypervisor(hv);
-    
+
     /**
      * Completed
      */

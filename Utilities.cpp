@@ -351,17 +351,25 @@ vector< map<string, string> > tokenizeList( vector<string> * lines, char delim )
 /**
  * Return a temporary filename
  */
-std::string getTmpFile( std::string suffix ) {
+std::string getTmpFile( string suffix, string folder ) {
     #ifdef _WIN32
         DWORD wRet;
         int lRet;
         char tmpPath[MAX_PATH];
         char tmpName[MAX_PATH];
+
+        /* Prohibit too long folder names */
+        if (folder.length() + suffix.length() + 1 > MAX_PATH) return "";
         
-        /* Get temporary folder */
-        wRet = GetTempPathA( MAX_PATH, tmpPath );
-        if (wRet == 0) return "";
-        
+        /* Get temporary folder, if it's not specified */
+        if (folder.empty()) {
+            wRet = GetTempPathA( MAX_PATH, tmpPath );
+            if (wRet == 0) return "";
+        } else {
+            folder.copy( tmpPath, folder.length() );
+            folder[ folder.length() ] = '\0';
+        }
+
         /* Get temporary file name */
         lRet = GetTempFileNameA( tmpPath, "cvm", 0, tmpName );
         if (lRet == 0) return "";
@@ -375,10 +383,27 @@ std::string getTmpFile( std::string suffix ) {
         return tmpStr;
     
     #else
-        char * tmp = tmpnam(NULL);
-        string tmpFile = tmp;
-        tmpFile += suffix;
+
+        /* If no folder is specified, use /tmp */
+        if (folder.empty())
+            folder = "/tmp";
+
+        /* Append template */
+        folder += "/tmpXXXXXXXXXX." + suffix;
+
+        /* Copy to pointer */
+        char * fName = new char[ folder.length()+1 ];
+        folder.copy( fName, folder.length(), 0);
+        fName[ folder.length() ] = '\0';
+
+        /* Make unique name */
+        mkstemp(fName);
+        string tmpFile( fName );
+        delete[] fName;
+
+        /* Return std::string version of the filename */
         return tmpFile;
+
     #endif
 }
 
