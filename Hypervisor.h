@@ -72,11 +72,6 @@
 #define DEFAULT_CERNVM_VERSION  "1.4"
 #define DEFAULT_API_PORT        80
 
-/* Callback function definitions */
-typedef boost::function< void () >                                                   callbackVoid;
-typedef boost::function< void (const std::string&) >                                 callbackDebug;
-typedef boost::function< void (const std::string&, const int, const std::string&) >  callbackError;
-
 /**
  * A hypervisor session is actually a VM instance.
  * This is where the actual I/O happens
@@ -240,7 +235,7 @@ public:
     virtual int             registerSession     ( HVSession * sess );
     virtual int             getUsage            ( HVINFO_RES * usage);
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
-    virtual bool            waitTillReady       ( );
+    virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
     
     /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList );
@@ -261,8 +256,7 @@ public:
              a hack because those two systems (JSAPI & HypervisorAPI) should be isolated. */
     std::string             daemonBinPath;
      
-    
-private:
+protected:
     int                     sessionID;
     DownloadProviderPtr     downloadProvider;
     

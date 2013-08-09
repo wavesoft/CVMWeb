@@ -83,16 +83,19 @@ _NS_.WebAPIPlugin.prototype.requestSession = function( configURL, cbOK, cbFail )
 
             // Notify before the first progress event
             if (!inProgress) {
+                this.__fire('progressBegin'); 
                 pGroupID = notifyGlobalBeginProgress(b);
                 inProgress = true;
             }
 
             // Forward progress events in percentage
+            this.__fire('progress', Math.round(100 * a / b) ,c );
             notifyGlobalProgress( a,b,c, pGroupID );
             console.log("[DBG] ",a,"==",b);
 
             // Notify when total equals current
             if (a == b) {
+                this.__fire('progressEnd'); 
                 notifyGlobalEndProgress(pGroupID);
                 inProgress = false;
             }

@@ -48,7 +48,7 @@ using namespace std;
 \** =========================================== **/
 
 /**
- * Delegate function to forward progress events to a javascript object
+ * Delegate class to forward progress events to a javascript object
  */
 class ProgressDelegate {
 public:
@@ -256,16 +256,16 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
 
     /* Create a progress delegate */
     ProgressDelegate onProgress( progressCB );
-    onProgress.fire( 1, 7, "Initializing hypervisor" );
+    onProgress.fire( 1, 50, "Initializing hypervisor" );
 
     /* Wait for delaied hypervisor initiation */
-    p->hv->waitTillReady();
+    p->hv->waitTillReady( FBSTRING_PLUGIN_VERSION, onProgress.getFunction(), 2, 25, 50 );
 
     /* Fetch domain info */
     std::string domain = this->getDomainName();
 
     /* Try to update authorized keystore if it's in an invalid state */
-    onProgress.fire( 2, 7, "Initializing crypto store" );
+    onProgress.fire( 25, 50, "Initializing crypto store" );
     if (!isDomainPrivileged()) {
         
         // Trigger update in the keystore (if it's nessecary)
@@ -286,7 +286,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     }
     
     /* Validate arguments */
-    onProgress.fire( 3, 7, "Contacting configuration server" );
+    onProgress.fire( 30, 50, "Contacting configuration server" );
     std::string sURL = vmcpURL.convert_cast<std::string>();
     if (sURL.empty()) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
@@ -333,7 +333,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     };
     
     /* Validate signature */
-    onProgress.fire( 4, 7, "Validating server identity" );
+    onProgress.fire( 35, 50, "Validating server identity" );
     res = p->crypto->signatureValidate( domain, salt, jsonHash );
     if (res < 0) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
@@ -354,7 +354,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     
     /* Check if the session is new and prompt the user */
     if (res == 0) {
-        onProgress.fire( 5, 7, "Starting new session" );
+        onProgress.fire( 40, 50, "Starting new session" );
 
         // Newline-specific split
         string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine. This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
@@ -375,7 +375,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
                 this->throttleTimestamp = getMillis();
             }
             
-            onProgress.fire( 7, 7, "User aborted" );
+            onProgress.fire( 50, 50, "User aborted" );
             if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
             return;
             
@@ -390,7 +390,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     }
     
     /* Open/resume session */
-    onProgress.fire( 6, 7, "Oppening session" );
+    onProgress.fire( 45, 50, "Oppening session" );
     HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
     if (session == NULL) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
@@ -450,7 +450,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     CVMWA_LOG("Debug", "diskChecksum=" << session->diskChecksum);
     
     /* Call success callback */
-    onProgress.fire( 7, 7, "Session ready" );
+    onProgress.fire( 50, 50, "Session ready" );
     boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session );
     if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
         
@@ -517,7 +517,7 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
     } else {
     
         /* Wait for delaied hypervisor initiation */
-        p->hv->waitTillReady();
+        p->hv->waitTillReady( FBSTRING_PLUGIN_VERSION );
 
         /* Fetch info */
         string vmName = vm.convert_cast<string>();

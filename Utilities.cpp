@@ -349,6 +349,23 @@ vector< map<string, string> > tokenizeList( vector<string> * lines, char delim )
 };
 
 /**
+ * Cross-platform function to return the temporary folder name
+ */
+std::string getTmpDir() {
+#ifdef _WIN32
+    char tmpPath[MAX_PATH];
+    DWORD wRet = GetTempPathA( MAX_PATH, tmpPath );
+    if (wRet == 0) return "";
+    std::string path = tmpPath;
+    if (path[path.length() - 1] == '\\')
+        return path.substr(0,path.length()-1);
+    return path;
+#else
+    return "/tmp";
+#endif
+}
+
+/**
  * Return a temporary filename
  */
 std::string getTmpFile( string suffix, string folder ) {

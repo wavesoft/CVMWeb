@@ -1490,7 +1490,7 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
 /**
  * Load sessions if they are not yet loaded
  */
-bool Virtualbox::waitTillReady() {
+bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbProgress, int progressMin , int progressMax, int progressTotal ) {
     
     /**
      * Session loading takes time, so instead of blocking the plugin
@@ -1501,6 +1501,17 @@ bool Virtualbox::waitTillReady() {
         this->sessionLoaded = true;
     }
     
+    /**
+     * By the way, check if we have guest additions installed
+     */
+    if (!this->hasExtPack()) {
+        this->installExtPack(
+            pluginVersion,
+            this->downloadProvider,
+            cbProgress, progressMin, progressMax, progressTotal
+            );
+    }
+
     /**
      * All's good!
      */
@@ -1938,13 +1949,15 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     /* Get the version of Virtualbox currently installed */
     unsigned verPart = this->verString.find(" ");
     if (verPart == string::npos) verPart = this->verString.length();
+    unsigned revPart = this->verString.find("r");
+    if (revPart == string::npos) revPart = verPart;
 
     /* Build version string (it will be something like "vbox-2.4.12") */
-    string verstring = "vbox-" + this->verString.substr(0, verPart);
+    string verstring = "vbox-" + this->verString.substr(0, revPart);
 
     /* Prepare name constants to be looked up on the configuration url */
-    string kExtpackUrl = verString      + "-extpack";
-    string kExtpackChecksum = verString + "-extpackChecksum";
+    string kExtpackUrl = verstring      + "-extpack";
+    string kExtpackChecksum = verstring + "-extpackChecksum";
     string kExtpackExt = ".vbox-extpack";
 
     /* Verify integrity of the data */
@@ -1969,7 +1982,7 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     feedback.message = "Downloading extension pack";
 
     /* Download extension pack */
-    string tmpExtpackFile = getTmpFile( kExtpackExt );
+    string tmpExtpackFile = getTmpDir() + "/" + getFilename( data[kExtpackUrl] );
     if (cbProgress) (cbProgress)(currProgress, progressTotal, "Downloading extension pack");
     CVMWA_LOG( "Info", "Downloading " << data[kExtpackUrl] << " to " << tmpExtpackFile  );
     res = downloadProvider->downloadFile( data[kExtpackUrl], tmpExtpackFile, &feedback );
@@ -1986,7 +1999,7 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     /* Install extpack on virtualbox */
     currProgress += progressStep;
     if (cbProgress) (cbProgress)(currProgress, progressTotal, "Installing extension pack");
-    res = this->exec("extpack install \"" + tmpExtpackFile + "\\", NULL);
+    res = this->exec("extpack install \"" + tmpExtpackFile + "\"", NULL);
     if (res != HVE_OK) return HVE_EXTERNAL_ERROR;
 
     /* Cleanup */

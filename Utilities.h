@@ -40,6 +40,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <boost/function.hpp>
+#include <boost/shared_array.hpp>
+
 // Only for WIN32
 #ifdef _WIN32
 #include <Windows.h>
@@ -101,7 +104,14 @@
 #define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
 #define THREAD_ID        pthread_self(  )
 #endif
- 
+
+/* Callback function definitions */
+typedef boost::function< void () >                                                   callbackVoid;
+typedef boost::function< void (const std::string&) >                                 callbackDebug;
+typedef boost::function< void (const std::string&, const int, const std::string&) >  callbackError;
+typedef boost::function<void ( const boost::shared_array<uint8_t>&, const size_t)>   callbackData;
+typedef boost::function<void ( const size_t, const size_t, const std::string& )>     callbackProgress;
+
 /**
  * Get the location of the application's AppData folder
  */
@@ -153,6 +163,11 @@ int                                                 sha256_bin   ( std::string p
  * This function will wait for the command to finish and it will return it's exit code
  */
 int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList );
+
+/**
+ * Cross-platform function to return the temporary folder path
+ */
+std::string                                         getTmpDir       ( );
 
 /**
  * Return the name of a system-temporary file, appending the given suffix to it.

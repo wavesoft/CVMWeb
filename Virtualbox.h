@@ -95,7 +95,7 @@ public:
     virtual int             updateSession       ( HVSession * session, bool fast );
     virtual HVSession *     allocateSession     ( std::string name, std::string key );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
-    virtual bool            waitTillReady       ( );
+    virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
 
 private:
     bool                    sessionLoaded;

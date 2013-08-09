@@ -423,7 +423,7 @@ ThinIPCEndpoint::ThinIPCEndpoint( int port ) {
 //    std::cout << "INFO: ThinIPC(" << port << ")" << std::endl;
     
     // Bind on the server address
-    if( bind(this->sock, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) < 0) {
+    if( ::bind(this->sock, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) < 0) {
         this->errorCode = SCKE_BIND;
         return;
     }

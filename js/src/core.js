@@ -145,6 +145,25 @@ function callError( userCallback, message, code ) {
 };
 
 /**
+ * Global function to receive installation/environment setup progress updates
+ */
+var globalInstallProgressHandlers = [ ];
+_NS_.addInstallProgressHandler = function(handler) {
+    globalInstallProgressHandlers.push(handler);
+};
+_NS_.removeInstallProgressHandler = function(handler) {
+    var i = globalInstallProgressHandlers.indexOf(handler);
+    globalInstallProgressHandlers.splice(i,1);
+};
+
+/**
+ * Let CVMWeb that the page is loaded (don't register page loaded)
+ */
+_NS_.markPageLoaded = function() {
+    __pageLoaded = true;
+};
+
+/**
  * Global function to initialize the plugin and callback when ready
  *
  * @param cbOK              A callback function that will be fired when a plugin instance is obtained
@@ -158,6 +177,13 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
     if (cbFail === true) {
         setupEnvironment = true;
         cbFail = null;
+    }
+
+    // Forward progress events to the global function handlers (if any)
+    var cb_progress = function(curr, total, msg) {
+        for (var i=0; i<globalInstallProgressHandlers.length; i++) {
+            globalInstallProgressHandlers[i]( Math.round(100 * curr / total), msg);
+        }
     }
     
     // Create a local callback that will check the plugin
@@ -234,14 +260,19 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                                 
                             } else if (BrowserDetect.browser == "Chrome") {
                                 
-                                // And then trigger the installation
-                                chrome.webstore.install("https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm", function() {
-                                    // Installed, reload
-                                    location.reload();
-                                }, function(e) {
+                                try {
+                                    // And then trigger the installation
+                                    chrome.webstore.install("https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm", function() {
+                                        // Installed, reload
+                                        location.reload();
+                                    }, function(e) {
+                                        // Automatic installation failed, try manual
+                                        window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
+                                    });
+                                } catch (e) {
                                     // Automatic installation failed, try manual
                                     window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
-                                });
+                                }
                                 
                             } else {
                                 window.location = "http://cernvm.cern.ch/portal/webapi";
@@ -288,11 +319,13 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                                 // Setup callbacks and install hypervisor
                                 __pluginSingleton.addEventListener('install', cb_ok);
                                 __pluginSingleton.addEventListener('installError', cb_error);
+                                __pluginSingleton.addEventListener('installProgress', cb_progress);
                                 __pluginSingleton.installHypervisor();
 
                             } else {
                                 callError( cbFail, "User denied hypervisor installation!", -102 );
                             }
+
                         }
                     );
                     

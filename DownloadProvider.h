@@ -45,12 +45,6 @@
 #define DP_THROTTLE_TIMER   250
 
 /**
- * Callback typedef
- */
-typedef boost::function<void ( const boost::shared_array<uint8_t>&, const size_t)>  callbackData;
-typedef boost::function<void ( const size_t, const size_t, const std::string& )>    callbackProgress;
-
-/**
  * Forward decleration of pointer types
  */
 class DownloadProvider; 

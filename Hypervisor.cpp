@@ -40,7 +40,7 @@
 using namespace std;
 
 /* Incomplete type placeholders */
-bool Hypervisor::waitTillReady ( )                                  { return false; }
+bool Hypervisor::waitTillReady(string,callbackProgress,int,int,int) { return false; }
 int Hypervisor::loadSessions()                                      { return HVE_NOT_IMPLEMENTED; }
 int Hypervisor::updateSession( HVSession * session )                { return HVE_NOT_IMPLEMENTED; }
 int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; }

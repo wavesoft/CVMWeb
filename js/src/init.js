@@ -5,12 +5,22 @@
  */
  
 /**
-* Hook on the onLoad event
-* (I can't use jQuery because it's supposed to be a non-dependant library)
+* By default use 'load' handler, unless user has jQuery loaded
 */
-window.addEventListener('load', function(e) {
-    __pageLoaded = true;
-    for (var i=0; i<__loadHooks.length; i++) {
-        __loadHooks[i]();
-    }
-});
+if (window['jQuery'] == undefined) {
+	if (__pageLoaded) return;
+	window.addEventListener('load', function(e) {
+	    __pageLoaded = true;
+	    for (var i=0; i<__loadHooks.length; i++) {
+	        __loadHooks[i]();
+	    }
+	});
+} else {
+	$(function(){
+		if (__pageLoaded) return;
+		__pageLoaded = true;
+	    for (var i=0; i<__loadHooks.length; i++) {
+	        __loadHooks[i]();
+	    }
+	});
+}
