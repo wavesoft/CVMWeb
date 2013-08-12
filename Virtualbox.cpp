@@ -342,10 +342,12 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             vector< map< string, string > > disks = this->host->getDiskList();
             for (vector< map<string, string> >::iterator i = disks.begin(); i != disks.end(); i++) {
                 map<string, string> iface = *i;
-                
+
                 /* Look of the master disk of what we are using */
                 if ( (iface.find("Type") != iface.end()) && (iface.find("Parent UUID") != iface.end()) && (iface.find("Location") != iface.end()) && (iface.find("UUID") != iface.end()) ) {
-                    if ( (iface["Type"].compare("multiattach") == 0) && (iface["Parent UUID"].compare("base") == 0) && (iface["Location"].compare(masterDisk) == 0) ) {
+
+                    /* Check if all the component maches */
+                    if ( (iface["Type"].compare("multiattach") == 0) && (iface["Parent UUID"].compare("base") == 0) && samePath(iface["Location"],masterDisk) ) {
                         
                         /* Use the master UUID instead of the filename */
                         CVMWA_LOG("Info", "Found master with UUID " << iface["UUID"]);

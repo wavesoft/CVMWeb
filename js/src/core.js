@@ -73,7 +73,7 @@ _NS_.setGlobalProgressHandler = _NS_.setGlobalProgressHandlers = function( onPro
 /**
  * Helper function to start RDP client using the jar from CernVM
  */
-_NS.launchRDP = function( url ) {
+_NS_.launchRDP = function( rdpURL, resolution ) {
 
     // Prepare applet
     var applet = document.createElement('applet');
@@ -85,20 +85,40 @@ _NS.launchRDP = function( url ) {
     applet.setAttribute('align', 'top');
     applet.style['visibility'] = 'hidden';
 
-    // Place server
-    param = document.createElement('param');
+    // Specify URL
+    var param = document.createElement('param');
     param.name = "server";
-    param.value = url;
+    param.value = rdpURL;
     applet.appendChild(param);
 
-    // We need geometry
-    param = document.createElement('param');
+    // Process resolution parameter
+    var geom, bpp;
+    if (resolution != undefined ) {
+        // Split <width>x<height>x<bpp> string into it's components
+        var res_parts = resolution.split("x");
+        geom = res_parts[0] + 'x' + res_parts[1];
+        bpp  = res_parts[2];
+    }
+
+    // Put resolution information
+    var param = document.createElement('param');
     param.name = "geometry";
-    param.value = "1024x768";
+    param.value = geom || "1024x768";
     applet.appendChild(param);
 
+    // But bpp information
+    if (bpp) {
+        var param = document.createElement('param');
+        param.name = "bpp";
+        param.value = bpp;
+        applet.appendChild(param);
+    }
+
+    // Put applet on body (it will pop-up immediately a new window)
     document.body.appendChild(applet);
-}
+    return applet;
+
+};
 
 
 /**

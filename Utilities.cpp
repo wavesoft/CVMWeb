@@ -545,6 +545,20 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
 #endif
 
 /**
+ * Compare two paths for eqality (ignoring different kinds of slashes)
+ */
+bool samePath( std::string pathA, std::string pathB ) {
+    for (size_t i = 0; i < pathA.length(); i++) {
+        if (i >= pathB.length()) return false;
+        char a = pathA[i], b = pathB[i];
+        if (a == '\\') a = '/';
+        if (b == '\\') b = '/';
+        if (a != b) return false;
+    }
+    return true;
+}
+
+/**
  * Sha256 from binary to hex
  */
 void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {

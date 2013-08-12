@@ -175,6 +175,11 @@ std::string                                         getTmpDir       ( );
 std::string                                         getTmpFile      ( std::string suffix, std::string folder = "" );
 
 /**
+ * Compare two paths for eqality (ignoring different kinds of slashes)
+ */
+bool                                                samePath        ( std::string pathA, std::string pathB );
+
+/**
  * Convert a hexadecimal int, short or long from string to it's numeric representation
  */
 template <typename T> T                             hex_ston        ( const std::string &Text );

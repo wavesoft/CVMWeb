@@ -400,3 +400,12 @@ _NS_.WebAPISession.prototype.close = function( cbOK ) {
     return true;
 
 };
+_NS_.WebAPISession.prototype.openRDPWindow = function() {
+
+    // Launch RDP window
+    _NS_.launchRDP( 
+        this.__session.rdpURL, 
+        this.__session.resolution 
+    );
+
+}
