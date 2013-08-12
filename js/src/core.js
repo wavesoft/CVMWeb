@@ -71,6 +71,37 @@ _NS_.setGlobalProgressHandler = _NS_.setGlobalProgressHandlers = function( onPro
 };
 
 /**
+ * Helper function to start RDP client using the jar from CernVM
+ */
+_NS.launchRDP = function( url ) {
+
+    // Prepare applet
+    var applet = document.createElement('applet');
+    applet.setAttribute('codebase', 'http://cernvm.cern.ch/releases/webapi/js');
+    applet.setAttribute('code', 'net.propero.rdp.applet.RdpApplet.class');
+    applet.setAttribute('archive', 'cernvm-properrdp-14.1.1.jar');
+    applet.setAttribute('width', '1');
+    applet.setAttribute('height', '1');
+    applet.setAttribute('align', 'top');
+    applet.style['visibility'] = 'hidden';
+
+    // Place server
+    param = document.createElement('param');
+    param.name = "server";
+    param.value = url;
+    applet.appendChild(param);
+
+    // We need geometry
+    param = document.createElement('param');
+    param.name = "geometry";
+    param.value = "1024x768";
+    applet.appendChild(param);
+
+    document.body.appendChild(applet);
+}
+
+
+/**
  * High-level progress forwarding functions
  */
 var currentProgressTotal = 0,

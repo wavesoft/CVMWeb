@@ -60,6 +60,7 @@ int HVSession::setProperty( std::string name, std::string key )     { return HVE
 std::string HVSession::getIP()                                      { return ""; }
 std::string HVSession::getProperty( std::string name )              { return ""; }
 std::string HVSession::getRDPHost()                                 { return ""; }
+std::string HVSession::getExtraInfo( int extraInfo )                { return ""; };
 
 /** 
  * Return the string representation of the given error code

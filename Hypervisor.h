@@ -60,6 +60,9 @@
 #define STATE_ERROR             5
 #define STATE_PAUSED            6
 
+/* Extra parameters supported by getExtraInfo() */
+#define EXIF_VIDEO_MODE         1
+
 /* Virtual machine session flags */
 #define HVF_SYSTEM_64BIT        1       // The system is 64-bit instead of 32-bit
 #define HVF_DEPLOYMENT_HDD      2       // Use regular deployment (HDD) instead of micro-iso
@@ -143,6 +146,8 @@ public:
     virtual std::string     getIP();
     virtual std::string     getRDPHost();
     virtual bool            isAPIAlive();
+
+    virtual std::string     getExtraInfo( int extraInfo );
 
     virtual int             update();
     virtual int             updateFast();

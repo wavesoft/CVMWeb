@@ -69,6 +69,7 @@ public:
         registerProperty("executionCap",        make_property(this, &CVMWebAPISession::get_executionCap));
         registerProperty("apiURL",              make_property(this, &CVMWebAPISession::get_apiEntryPoint));
         registerProperty("rdpURL",              make_property(this, &CVMWebAPISession::get_rdp));
+        registerProperty("resolution",          make_property(this, &CVMWebAPISession::get_resolution));
 
         registerProperty("daemonControlled",    make_property(this, &CVMWebAPISession::get_daemonControlled,
                                                                     &CVMWebAPISession::set_daemonControlled));
@@ -176,6 +177,7 @@ public:
     std::string get_rdp();
     std::string get_apiEntryPoint();
     std::string get_version();
+    std::string get_resolution();
     std::string toString();
     
     // Property setters

@@ -1467,6 +1467,19 @@ std::string VBoxSession::getIP() {
     }
 }
 
+/**
+ * Return miscelaneous information
+ */
+std::string VBoxSession::getExtraInfo( int extraInfo ) {
+    if (extraInfo == EXIF_VIDEO_MODE) {
+        map<string, string> info = this->getMachineInfo();
+        if (info.find("Video mode") != info.end())
+            return info["Video mode"];
+    }
+
+    return "";
+}
+
 
 /** =========================================== **\
             Virtualbox Implementation

@@ -50,6 +50,7 @@ public:
     virtual std::string     getProperty( std::string name );
     virtual std::string     getRDPHost();
     virtual std::string     getIP();
+    virtual std::string     getExtraInfo( int extraInfo );
 
     virtual int             update();
     virtual int             updateFast();

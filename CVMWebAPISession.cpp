@@ -412,6 +412,13 @@ std::string CVMWebAPISession::get_name() {
     return this->session->name;
 }
 
+std::string CVMWebAPISession::get_resolution() {
+
+    // Get screen screen resolution as extra info
+    return this->session->getExtraInfo(EXIF_VIDEO_MODE);
+
+}
+
 std::string CVMWebAPISession::get_apiEntryPoint() {
     std::string ip = this->session->getIP();
     if (ip.empty()) {
