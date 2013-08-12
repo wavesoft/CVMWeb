@@ -221,18 +221,31 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
         time_t storeTime = config.getLastModified("domainkeys.lst");
 
         // Check if we are still within the  validity period
-        if (currTime - storeTime < CRYPTO_STORE_VALIDITY) {
+        if ((currTime - storeTime) < CRYPTO_STORE_VALIDITY) {
+
             // We are still within it's validity time
             CVMWA_LOG( "Crypto", "Store still valid" );
-            needsReload = false;
-        }
-            
-        // Check if the file was changed externally
-        if (storeTime != keystoreTimestamp) {
-            if (validateSignature( localKeystore, localKeystoreSig )) {
-                CVMWA_LOG( "Crypto", "Store timestamp changed but is still valid" );
+
+            // Check if the file was changed externally
+            if ((keystoreTimestamp != 0) && (storeTime != keystoreTimestamp)) {
+
+                // Timestamp changed. Check if signature is still valid
+                if (validateSignature( localKeystore, localKeystoreSig )) {
+
+                    // Signature is still valid. No reload is needed
+                    CVMWA_LOG( "Crypto", "Store timestamp changed but is still valid" );
+                    needsReload = false;
+
+                }
+
+            } else {
+
+                // No need to reload anything. We are good and no
+                // modifications occured externally
                 needsReload = false;
+
             }
+
         }
 
     }

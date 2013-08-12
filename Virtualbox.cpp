@@ -1953,7 +1953,7 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     string requestBuf;
     string checksum;
     CVMWA_LOG( "Info", "Fetching data" );
-    int res = downloadProvider->downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
+    int res = downloadProvider->downloadText( "http://http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf );
     if ( res != HVE_OK ) return res;
     
     /* Extract information */

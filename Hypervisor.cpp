@@ -648,7 +648,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     string requestBuf;
     CVMWA_LOG( "Info", "Fetching data" );
     if (cbProgress) (cbProgress)(1, maxSteps, "Checking the appropriate hypervisor for your system");
-    int res = downloadProvider->downloadText( "http://labs.wavesoft.gr/lhcah/?vid=" + versionID, &requestBuf );
+    int res = downloadProvider->downloadText( "http://http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf );
     if ( res != HVE_OK ) return res;
     
     /**
