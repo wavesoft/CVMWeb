@@ -75,6 +75,38 @@ _NS_.setGlobalProgressHandler = _NS_.setGlobalProgressHandlers = function( onPro
  */
 _NS_.launchRDP = function( rdpURL, resolution ) {
 
+    // Process resolution parameter
+    var width=800, height=600, bpp=24;
+    if (resolution != undefined ) {
+        // Split <width>x<height>x<bpp> string into it's components
+        var res_parts = resolution.split("x");
+        width = parseInt(res_parts[0]);
+        height = parseInt(res_parts[1]);
+        if (res_parts.length > 2)
+            bpp  = parseInt(res_parts[2]);
+    }
+
+    // Open web-RDP client from CernVM
+    var w = window.open(
+        'http://cernvm.cern.ch/releases/webapi/webrdp/webclient.html#' + rdpURL + ',' + width + ',' + height, 
+        'WebRDPClient', 
+        'width=' + width + ',height=' + height
+    );
+
+    // Align, center and focus
+    w.moveTo( (screen.width - width)/2, (screen.height - height)/2 );
+    setTimeout(function() { w.focus() }, 100);
+    w.focus();
+
+    /*
+
+    //########################################//
+    //########################################//
+    //###### JAVA SOLUTION DEPRECATED ########//
+    //###### CODE KEPT FOR REFERENCE  ########//
+    //########################################//
+    //########################################//
+
     // Prepare applet
     var applet = document.createElement('applet');
     applet.setAttribute('codebase', 'http://cernvm.cern.ch/releases/webapi/js');
@@ -84,6 +116,12 @@ _NS_.launchRDP = function( rdpURL, resolution ) {
     applet.setAttribute('height', '1');
     applet.setAttribute('align', 'top');
     applet.style['visibility'] = 'hidden';
+
+    // Additional JVM arguments
+    var param = document.createElement('param');
+    param.name = "java_arguments";
+    param.value = "-d32";
+    applet.appendChild(param);
 
     // Specify URL
     var param = document.createElement('param');
@@ -117,6 +155,7 @@ _NS_.launchRDP = function( rdpURL, resolution ) {
     // Put applet on body (it will pop-up immediately a new window)
     document.body.appendChild(applet);
     return applet;
+    */
 
 };
 
@@ -307,7 +346,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                             if (BrowserDetect.browser == "Firefox") {
                                 
                                 // For firefox, just point to the XPI, the user will be prompted
-                                window.location = "http://cernvm.cern.ch/releases/webapi/plugin/cvmwebapi-1.2.6.xpi";
+                                window.location = "http://labs.wavesoft.gr/micro/res/cvmwebapi-1.2.6.xpi";
                                 
                             } else if (BrowserDetect.browser == "Chrome") {
                                 
