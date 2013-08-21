@@ -68,6 +68,8 @@ ThinIPCMessage::ThinIPCMessage( ) {
  */
 ThinIPCMessage::ThinIPCMessage( char* payload, short size ) {
     this->data = (char*) malloc( size );
+    if (this->data == NULL) return;
+
     memcpy( this->data, payload, size );
     this->size = size;
     __chunkPos = 0;
@@ -155,6 +157,7 @@ string ThinIPCMessage::readString() {
     // Read bytes
     if (__ioPos+len > size) return "";
     char * buf = (char *) malloc( len );
+    if (buf == NULL) return "";
     memcpy( buf, &this->data[__ioPos], len );
     __ioPos += len;
 
@@ -172,7 +175,16 @@ short ThinIPCMessage::writeInt( long int v ) {
 
     // Resize buffer
     size += 4;
-    this->data = (char *) realloc( this->data, size );
+    char * nData = (char *) realloc( this->data, size );
+
+    // Check if there was an error to realloc
+    // (and therefore the data pointer was not deallocated)
+    if (nData == NULL) {
+        size -= 4;
+        return 0;
+    } else {
+        this->data = nData;
+    }
     
     // Write int
     memcpy( &this->data[__ioPos], &v, 4 );
@@ -189,8 +201,17 @@ short ThinIPCMessage::writeShort( short int v ) {
 
     // Resize buffer
     size += 2;
-    this->data = (char *) realloc( this->data, size );
+    char * nData = (char *) realloc( this->data, size );
     
+    // Check if there was an error to realloc
+    // (and therefore the data pointer was not deallocated)
+    if (nData == NULL) {
+        size -= 4;
+        return 0;
+    } else {
+        this->data = nData;
+    }
+
     // Write int
     memcpy( &this->data[__ioPos], &v, 2 );
     __ioPos += 2;
@@ -206,8 +227,17 @@ short ThinIPCMessage::writeString( string v ) {
 
     // Resize buffer
     size += 2 + v.length();
-    this->data = (char *) realloc( this->data, size );
-    
+    char * nData = (char *) realloc( this->data, size );
+
+    // Check if there was an error to realloc
+    // (and therefore the data pointer was not deallocated)
+    if (nData == NULL) {
+        size -= 4;
+        return 0;
+    } else {
+        this->data = nData;
+    }
+
     // Write length
     short len = (short) v.length();
     memcpy( &this->data[__ioPos], &len, 2 );
@@ -305,6 +335,11 @@ short ThinIPCMessage::putChunk( char * buffer, short capacity ) {
         // Reset buffer
         if (this->data != NULL) free(this->data);
         this->data = (char *)malloc( size );
+
+        // Check for alloc failure
+        if (this->data == NULL) {
+            return 0;
+        }
     
         // Check if the entire buffer fits in the chunk
         if ( size <= capacity) {

@@ -194,12 +194,7 @@ string FloppyIO::receive() {
     int dataLength = this->szInput;
     
     // Find the size of the input string
-    for (int i=0; i<this->szInput; i++) {
-        if (dataToReceive[0] == '\0') {
-            dataLength=i;
-            break;
-        }
-    }
+    memset( dataToReceive, 0, this->szInput );
     
     // Read the input bytes from FD
     this->fIO->seekg(this->ofsInput, ios_base::beg);

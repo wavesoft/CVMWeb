@@ -68,6 +68,7 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     
     // Prepare primary record
     memset(&descPrimary, 0, sizeof(iso_primary_descriptor));
+#pragma warning(suppress: 6386)
     memset(&descPrimary.volume_set_id[0], 0x20, 1205); // Reaches till .unused5
     memset(&descPrimary.file_structure_version[0], 1, 1);
     memset(&descPrimary.unused4[0], 0, 1);
@@ -127,6 +128,7 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     // Compose the CD-ROM Disk buffer
     static char bytes[CONTEXTISO_CDROM_SIZE];
     memset(&bytes,0,CONTEXTISO_CDROM_SIZE);
+#pragma warning(suppress: 6385)
     memcpy(&bytes[PRIMARY_DESCRIPTOR_OFFSET],           &descPrimary,               sizeof(iso_primary_descriptor));
     memcpy(&bytes[0x8800],                              &ISO9660_AT_8800,           ISO9660_AT_8800_SIZE);
     memcpy(&bytes[0x9800],                              &ISO9660_AT_9800,           ISO9660_AT_9800_SIZE);

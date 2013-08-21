@@ -218,7 +218,7 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     if ( file_exists(localKeystore) && file_exists(localKeystoreSig) ) {
         
         // Check for external modifications
-        time_t storeTime = config.getLastModified("domainkeys.lst");
+        time_t storeTime = config.getLastModified("domainkeys.conf");
 
         // Check if we are still within the  validity period
         if ((currTime - storeTime) < CRYPTO_STORE_VALIDITY) {
@@ -273,7 +273,7 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     config.loadMap( "domainkeys", &domainKeys );
 
     // Update the timestamp of the keystore
-    keystoreTimestamp = config.getLastModified("domainkeys.lst");
+    keystoreTimestamp = config.getLastModified("domainkeys.conf");
     
     // We are ready!
     valid = true;

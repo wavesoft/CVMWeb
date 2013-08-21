@@ -813,6 +813,13 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 			return HVE_EXTERNAL_ERROR;
 		}
 
+        /* Validate hProcess */
+        if (shExecInfo.hProcess == 0) {
+			cout << "ERROR: Installation could not start! Error = " << res << endl;
+			remove( tmpHypervisorInstall.c_str() );
+			return HVE_EXTERNAL_ERROR;
+        }
+
 		/* Wait for termination */
 		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
 
