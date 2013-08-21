@@ -63,7 +63,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
         "ip"            :   {   get: function () { if (!this.__valid) return u; return this.__session.ip;                    } },
         "ram"           :   {   get: function () { if (!this.__valid) return u; return this.__session.ram;                   } },
         "disk"          :   {   get: function () { if (!this.__valid) return u; return this.__session.disk;                  } },
-        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.apiURL;                } },
+        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return "http://" + this.__session.apiURL;                } },
         "rdpURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.rdpURL;                } },
         "executionCap"  :   {   get: function () { if (!this.__valid) return u; return this.__session.executionCap;          }, 
                                 set: function(v) { this.__session.setExecutionCap(v);           } },

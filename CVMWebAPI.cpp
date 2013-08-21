@@ -247,216 +247,226 @@ FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB:
  */
 void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB ) {
 
-    /* Handle request */
-    CVMWebPtr p = this->getPlugin();
-    if (p->hv == NULL) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
-        return;
-    }
+    try {
 
-    /* Create a progress delegate */
-    ProgressDelegate onProgress( progressCB );
-    onProgress.fire( 1, 50, "Initializing hypervisor" );
-
-    /* Wait for delaied hypervisor initiation */
-    p->hv->waitTillReady( FBSTRING_PLUGIN_VERSION, onProgress.getFunction(), 2, 25, 50 );
-
-    /* Fetch domain info */
-    std::string domain = this->getDomainName();
-
-    /* Try to update authorized keystore if it's in an invalid state */
-    onProgress.fire( 25, 50, "Initializing crypto store" );
-    if (!isDomainPrivileged()) {
-        
-        // Trigger update in the keystore (if it's nessecary)
-        p->crypto->updateAuthorizedKeystore( p->browserDownloadProvider );
-
-        // Still invalid? Something's wrong
-        if (!p->crypto->valid) {
-            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
+        /* Handle request */
+        CVMWebPtr p = this->getPlugin();
+        if (p->hv == NULL) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
             return;
         }
 
-        // Block requests from untrusted domains
-        if (!p->crypto->isDomainValid(domain)) {
-            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
-            return;
-        }
+        /* Create a progress delegate */
+        ProgressDelegate onProgress( progressCB );
+        onProgress.fire( 1, 50, "Initializing hypervisor" );
+
+        /* Wait for delaied hypervisor initiation */
+        p->hv->waitTillReady( FBSTRING_PLUGIN_VERSION, onProgress.getFunction(), 2, 25, 50 );
+
+        /* Fetch domain info */
+        std::string domain = this->getDomainName();
+
+        /* Try to update authorized keystore if it's in an invalid state */
+        onProgress.fire( 25, 50, "Initializing crypto store" );
+        if (!isDomainPrivileged()) {
         
-    }
-    
-    /* Validate arguments */
-    onProgress.fire( 30, 50, "Contacting configuration server" );
-    std::string sURL = vmcpURL.convert_cast<std::string>();
-    if (sURL.empty()) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
-        return;
-    }
-    
-    /* Put salt and user-specific ID in the URL */
-    std::string salt = p->crypto->generateSalt();
-    std::string glueChar = "&";
-    if (sURL.find("?") == string::npos) glueChar = "?";
-    std::string newURL = 
-        sURL + glueChar + 
-        "cvm_salt=" + salt + "&" +
-        "cvm_hostid=" + this->calculateHostID( domain );
-    
-    /* Download data from URL */
-    std::string jsonString;
-    int res = p->browserDownloadProvider->downloadText( newURL, &jsonString );
-    if (res < 0) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
-        return;
-    }
-    
-    /* Try to parse the data */
-    FB::variant jsonData = FB::jsonToVariantValue( jsonString );
-    if (!jsonData.is_of_type<FB::VariantMap>()) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
-        return;
-    }
-    
-    /* Validate response */
-    FB::VariantMap jsonHash = jsonData.cast<FB::VariantMap>();
-    if (jsonHash.find("name") == jsonHash.end()) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
-        return;
-    };
-    if (jsonHash.find("secret") == jsonHash.end()) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
-        return;
-    };
-    if (jsonHash.find("signature") == jsonHash.end()) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
-        return;
-    };
-    
-    /* Validate signature */
-    onProgress.fire( 35, 50, "Validating server identity" );
-    res = p->crypto->signatureValidate( domain, salt, jsonHash );
-    if (res < 0) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
-        return;
-    }
-    
-    /* Fetch useful fields */
-    string vmName = jsonHash["name"].convert_cast<string>();
-    string vmSecret = jsonHash["secret"].convert_cast<string>();
-    
-    /* Check session state */
-    res = p->hv->sessionValidate( vmName, vmSecret );
-    if (res == 2) { 
-        // Invalid password
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
-        return;
-    }
-    
-    /* Check if the session is new and prompt the user */
-    if (res == 0) {
-        onProgress.fire( 40, 50, "Starting new session" );
+            // Trigger update in the keystore (if it's nessecary)
+            p->crypto->updateAuthorizedKeystore( p->browserDownloadProvider );
 
-        // Newline-specific split
-        string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine. This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
-
-        // Prompt user
-        // (It is safe to use unsafe confirm, since we trust the domain - Therefore we also get rid of all the platform-dependant code)
-        if (!this->unsafeConfirm(msg)) {
-            
-            /* If we were aborted due to shutdown, exit */
-            if (this->shuttingDown) return;
-
-            /* Manage throttling */
-            if ((getMillis() - this->throttleTimestamp) <= THROTTLE_TIMESPAN) {
-                if (++this->throttleDenies >= THROTTLE_TRIES)
-                    this->throttleBlock = true;
-            } else {
-                this->throttleDenies = 1;
-                this->throttleTimestamp = getMillis();
+            // Still invalid? Something's wrong
+            if (!p->crypto->valid) {
+                if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_VALIDATED ));
+                return;
             }
-            
-            onProgress.fire( 50, 50, "User aborted" );
-            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
-            return;
-            
-        } else {
-            
-            /* Reset throttle */
-            this->throttleDenies = 0;
-            this->throttleTimestamp = 0;
-            
+
+            // Block requests from untrusted domains
+            if (!p->crypto->isDomainValid(domain)) {
+                if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_NOT_TRUSTED ));
+                return;
+            }
+        
         }
-        
-    }
     
-    /* Open/resume session */
-    onProgress.fire( 45, 50, "Oppening session" );
-    HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
-    if (session == NULL) {
-        if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
-        return;
-    }
-    
-    /* Update defaults on the session */
-    if (jsonHash.find("ram") != jsonHash.end())              session->memory = jsonHash["ram"].convert_cast<int>();
-    if (jsonHash.find("cpus") != jsonHash.end())             session->cpus = jsonHash["cpus"].convert_cast<int>();
-    if (jsonHash.find("disk") != jsonHash.end())             session->disk = jsonHash["disk"].convert_cast<int>();
-    if (jsonHash.find("flags") != jsonHash.end())            session->flags = jsonHash["flags"].convert_cast<int>();
-    if (jsonHash.find("version") != jsonHash.end())          session->version = jsonHash["version"].convert_cast<string>();
-    if (jsonHash.find("apiPort") != jsonHash.end())          session->apiPort = jsonHash["apiPort"].convert_cast<int>();
-    if (jsonHash.find("userData") != jsonHash.end())         session->userData = jsonHash["userData"].convert_cast<string>();
-    if (jsonHash.find("executionCap") != jsonHash.end())     session->executionCap = jsonHash["executionCap"].convert_cast<int>();
-    if (jsonHash.find("daemonControlled") != jsonHash.end()) session->daemonControlled = jsonHash["daemonControlled"].convert_cast<bool>();
-    if (jsonHash.find("daemonMinCap") != jsonHash.end())     session->daemonMinCap = jsonHash["daemonMinCap"].convert_cast<int>();
-    if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonControlled = jsonHash["daemonMaxCap"].convert_cast<int>();
-    if (jsonHash.find("daemonFlags") != jsonHash.end())      session->daemonFlags = jsonHash["daemonFlags"].convert_cast<int>();
-    if (jsonHash.find("diskURL") != jsonHash.end()) {
-        
-        // If we have a missing checksum, that's a problem
-        if (jsonHash.find("diskChecksum") == jsonHash.end()) {
+        /* Validate arguments */
+        onProgress.fire( 30, 50, "Contacting configuration server" );
+        std::string sURL = vmcpURL.convert_cast<std::string>();
+        if (sURL.empty()) {
             if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
             return;
         }
+    
+        /* Put salt and user-specific ID in the URL */
+        std::string salt = p->crypto->generateSalt();
+        std::string glueChar = "&";
+        if (sURL.find("?") == string::npos) glueChar = "?";
+        std::string newURL = 
+            sURL + glueChar + 
+            "cvm_salt=" + salt + "&" +
+            "cvm_hostid=" + this->calculateHostID( domain );
+    
+        /* Download data from URL */
+        std::string jsonString;
+        int res = p->browserDownloadProvider->downloadText( newURL, &jsonString );
+        if (res < 0) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
+            return;
+        }
+    
+        /* Try to parse the data */
+        FB::variant jsonData = FB::jsonToVariantValue( jsonString );
+        if (!jsonData.is_of_type<FB::VariantMap>()) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
+            return;
+        }
+    
+        /* Validate response */
+        FB::VariantMap jsonHash = jsonData.cast<FB::VariantMap>();
+        if (jsonHash.find("name") == jsonHash.end()) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+            return;
+        };
+        if (jsonHash.find("secret") == jsonHash.end()) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+            return;
+        };
+        if (jsonHash.find("signature") == jsonHash.end()) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+            return;
+        };
+    
+        /* Validate signature */
+        onProgress.fire( 35, 50, "Validating server identity" );
+        res = p->crypto->signatureValidate( domain, salt, jsonHash );
+        if (res < 0) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( res ));
+            return;
+        }
+    
+        /* Fetch useful fields */
+        string vmName = jsonHash["name"].convert_cast<string>();
+        string vmSecret = jsonHash["secret"].convert_cast<string>();
+    
+        /* Check session state */
+        res = p->hv->sessionValidate( vmName, vmSecret );
+        if (res == 2) { 
+            // Invalid password
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+            return;
+        }
+    
+        /* Check if the session is new and prompt the user */
+        if (res == 0) {
+            onProgress.fire( 40, 50, "Starting new session" );
+
+            // Newline-specific split
+            string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine. This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
+
+            // Prompt user
+            // (It is safe to use unsafe confirm, since we trust the domain - Therefore we also get rid of all the platform-dependant code)
+            if (!this->unsafeConfirm(msg)) {
+            
+                /* If we were aborted due to shutdown, exit */
+                if (this->shuttingDown) return;
+
+                /* Manage throttling */
+                if ((getMillis() - this->throttleTimestamp) <= THROTTLE_TIMESPAN) {
+                    if (++this->throttleDenies >= THROTTLE_TRIES)
+                        this->throttleBlock = true;
+                } else {
+                    this->throttleDenies = 1;
+                    this->throttleTimestamp = getMillis();
+                }
+            
+                onProgress.fire( 50, 50, "User aborted" );
+                if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
+                return;
+            
+            } else {
+            
+                /* Reset throttle */
+                this->throttleDenies = 0;
+                this->throttleTimestamp = 0;
+            
+            }
         
-        // Update information
-        session->version = jsonHash["diskURL"].convert_cast<string>();
-        session->diskChecksum = jsonHash["diskChecksum"].convert_cast<string>();
-        session->flags |= HVF_DEPLOYMENT_HDD;
+        }
+    
+        /* Open/resume session */
+        onProgress.fire( 45, 50, "Oppening session" );
+        HVSession * session = p->hv->sessionOpen(vmName, vmSecret);
+        if (session == NULL) {
+            if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_PASSWORD_DENIED ));
+            return;
+        }
+    
+        /* Update defaults on the session */
+        if (jsonHash.find("ram") != jsonHash.end())              session->memory = jsonHash["ram"].convert_cast<int>();
+        if (jsonHash.find("cpus") != jsonHash.end())             session->cpus = jsonHash["cpus"].convert_cast<int>();
+        if (jsonHash.find("disk") != jsonHash.end())             session->disk = jsonHash["disk"].convert_cast<int>();
+        if (jsonHash.find("flags") != jsonHash.end())            session->flags = jsonHash["flags"].convert_cast<int>();
+        if (jsonHash.find("version") != jsonHash.end())          session->version = jsonHash["version"].convert_cast<string>();
+        if (jsonHash.find("apiPort") != jsonHash.end())          session->apiPort = jsonHash["apiPort"].convert_cast<int>();
+        if (jsonHash.find("userData") != jsonHash.end())         session->userData = jsonHash["userData"].convert_cast<string>();
+        if (jsonHash.find("executionCap") != jsonHash.end())     session->executionCap = jsonHash["executionCap"].convert_cast<int>();
+        if (jsonHash.find("daemonControlled") != jsonHash.end()) session->daemonControlled = jsonHash["daemonControlled"].convert_cast<bool>();
+        if (jsonHash.find("daemonMinCap") != jsonHash.end())     session->daemonMinCap = jsonHash["daemonMinCap"].convert_cast<int>();
+        if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonControlled = jsonHash["daemonMaxCap"].convert_cast<int>();
+        if (jsonHash.find("daemonFlags") != jsonHash.end())      session->daemonFlags = jsonHash["daemonFlags"].convert_cast<int>();
+        if (jsonHash.find("diskURL") != jsonHash.end()) {
         
-    } else if (jsonHash.find("version") != jsonHash.end()) {
+            // If we have a missing checksum, that's a problem
+            if (jsonHash.find("diskChecksum") == jsonHash.end()) {
+                if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
+                return;
+            }
         
-        // Update the default flags for CernVM Micro
-        session->flags |= HVF_SYSTEM_64BIT;
+            // Update information
+            session->version = jsonHash["diskURL"].convert_cast<string>();
+            session->diskChecksum = jsonHash["diskChecksum"].convert_cast<string>();
+            session->flags |= HVF_DEPLOYMENT_HDD;
         
+        } else if (jsonHash.find("version") != jsonHash.end()) {
+        
+            // Update the default flags for CernVM Micro
+            session->flags |= HVF_SYSTEM_64BIT;
+        
+        }
+    
+        /* Get the overridable vars */
+        session->overridableVars.clear();
+        if (jsonHash.find("canOverride") != jsonHash.end())
+            explode(jsonHash["canOverride"].convert_cast<string>(), ',', &session->overridableVars );
+    
+        CVMWA_LOG("Debug", "userData=" << session->userData);
+        CVMWA_LOG("Debug", "cpus=" << session->cpus);
+        CVMWA_LOG("Debug", "executionCap=" << session->executionCap);
+        CVMWA_LOG("Debug", "apiPort=" << session->apiPort);
+        CVMWA_LOG("Debug", "ram=" << session->memory);
+        CVMWA_LOG("Debug", "disk=" << session->disk);
+        CVMWA_LOG("Debug", "flags=" << session->flags);
+        CVMWA_LOG("Debug", "version/diskURL=" << session->version);
+        CVMWA_LOG("Debug", "daemonControlled=" << session->daemonControlled);
+        CVMWA_LOG("Debug", "daemonMinCap=" << session->daemonMinCap);
+        CVMWA_LOG("Debug", "daemonMaxCap=" << session->daemonMaxCap);
+        CVMWA_LOG("Debug", "daemonFlags=" << session->daemonFlags);
+        CVMWA_LOG("Debug", "diskChecksum=" << session->diskChecksum);
+    
+        /* Call success callback */
+        onProgress.fire( 50, 50, "Session ready" );
+        boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session );
+        if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
+        
+        /* Check if we need a daemon for our current services */
+        p->hv->checkDaemonNeed();
+    
+    } catch (...) {
+
+        // Forward failure CB
+        if (IS_CB_AVAILABLE(failureCb)) 
+            failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_EXTERNAL_ERROR ));
+
     }
-    
-    /* Get the overridable vars */
-    session->overridableVars.clear();
-    if (jsonHash.find("canOverride") != jsonHash.end())
-        explode(jsonHash["canOverride"].convert_cast<string>(), ',', &session->overridableVars );
-    
-    CVMWA_LOG("Debug", "userData=" << session->userData);
-    CVMWA_LOG("Debug", "cpus=" << session->cpus);
-    CVMWA_LOG("Debug", "executionCap=" << session->executionCap);
-    CVMWA_LOG("Debug", "apiPort=" << session->apiPort);
-    CVMWA_LOG("Debug", "ram=" << session->memory);
-    CVMWA_LOG("Debug", "disk=" << session->disk);
-    CVMWA_LOG("Debug", "flags=" << session->flags);
-    CVMWA_LOG("Debug", "version/diskURL=" << session->version);
-    CVMWA_LOG("Debug", "daemonControlled=" << session->daemonControlled);
-    CVMWA_LOG("Debug", "daemonMinCap=" << session->daemonMinCap);
-    CVMWA_LOG("Debug", "daemonMaxCap=" << session->daemonMaxCap);
-    CVMWA_LOG("Debug", "daemonFlags=" << session->daemonFlags);
-    CVMWA_LOG("Debug", "diskChecksum=" << session->diskChecksum);
-    
-    /* Call success callback */
-    onProgress.fire( 50, 50, "Session ready" );
-    boost::shared_ptr<CVMWebAPISession> pSession = boost::make_shared<CVMWebAPISession>(p, m_host, session );
-    if (IS_CB_AVAILABLE(successCb)) successCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( pSession ));
-        
-    /* Check if we need a daemon for our current services */
-    p->hv->checkDaemonNeed();
-    
+
 }
 
 /**

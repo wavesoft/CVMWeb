@@ -57,7 +57,8 @@ int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int
 int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
-std::string HVSession::getIP()                                      { return ""; }
+int HVSession::getAPIPort()                                         { return 0; }
+std::string HVSession::getAPIHost()                                 { return ""; }
 std::string HVSession::getProperty( std::string name )              { return ""; }
 std::string HVSession::getRDPHost()                                 { return ""; }
 std::string HVSession::getExtraInfo( int extraInfo )                { return ""; };
@@ -90,9 +91,9 @@ std::string hypervisorErrorStr( int error ) {
  */
 
 bool HVSession::isAPIAlive() {
-    std::string ip = this->getIP();
+    std::string ip = this->getAPIHost();;
     if (ip.empty()) return false;
-    return isPortOpen( ip.c_str(), this->apiPort );
+    return isPortOpen( ip.c_str(), this->getAPIPort() );
 }
 
 /**
@@ -897,6 +898,9 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     /**
      * If we are installing VirtualBox, make sure the VBOX Extension pack are installed
      */
+
+    /*
+    ===== Due to policy reasons we are not installing the extension pack =====
     if (hv->type == HV_VIRTUALBOX) {
         if ( !((Virtualbox*)hv)->hasExtPack() ) {
 
@@ -908,6 +912,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
         }
     }
+    */
 
     /**
      * Release hypervisor

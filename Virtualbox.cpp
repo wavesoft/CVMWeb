@@ -178,7 +178,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
-    string stdoutList, uuid, ifHO, vmIso, kk, kv;
+    string stdoutList, uuid, vmIso, kk, kv;
     int ans;
     bool needsUpdate;
 
@@ -201,14 +201,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         this->uuid = uuid;
     }
     
-    /* Detect the host-only adapter */
-    if (this->onProgress) (this->onProgress)(10, 110, "Setting up local network");
-    ifHO = this->getHostOnlyAdapter();
-    if (ifHO.empty()) {
-        this->state = STATE_ERROR;
-        return HVE_CREATE_ERROR;
-    }
-
     /* Find a random free port for VRDE */
     this->rdpPort = (rand() % 0xFBFF) + 1024;
     while (isPortOpen( "127.0.0.1", this->rdpPort ))
@@ -247,9 +239,51 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         << " --nic1 "                   << "nat"
         << " --natdnshostresolver1 "    << "on"
         << " --draganddrop "            << vDragDrop
-        << " --clipboard "              << vClipboard
-        << " --nic2 "                   << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
+        << " --clipboard "              << vClipboard;
     
+    /* Check if we are NATing or if we are using the second NIC */
+    if ((this->flags & HVF_DUAL_NIC) != 0) {
+
+        /* =============================================================================== */
+        /*   NETWORK MODE 1 : Dual Interface                                               */
+        /* ------------------------------------------------------------------------------- */
+        /*  In this mode a secondary, host-only adapter will be added to the VM, enabling  */
+        /*  any kind of traffic to pass through to the VM. The API URL will be built upon  */
+        /*  this IP address.                                                               */
+        /* =============================================================================== */
+
+        /* Detect the host-only adapter */
+        if (this->onProgress) (this->onProgress)(10, 110, "Setting up local network");
+        string ifHO = this->getHostOnlyAdapter();
+        if (ifHO.empty()) {
+            this->state = STATE_ERROR;
+            return HVE_CREATE_ERROR;
+        }
+
+        /* Create a secondary adapter */
+        args << " --nic2 "              << "hostonly" << " --hostonlyadapter2 \"" << ifHO << "\"";
+
+    } else {
+
+        /* =============================================================================== */
+        /*   NETWORK MODE 2 : NAT on the main interface                                    */
+        /* ------------------------------------------------------------------------------- */
+        /*  In this mode a NAT port forwarding rule will be added to the first NIC that    */
+        /*  enables communication only to the specified API port. This is much simpler     */
+        /*  since the guest IP does not need to be known.                                  */
+        /* =============================================================================== */
+
+        /* Find a random free port for API */
+        this->localApiPort = (rand() % 0xFBFF) + 1024;
+        while (isPortOpen( "127.0.0.1", this->localApiPort ))
+            this->localApiPort = (rand() % 0xFBFF) + 1024;
+
+        /* Create a NAT rule to the API port */
+        args << " --natpf1 "              << "guestapi,tcp,127.0.0.1," << this->localApiPort << ",," << this->apiPort;
+
+    }
+
+    /* Invoke the cmdline */
     if (this->onProgress) (this->onProgress)(15, 110, "Setting up VM");
     ans = this->wrapExec(args.str(), NULL);
     CVMWA_LOG( "Info", "Modify VM=" << ans  );
@@ -577,6 +611,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     
     /* Store web-secret on the guest properties */
     this->setProperty("/CVMWeb/secret", this->key);
+    this->setProperty("/CVMWeb/localApiPort", ntos<int>(this->localApiPort));
     this->setProperty("/CVMWeb/daemon/controlled", (this->daemonControlled ? "1" : "0"));
     this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(this->daemonMinCap));
     this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(this->daemonMaxCap));
@@ -1455,18 +1490,51 @@ int VBoxSession::updateFast() {
 /**
  * Return the IP Address of the session
  */
-std::string VBoxSession::getIP() {
-    if (this->ip.empty()) {
-        std::string guessIP = this->getProperty("/VirtualBox/GuestInfo/Net/1/V4/IP");
-        if (!guessIP.empty()) {
-            this->ip = guessIP;
-            return guessIP;
+std::string VBoxSession::getAPIHost() {
+
+    // The API host is different in various NIC modes
+    if ((this->flags & HVF_DUAL_NIC) != 0) {
+
+        // (1) The API Host is on the second interface
+        if (this->ip.empty()) {
+            std::string guestIP = this->getProperty("/VirtualBox/GuestInfo/Net/1/V4/IP");
+            if (!guestIP.empty()) {
+                this->ip = guestIP;
+                return guestIP;
+            } else {
+                return "";
+            }
         } else {
-            return "";
+            return this->ip;
         }
+
     } else {
-        return this->ip;
+
+        // (2) The API Host is on localhost
+        return "127.0.0.1";
+
     }
+}
+
+/**
+ * Return the actual API Port where to contact
+ */
+int VBoxSession::getAPIPort() {
+
+    // The API port is different in various NIC modes
+    if ((this->flags & HVF_DUAL_NIC) != 0) {
+
+        // (1) The API Port is the actual API port in the guest.
+        return this->apiPort;
+
+    } else {
+
+        // (2) The API Port is a random port on the host, which
+        //     is forwarded via NAT in the guest.
+        return this->localApiPort;
+
+    }
+
 }
 
 /**
@@ -1517,8 +1585,11 @@ bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbPr
     }
     
     /**
-     * By the way, check if we have guest additions installed
+     * By the way, check if we have the extension pack installed
      */
+
+    /*
+    ===== Due to policy reasons we are not installing the extension pack =====
     if (!this->hasExtPack()) {
         this->installExtPack(
             pluginVersion,
@@ -1526,6 +1597,7 @@ bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbPr
             cbProgress, progressMin, progressMax, progressTotal
             );
     }
+    */
 
     /**
      * All's good!
@@ -1565,6 +1637,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->key = key;
     sess->host = this;
     sess->rdpPort = 0;
+    sess->localApiPort = 0;
     sess->dataPath = "";
     return sess;
 }
@@ -1865,6 +1938,12 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
             session->userData = "";
         } else {
             session->userData = base64_decode(strProp);
+        }
+        strProp = this->getProperty( uuid, "/CVMWeb/localApiPort" );
+        if (strProp.empty()) {
+            ((VBoxSession *)session)->localApiPort = 0;
+        } else {
+            ((VBoxSession *)session)->localApiPort = ston<int>(strProp);
         }
     }
 

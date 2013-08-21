@@ -70,9 +70,10 @@
 #define HVF_FLOPPY_IO           8       // Use floppyIO instead of contextualization CD-ROM
 #define HVF_HEADFUL            16       // Start the VM in headful mode
 #define HVF_GRAPHICAL          32       // Enable graphical extension (like drag-n-drop)
+#define HVF_DUAL_NIC           64       // Use secondary adapter instead of creating a NAT rule on the first one
 
 /* Default CernVM Version */
-#define DEFAULT_CERNVM_VERSION  "1.4"
+#define DEFAULT_CERNVM_VERSION  "1.11"
 #define DEFAULT_API_PORT        80
 
 /**
@@ -143,8 +144,9 @@ public:
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
-    virtual std::string     getIP();
     virtual std::string     getRDPHost();
+    virtual std::string     getAPIHost();
+    virtual int             getAPIPort();
     virtual bool            isAPIAlive();
 
     virtual std::string     getExtraInfo( int extraInfo );

@@ -36,6 +36,7 @@ public:
     
     Virtualbox *            host;
     int                     rdpPort;
+    int                     localApiPort;
     
     virtual int             pause();
     virtual int             close();
@@ -49,8 +50,9 @@ public:
     virtual int             setProperty( std::string name, std::string key );
     virtual std::string     getProperty( std::string name );
     virtual std::string     getRDPHost();
-    virtual std::string     getIP();
     virtual std::string     getExtraInfo( int extraInfo );
+    virtual std::string     getAPIHost();
+    virtual int             getAPIPort();
 
     virtual int             update();
     virtual int             updateFast();

@@ -131,7 +131,7 @@ public:
     FB_JSAPI_EVENT(hibernate,   0, ());
     FB_JSAPI_EVENT(hibernateError,2, ( const std::string&, int ));
     FB_JSAPI_EVENT(error,       3, ( const std::string&, int, const std::string& ));
-    FB_JSAPI_EVENT(apiAvailable,2, ( const std::string&, const std::string&));
+    FB_JSAPI_EVENT(apiAvailable,2, ( const std::string&, const std::string& ));
     FB_JSAPI_EVENT(apiUnavailable,0, ());
     FB_JSAPI_EVENT(debug,       1, ( const std::string& ));
     

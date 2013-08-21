@@ -396,10 +396,6 @@ int CVMWebAPISession::get_flags() {
     return this->session->flags;
 }
 
-std::string CVMWebAPISession::get_ip() {
-    return this->session->getIP();
-}
-
 std::string CVMWebAPISession::get_rdp() {
     return this->session->getRDPHost();
 }
@@ -412,6 +408,10 @@ std::string CVMWebAPISession::get_name() {
     return this->session->name;
 }
 
+std::string CVMWebAPISession::get_ip() {
+    return this->session->getAPIHost();
+}
+
 std::string CVMWebAPISession::get_resolution() {
 
     // Get screen screen resolution as extra info
@@ -420,14 +420,12 @@ std::string CVMWebAPISession::get_resolution() {
 }
 
 std::string CVMWebAPISession::get_apiEntryPoint() {
-    std::string ip = this->session->getIP();
-    if (ip.empty()) {
-        return "";
-    } else {
-        char numstr[21]; // enough to hold all numbers up to 64-bits
-        sprintf(numstr, "%d", (unsigned int) this->session->apiPort);
-        return "http://" + ip + ":" + numstr;
-    }
+    std::string apiURL = this->session->getAPIHost();
+    if (apiURL.empty()) return "";
+    int apiPort = this->session->getAPIPort();
+    if (apiPort == 0) return "";
+    apiURL += ":" + ntos<int>( apiPort );
+    return apiURL;
 }
 
 void CVMWebAPISession::onProgress(const size_t v, const size_t tot, const std::string& msg) {
