@@ -711,20 +711,52 @@ bool isPortOpen( const char * host, int port ) {
     client.sin_port = htons( port );
     client.sin_addr.s_addr = inet_addr( host );
     
+    // Open a connection
     sock = (SOCKET) socket(AF_INET, SOCK_STREAM, 0);
     int result = connect(sock, (struct sockaddr *) &client,sizeof(client));
 
+    // Check for open failures
+    if (result < 0) {
+        #ifdef _WIN32
+            closesocket(sock);
+        #else
+            ::close(sock);
+        #endif
+        return false;
+    }
+
+    // Try to send some data
+    int n = send(sock," ",1,0);
+    if (n < 0) {
+        #ifdef _WIN32
+            closesocket(sock);
+        #else
+            ::close(sock);
+        #endif
+        return false;
+    }
+
+    // Check if it's still connected
+    int errorCode = 0;
+    socklen_t szErrorCode = sizeof(errorCode);
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &errorCode, &szErrorCode );
+    if (errorCode != 0 ){
+        #ifdef _WIN32
+            closesocket(sock);
+        #else
+            ::close(sock);
+        #endif
+        return false;
+    }
+
+    // It works
     #ifdef _WIN32
         closesocket(sock);
     #else
         ::close(sock);
     #endif
+    return true;
 
-    if (result < 0) {
-        return false;
-    } else {
-        return true;
-    }
 }
 
 /**

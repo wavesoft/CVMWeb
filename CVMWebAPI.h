@@ -157,7 +157,7 @@ public:
     // Events
     FB_JSAPI_EVENT(install,         0, ());
     FB_JSAPI_EVENT(installError,    2, ( const std::string&, int ));
-    FB_JSAPI_EVENT(installProgress, 3, ( int, int, const std::string& ));
+    FB_JSAPI_EVENT(installProgress, 3, ( const size_t, const size_t, const std::string& ));
     
     // Forward proxy to browser's confirm
     bool        confirm( std::string );

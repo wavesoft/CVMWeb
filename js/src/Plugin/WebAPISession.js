@@ -63,7 +63,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
         "ip"            :   {   get: function () { if (!this.__valid) return u; return this.__session.ip;                    } },
         "ram"           :   {   get: function () { if (!this.__valid) return u; return this.__session.ram;                   } },
         "disk"          :   {   get: function () { if (!this.__valid) return u; return this.__session.disk;                  } },
-        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return "http://" + this.__session.apiURL;                } },
+        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.apiURL;                } },
         "rdpURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.rdpURL;                } },
         "executionCap"  :   {   get: function () { if (!this.__valid) return u; return this.__session.executionCap;          }, 
                                 set: function(v) { this.__session.setExecutionCap(v);           } },
@@ -408,4 +408,14 @@ _NS_.WebAPISession.prototype.openRDPWindow = function() {
         this.__session.resolution 
     );
 
+}
+
+_NS_.WebAPISession.prototype.getProperty = function(name) {
+    if (!name) return "";
+    return this.__session.getProperty(name);
+}
+
+_NS_.WebAPISession.prototype.setProperty = function(name, value) {
+    if (!name) return "";
+    return this.__session.setProperty(name, value);
 }

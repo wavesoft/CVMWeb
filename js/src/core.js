@@ -159,6 +159,80 @@ _NS_.launchRDP = function( rdpURL, resolution ) {
 
 };
 
+/**
+ * Library-less way of presenting the oracle PUEL License
+ */
+function presentOracleLicense( cbAccept, cbDecline ) {
+     var o = document.createElement('div'),
+         c = document.createElement('div'),
+         cControls = document.createElement('div'),
+         cHeader = document.createElement('div'),
+         fLicense = document.createElement('iframe'),
+         lnkOk = document.createElement('input'),
+         lnkCancel = document.createElement('input');
+
+     lnkOk.innerHTML = 'Accept';
+     lnkCancel.innerHTML = 'Decline';
+     fLicense.src = 'https://www.virtualbox.org/wiki/VirtualBox_PUEL';
+     fLicense.width = 700;
+     fLicense.height = 450;
+     fLicense.frameBorder = 0;
+
+     // Prepare buttons
+     lnkOk.type = 'button';
+     lnkOk.value = 'Accept License';
+     lnkCancel.type = 'button';
+     lnkCancel.value = 'Decline License';
+     lnkOk.onclick = function() {
+        document.body.removeChild(o);
+        if (cbAccept) cbAccept();
+     };
+     lnkCancel.onclick = function() {
+        document.body.removeChild(o);
+        if (cbDecline) cbDecline();
+     };
+
+     // Outer container
+     o.style['display'] = 'block';
+     o.style['position'] = 'absolute';
+     o.style['width'] = '100%';
+     o.style['height'] = '580px';
+     o.style['margin'] = '-300px 0px 0px 0px';
+     o.style['left'] = '0px';
+     o.style['top'] = '50%';
+     o.style['font'] = '14px Verdana, Helvetica, Tahoma, Arial';
+     o.appendChild(c);
+
+     // Actual container
+     c.style['width'] = '705px';
+     c.style['height'] = '580px';
+     c.style['margin'] = 'auto';
+     c.style['background'] = '#999';
+     c.style['border'] = 'solid 2px #999';
+     c.style['borderRadius'] = '5px';
+
+     // Header
+     cHeader.style['color'] = '#fff';
+     cHeader.style['background'] = '#999';
+     cHeader.style['height'] = '70px';
+     cHeader.style['padding'] = '8px';
+     cHeader.innerHTML = '<p>The CernVM WebAPI is going to install the VirtualBox Extension Pack which is licensed under VirtualBox Personal Use and Evaluation License (PUEL) License.</p><p>You must accept it to continue:</p>';
+
+     // Controls container
+     cControls.style['background'] = '#999';
+     cControls.style['padding'] = '6px';
+     cControls.style['textAlign'] = 'center';
+
+     // Nest layout
+     c.appendChild(cHeader);
+     c.appendChild(fLicense);
+     c.appendChild(cControls);
+     cControls.appendChild(lnkOk);
+     cControls.appendChild(lnkCancel);
+
+     document.body.appendChild( o );
+}
+
 
 /**
  * High-level progress forwarding functions
@@ -391,26 +465,38 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                         function(confirmed) {
                             if (confirmed) {
 
-                                var once=true;
-                                var cb_ok = function() {
-                                    if (once) { once=false } else { return };
-                                    __pluginSingleton.removeEventListener('install', cb_ok);
+                                // The user has accepted the oracle license
+                                var confirmInstall = function() {
 
-                                    // Hypervisor is now in place, continue
-                                    continue_init();
+                                    var once=true;
+                                    var cb_ok = function() {
+                                        if (once) { once=false } else { return };
+                                        __pluginSingleton.removeEventListener('install', cb_ok);
 
-                                };
-                                var cb_error = function(code) {
-                                    if (once) { once=false } else { return };
-                                    __pluginSingleton.removeEventListener('installError', cb_error);
-                                    callError( cbFail, "Unable to install hypervisor!", -103 );
-                                };
+                                        // Hypervisor is now in place, continue
+                                        continue_init();
 
-                                // Setup callbacks and install hypervisor
-                                __pluginSingleton.addEventListener('install', cb_ok);
-                                __pluginSingleton.addEventListener('installError', cb_error);
-                                __pluginSingleton.addEventListener('installProgress', cb_progress);
-                                __pluginSingleton.installHypervisor();
+                                    };
+                                    var cb_error = function(code) {
+                                        if (once) { once=false } else { return };
+                                        __pluginSingleton.removeEventListener('installError', cb_error);
+                                        callError( cbFail, "Unable to install hypervisor!", -103 );
+                                    };
+
+                                    // Setup callbacks and install hypervisor
+                                    __pluginSingleton.addEventListener('install', cb_ok);
+                                    __pluginSingleton.addEventListener('installError', cb_error);
+                                    __pluginSingleton.addEventListener('installProgress', cb_progress);
+                                    __pluginSingleton.installHypervisor();
+                                }
+
+                                // The user has declined the oracle license
+                                var abortInstall = function() {
+                                    callError( cbFail, "User denied hypervisor installation!", -102 );
+                                }
+
+                                // Present oracle license
+                                presentOracleLicense( confirmInstall, abortInstall );
 
                             } else {
                                 callError( cbFail, "User denied hypervisor installation!", -102 );
