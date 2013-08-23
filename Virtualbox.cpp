@@ -1587,9 +1587,6 @@ bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbPr
     /**
      * By the way, check if we have the extension pack installed
      */
-
-    /*
-    ===== Due to policy reasons we are not installing the extension pack =====
     if (!this->hasExtPack()) {
         this->installExtPack(
             pluginVersion,
@@ -1597,7 +1594,6 @@ bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbPr
             cbProgress, progressMin, progressMax, progressTotal
             );
     }
-    */
 
     /**
      * All's good!

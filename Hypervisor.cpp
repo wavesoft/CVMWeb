@@ -28,6 +28,7 @@
 #include <cmath>
 
 #include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
 
 #include "Utilities.h"
 #include "Hypervisor.h"
@@ -38,6 +39,7 @@
 #include "floppyIO.h"
 
 using namespace std;
+namespace fs = boost::filesystem;
 
 /* Incomplete type placeholders */
 bool Hypervisor::waitTillReady(string,callbackProgress,int,int,int) { return false; }
@@ -637,6 +639,110 @@ void freeHypervisor( Hypervisor * hv ) {
     delete hv;
 };
 
+
+#if defined(__linux__)
+
+/**
+ * Helper to traverse the /proc/<pid>/fd descriptors
+ * in order to see what points to the fileName
+ */
+bool _isLinkInDir( string fileName, const fs::path& path ) {
+
+    // Start iterating /proc/<id>/fd
+    fs::directory_iterator end_iter;
+    for ( fs::directory_iterator dir_itr( path );
+          dir_itr != end_iter;
+          ++dir_itr ) {
+        
+        // Process file descriptor
+        if (fs::is_symlink( dir_itr->status() )) {
+
+          // Resolve symlink & Check if the filename is used
+          try {
+                fs::path resolved = fs::canonical( dir_itr->path() );
+                if (resolved.filename.compare( fileName ) == 0)
+                    return true;
+          }
+          catch ( const std::exception & ex ) {
+              // Ignore errors (They are usually access denied)
+          }
+
+        }
+
+    }
+
+    // Not found
+    return false;
+
+};
+
+/**
+ * Utility function to check if the file is oppened by another process
+ */
+bool isFileOpen( string fileName) {
+    
+    // Get access to /proc
+    fs::path full_path( fs::initial_path<fs::path>() );
+    full_path = fs::system_complete( fs::path( "/proc" ) );
+
+    // Start iterating /proc
+    fs::directory_iterator end_iter;
+    for ( fs::directory_iterator dir_itr( full_path );
+          dir_itr != end_iter;
+          ++dir_itr ) {
+
+      // Ensure no error occurs
+      try {
+        if ( fs::is_directory( dir_itr->status() ) ) {
+
+            // Check the /fd directory
+            fs::path subPath = fs::system_complete( fs::path( dir_itr->path().filename + "/fd" ) );
+
+            // Check if the subPath is directory
+            if ( fs::is_directory( subPath ) ) {
+
+                // Check if the filename is inside the /proc/<pid>/fd descriptors
+                if (_isLinkInDir( fileName, dir_itr->path() ))
+                    return true;
+
+            }
+
+        }
+
+      }
+      catch ( const std::exception & ex ) {
+          // Ignore errors (They are usually access denied)
+      }
+    }
+
+    // Link was not found in the directory
+    return false;
+}
+
+/**
+ * Wait for a file to be oppened within a specific time range
+ */
+bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
+
+    // Wait for waitMillis
+    unsigned long sTime = getMillis() + waitMillis;
+    while (getMillis() < sTime ) {
+
+        // Wait until isFileOpen matches forOpen
+        if (isFileOpen(filename) == forOpen) return true;
+
+        // Wait a bit
+        boost::this_thread::sleep( boost::posix_time::millisec( 500 ) );
+
+    }
+
+    // Timeout occured
+    return false;
+
+}
+
+#endif
+
 /**
  * Install hypervisor
  */
@@ -848,11 +954,27 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     			remove( tmpHypervisorInstall.c_str() );
     			return HVE_EXTERNAL_ERROR;
     		}
-        
-            /* TODO: Currently we don't do it, but we must wait until the package is installed
-             *       and then do hypervisor probing again. */
-     		if (cbProgress) (cbProgress)(100, maxSteps, "Passing control to the user");
-            return HVE_SCHEDULED;
+            
+
+            /* At some point the process that xdg-open launches is
+             * going to open the file in order to read it's contnets. 
+             * Wait for 10 sec for it to happen */
+            if (!waitFileOpen( tmpHypervisorInstall, true, 10000 )) {
+    			cout << "ERROR: Could not wait for file handler capture: " << res << endl;
+    			remove( tmpHypervisorInstall.c_str() );
+    			return HVE_STILL_WORKING;
+            }
+
+            /* Wait for it to be released */
+            if (!waitFileOpen( tmpHypervisorInstall, false, 600000 )) {
+    			cout << "ERROR: Could not wait for file handler release: " << res << endl;
+    			remove( tmpHypervisorInstall.c_str() );
+    			return HVE_STILL_WORKING;
+            }
+
+            // Done
+     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+        	remove( tmpHypervisorInstall.c_str() );
         
         /* (2) If we have GKSudo, do directly dpkg/yum install */
         } else if (linuxInfo.hasGKSudo) {
@@ -899,8 +1021,6 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
      * If we are installing VirtualBox, make sure the VBOX Extension pack are installed
      */
 
-    /*
-    ===== Due to policy reasons we are not installing the extension pack =====
     if (hv->type == HV_VIRTUALBOX) {
         if ( !((Virtualbox*)hv)->hasExtPack() ) {
 
@@ -912,7 +1032,6 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
         }
     }
-    */
 
     /**
      * Release hypervisor
