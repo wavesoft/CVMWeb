@@ -469,13 +469,13 @@ std::string CVMWebAPISession::toString() {
 void CVMWebAPISession::cb_timer() {
     if (!isAlive) {
         if (this->session->state == STATE_STARTED) {
-            if (this->session->isAPIAlive()) {
+            if (this->session->isAPIAlive( HSK_HTTP )) {
                 isAlive = true;
                 fire_apiAvailable( this->get_ip(), this->get_apiEntryPoint() );
             }
         }
     } else {
-        if ((this->session->state != STATE_STARTED) || (!this->session->isAPIAlive())) {
+        if ((this->session->state != STATE_STARTED) || (!this->session->isAPIAlive( HSK_HTTP ))) {
             isAlive = false;
             fire_apiUnavailable();
         }

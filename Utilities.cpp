@@ -702,7 +702,7 @@ int sha256_bin( string buffer, unsigned char * hash ) {
 /**
  * Check if the given port is open
  */
-bool isPortOpen( const char * host, int port ) {
+bool isPortOpen( const char * host, int port, unsigned char handshake ) {
     SOCKET sock;
 
     struct sockaddr_in client;
@@ -725,28 +725,72 @@ bool isPortOpen( const char * host, int port ) {
         return false;
     }
 
-    // Try to send some data
-    int n = send(sock," ",1,0);
-    if (n < 0) {
-        #ifdef _WIN32
-            closesocket(sock);
-        #else
-            ::close(sock);
-        #endif
-        return false;
-    }
+    // If we have simple handsake, do it now
+    if (handshake == HSK_SIMPLE) {
 
-    // Check if it's still connected
-    int errorCode = 0;
-    socklen_t szErrorCode = sizeof(errorCode);
-    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &errorCode, &szErrorCode );
-    if (errorCode != 0 ){
-        #ifdef _WIN32
-            closesocket(sock);
-        #else
-            ::close(sock);
-        #endif
-        return false;
+        // Try to send some data
+        int n = send(sock," \n",2,0);
+        if (n < 0) {
+            #ifdef _WIN32
+                closesocket(sock);
+            #else
+                ::close(sock);
+            #endif
+            return false;
+        }
+
+        // Check if it's still connected
+        int errorCode = 0;
+        socklen_t szErrorCode = sizeof(errorCode);
+        getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &errorCode, &szErrorCode );
+        if (errorCode != 0 ){
+            #ifdef _WIN32
+                closesocket(sock);
+            #else
+                ::close(sock);
+            #endif
+            return false;
+        }
+
+    // If we have HTTP handsake, do it now
+    } else if (handshake == HSK_HTTP) {
+
+        // Prepare the request
+        std::ostringstream oss;
+        oss << "GET / HTTP/1.1\r\n"
+            << "Host: " << host << "\r\n"
+            << "Connection: close\r\n"
+            << "\r\n";
+
+        // Send it and check for failures
+        int n = send(sock, oss.str().c_str() , oss.str().length(), 0);
+        if (n < 0) {
+            #ifdef _WIN32
+                closesocket(sock);
+            #else
+                ::close(sock);
+            #endif
+            return false;
+        }
+
+        // Try to read a chunk
+        char readBuf[1024];
+        n = recv(sock, readBuf, 1024, 0);
+        if (n <= 0) {
+
+            // Either an error, or connection closed without
+            // any data sent. However we did provide a valid HTTP 
+            // request, which means the remote endpoint is not really
+            // an HTTP server, or something went really wrong.
+            #ifdef _WIN32
+                closesocket(sock);
+            #else
+                ::close(sock);
+            #endif
+            return false;
+
+        }
+
     }
 
     // It works

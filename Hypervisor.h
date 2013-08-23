@@ -147,7 +147,7 @@ public:
     virtual std::string     getRDPHost();
     virtual std::string     getAPIHost();
     virtual int             getAPIPort();
-    virtual bool            isAPIAlive();
+    virtual bool            isAPIAlive( unsigned char handshake = HSK_HTTP );
 
     virtual std::string     getExtraInfo( int extraInfo );
 

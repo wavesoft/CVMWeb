@@ -92,10 +92,10 @@ std::string hypervisorErrorStr( int error ) {
  * Try to connect to the API port and check if it succeeded
  */
 
-bool HVSession::isAPIAlive() {
+bool HVSession::isAPIAlive( unsigned char handshake ) {
     std::string ip = this->getAPIHost();;
     if (ip.empty()) return false;
-    return isPortOpen( ip.c_str(), this->getAPIPort() );
+    return isPortOpen( ip.c_str(), this->getAPIPort(), handshake );
 }
 
 /**
@@ -204,7 +204,7 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
         
         // Invalid checksum, remove file
         CVMWA_LOG("Info", "Invalid local checksum (" << sChecksum << ")");
-        remove( sGZOutput.c_str() );
+        ::remove( sGZOutput.c_str() );
         
         // (Let the next block re-download the file)
         return HVE_NOT_VALIDATED;
@@ -226,7 +226,7 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
         // Delete sGZOutput if sOutput is there
         if (file_exists(sOutput)) {
             CVMWA_LOG("Info", "File is in place" );
-            remove( sGZOutput.c_str() );
+            ::remove( sGZOutput.c_str() );
         } else {
             CVMWA_LOG("Info", "Could not find the extracted file!" );
             if (t != NULL) { t->join(); delete t; }
@@ -867,7 +867,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
 		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
 		if (res != 0) {
-			remove( tmpHypervisorInstall.c_str() );
+			::remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}
 		string infoLine = lines.back();
@@ -882,13 +882,13 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 		if (res != 0) {
 			CVMWA_LOG( "Info", "Detaching" );
 			res = sysExec("hdiutil detach " + dskDev, NULL);
-			remove( tmpHypervisorInstall.c_str() );
+			::remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}
 		CVMWA_LOG( "Info", "Detaching" );
 		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
 		res = sysExec("hdiutil detach " + dskDev, NULL);
-		remove( tmpHypervisorInstall.c_str() );
+		::remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(_WIN32)
 
@@ -912,14 +912,14 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 		/* Validate handle */
 		if ( !ShellExecuteExA( &shExecInfo ) ) {
 			cout << "ERROR: Installation could not start! Error = " << res << endl;
-			remove( tmpHypervisorInstall.c_str() );
+			::remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}
 
         /* Validate hProcess */
         if (shExecInfo.hProcess == 0) {
 			cout << "ERROR: Installation could not start! Error = " << res << endl;
-			remove( tmpHypervisorInstall.c_str() );
+			::remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
         }
 
@@ -928,7 +928,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
 		/* Cleanup */
 		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-		remove( tmpHypervisorInstall.c_str() );
+		::remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(__linux__)
 
@@ -936,7 +936,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 		if (cbProgress) (cbProgress)(92, maxSteps, "Validating OS environment");
         if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
             cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
-			remove( tmpHypervisorInstall.c_str() );
+			::remove( tmpHypervisorInstall.c_str() );
             return HVE_NOT_FOUND;
         }
 
@@ -947,7 +947,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
             res = system( cmdline.c_str() );
     		if (res < 0) {
     			cout << "ERROR: Could not start. Return code: " << res << endl;
-    			remove( tmpHypervisorInstall.c_str() );
+    			::remove( tmpHypervisorInstall.c_str() );
     			return HVE_EXTERNAL_ERROR;
     		}
             
@@ -957,7 +957,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		if (cbProgress) (cbProgress)(95, maxSteps, "Waiting for the installation to begin");
             if (!waitFileOpen( tmpHypervisorInstall, true, 60000 )) { // 1 min until it's captured
     			cout << "ERROR: Could not wait for file handler capture: " << res << endl;
-    			remove( tmpHypervisorInstall.c_str() );
+    			::remove( tmpHypervisorInstall.c_str() );
     			return HVE_STILL_WORKING;
             }
 
@@ -965,13 +965,13 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		if (cbProgress) (cbProgress)(96, maxSteps, "Waiting for the installation to complete");
             if (!waitFileOpen( tmpHypervisorInstall, false, 900000 )) { // 15 mins until it's released
     			cout << "ERROR: Could not wait for file handler release: " << res << endl;
-    			remove( tmpHypervisorInstall.c_str() );
+                // We can't remove the file, it's in use :(
     			return HVE_STILL_WORKING;
             }
 
             // Done
      		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-        	remove( tmpHypervisorInstall.c_str() );
+        	::remove( tmpHypervisorInstall.c_str() );
         
         /* (2) If we have GKSudo, do directly dpkg/yum install */
         } else if (linuxInfo.hasGKSudo) {
@@ -987,13 +987,13 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		res = system( cmdline.c_str() );
     		if (res < 0) {
     			cout << "ERROR: Could not start. Return code: " << res << endl;
-    			remove( tmpHypervisorInstall.c_str() );
+    			::remove( tmpHypervisorInstall.c_str() );
     			return HVE_EXTERNAL_ERROR;
     		}
 
             /* Cleanup */
     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-        	remove( tmpHypervisorInstall.c_str() );
+        	::remove( tmpHypervisorInstall.c_str() );
     	
         /* (3) Otherwise create a bash script and prompt the user */
         } else {

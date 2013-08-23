@@ -105,6 +105,11 @@
 #define THREAD_ID        pthread_self(  )
 #endif
 
+/* isPortOpen Handshake Protocols */
+#define HSK_NONE        0   // No port negotiation will happen
+#define HSK_SIMPLE      1   // Just send a space and a newline and check if it's still connected
+#define HSK_HTTP        2   // Send a basic HTTP GET / request and expect some data as response
+
 /* Callback function definitions */
 typedef boost::function< void () >                                                   callbackVoid;
 typedef boost::function< void (const std::string&) >                                 callbackDebug;
@@ -209,7 +214,7 @@ int                                                 parseLines       ( std::vect
 /**
  * Check if the specified port is accepting connections
  */
-bool                                                isPortOpen      ( const char * host, int port );
+bool                                                isPortOpen      ( const char * host, int port, unsigned char handshake = HSK_NONE );
 
 /**
  * Visualize the dump of a string:string hash map
