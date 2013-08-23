@@ -74,3 +74,4 @@ add_firebreath_library(jsoncpp)
 
 # Boost libraries
 add_boost_library(regex)
+add_boost_library(filesystem)

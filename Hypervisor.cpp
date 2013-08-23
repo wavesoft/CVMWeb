@@ -63,7 +63,7 @@ int HVSession::getAPIPort()                                         { return 0; 
 std::string HVSession::getAPIHost()                                 { return ""; }
 std::string HVSession::getProperty( std::string name )              { return ""; }
 std::string HVSession::getRDPHost()                                 { return ""; }
-std::string HVSession::getExtraInfo( int extraInfo )                { return ""; };
+std::string HVSession::getExtraInfo( int extraInfo )                { return ""; }
 
 /** 
  * Return the string representation of the given error code
@@ -654,19 +654,14 @@ bool _isLinkInDir( string fileName, const fs::path& path ) {
           dir_itr != end_iter;
           ++dir_itr ) {
         
-        // Process file descriptor
-        if (fs::is_symlink( dir_itr->status() )) {
-
-          // Resolve symlink & Check if the filename is used
-          try {
-                fs::path resolved = fs::canonical( dir_itr->path() );
-                if (resolved.filename.compare( fileName ) == 0)
-                    return true;
-          }
-          catch ( const std::exception & ex ) {
-              // Ignore errors (They are usually access denied)
-          }
-
+        // Resolve symlink & Check if the filename is used
+        try {
+            fs::path resolved = fs::canonical( dir_itr->path() );
+            if (resolved.string().compare( fileName ) == 0)
+                return true;
+        }
+        catch ( const std::exception & ex ) {
+            // Ignore errors (They are usually access denied)
         }
 
     }
@@ -679,7 +674,7 @@ bool _isLinkInDir( string fileName, const fs::path& path ) {
 /**
  * Utility function to check if the file is oppened by another process
  */
-bool isFileOpen( string fileName) {
+bool isFileOpen( string fileName ) {
     
     // Get access to /proc
     fs::path full_path( fs::initial_path<fs::path>() );
@@ -696,13 +691,14 @@ bool isFileOpen( string fileName) {
         if ( fs::is_directory( dir_itr->status() ) ) {
 
             // Check the /fd directory
-            fs::path subPath = fs::system_complete( fs::path( dir_itr->path().filename + "/fd" ) );
+            string sPath = dir_itr->path().string() + "/fd";
+            fs::path subPath = fs::system_complete( fs::path( sPath ) );
 
             // Check if the subPath is directory
             if ( fs::is_directory( subPath ) ) {
 
                 // Check if the filename is inside the /proc/<pid>/fd descriptors
-                if (_isLinkInDir( fileName, dir_itr->path() ))
+                if (_isLinkInDir( fileName, subPath ))
                     return true;
 
             }
@@ -955,18 +951,19 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     			return HVE_EXTERNAL_ERROR;
     		}
             
-
             /* At some point the process that xdg-open launches is
              * going to open the file in order to read it's contnets. 
              * Wait for 10 sec for it to happen */
-            if (!waitFileOpen( tmpHypervisorInstall, true, 10000 )) {
+    		if (cbProgress) (cbProgress)(95, maxSteps, "Waiting for the installation to begin");
+            if (!waitFileOpen( tmpHypervisorInstall, true, 60000 )) { // 1 min until it's captured
     			cout << "ERROR: Could not wait for file handler capture: " << res << endl;
     			remove( tmpHypervisorInstall.c_str() );
     			return HVE_STILL_WORKING;
             }
 
             /* Wait for it to be released */
-            if (!waitFileOpen( tmpHypervisorInstall, false, 600000 )) {
+    		if (cbProgress) (cbProgress)(96, maxSteps, "Waiting for the installation to complete");
+            if (!waitFileOpen( tmpHypervisorInstall, false, 900000 )) { // 15 mins until it's released
     			cout << "ERROR: Could not wait for file handler release: " << res << endl;
     			remove( tmpHypervisorInstall.c_str() );
     			return HVE_STILL_WORKING;
