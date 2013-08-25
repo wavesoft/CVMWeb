@@ -334,7 +334,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         needsUpdate = true;
         if (machineInfo.find( BOOT_DSK ) != machineInfo.end()) {
             
-            /* Get the filename of the iso */
+            /* Get the filename of the disk */
             getKV( machineInfo[ BOOT_DSK ], &kk, &kv, '(', 0 );
             kk = kk.substr(0, kk.length()-1);
             
@@ -346,7 +346,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             } else {
                 CVMWA_LOG( "Info", "Master disk is different : " << kk << " / " << masterDisk  );
 
-                /* Unmount previount iso */
+                /* Unmount previount disk */
                 args.str("");
                 args << "storageattach "
                     << uuid
@@ -357,7 +357,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
 
                 if (this->onProgress) (this->onProgress)(93, 110, "Detachining previous disk");
                 ans = this->wrapExec(args.str(), NULL);
-                CVMWA_LOG( "Info", "Detaching ISO=" << ans  );
+                CVMWA_LOG( "Info", "Detaching Disk=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
                     return HVE_MODIFY_ERROR;
@@ -370,9 +370,13 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         /* If we must attach the disk, do it now */
         if (needsUpdate) {
             CVMWA_LOG("Info", "Disk needs to be updated");
+
+            /* Prepare two locations where we can find the disk,
+             * because before some version VirtualBox required the UUID if the master disk */
+            string masterDiskPath = "\"" + masterDisk + "\"";
+            string masterDiskUUID = "";
             
             /* Get a list of the disks in order to properly compute multi-attach */
-            string masterDiskID = "\"" + masterDisk + "\"";
             vector< map< string, string > > disks = this->host->getDiskList();
             for (vector< map<string, string> >::iterator i = disks.begin(); i != disks.end(); i++) {
                 map<string, string> iface = *i;
@@ -385,14 +389,14 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                         
                         /* Use the master UUID instead of the filename */
                         CVMWA_LOG("Info", "Found master with UUID " << iface["UUID"]);
-                        masterDiskID = "{" + iface["UUID"] + "}";
+                        masterDiskUUID = "{" + iface["UUID"] + "}";
                         break;
                         
                     }
                 }
             }
             
-            /* (5) Attach disk to the SATA controller */
+            /* (5a) Try to attach disk to the SATA controller using full path */
             args.str("");
             args << "storageattach "
                 << uuid
@@ -401,14 +405,40 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 << " --device "     << BOOT_DEVICE
                 << " --type "       << "hdd"
                 << " --mtype "      << "multiattach"
-                << " --medium "     <<  masterDiskID;
+                << " --medium "     <<  masterDiskPath;
 
             if (this->onProgress) (this->onProgress)(95, 110, "Attaching hard disk");
             ans = this->wrapExec(args.str(), NULL);
             CVMWA_LOG( "Info", "Storage Attach=" << ans  );
-            if (ans != 0) {
-                this->state = STATE_ERROR;
-                return HVE_MODIFY_ERROR;
+            if (ans == 0) {
+                needsUpdate = false;
+            } else {
+                /* If we have no UUID available, we can't try the 5b */
+                if (masterDiskUUID.empty()) {
+                    this->state = STATE_ERROR;
+                    return HVE_MODIFY_ERROR;
+                }
+            }
+            
+            /* (5b) Try to attach disk to the SATA controller using UUID (For older VirtualBox versions) */
+            if (needsUpdate) {
+                args.str("");
+                args << "storageattach "
+                    << uuid
+                    << " --storagectl " << BOOT_CONTROLLER
+                    << " --port "       << BOOT_PORT
+                    << " --device "     << BOOT_DEVICE
+                    << " --type "       << "hdd"
+                    << " --mtype "      << "multiattach"
+                    << " --medium "     <<  masterDiskUUID;
+
+                if (this->onProgress) (this->onProgress)(95, 110, "Attaching hard disk");
+                ans = this->wrapExec(args.str(), NULL);
+                CVMWA_LOG( "Info", "Storage Attach=" << ans  );
+                if (ans != 0) {
+                    this->state = STATE_ERROR;
+                    return HVE_MODIFY_ERROR;
+                }
             }
             
         }
