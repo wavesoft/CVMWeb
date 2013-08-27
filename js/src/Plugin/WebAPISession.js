@@ -63,7 +63,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
         "ip"            :   {   get: function () { if (!this.__valid) return u; return this.__session.ip;                    } },
         "ram"           :   {   get: function () { if (!this.__valid) return u; return this.__session.ram;                   } },
         "disk"          :   {   get: function () { if (!this.__valid) return u; return this.__session.disk;                  } },
-        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.apiURL;                } },
+        "apiURL"        :   {   get: function () { if (!this.__valid) return u; return 'http://' + this.__session.apiURL;                } },
         "rdpURL"        :   {   get: function () { if (!this.__valid) return u; return this.__session.rdpURL;                } },
         "executionCap"  :   {   get: function () { if (!this.__valid) return u; return this.__session.executionCap;          }, 
                                 set: function(v) { this.__session.setExecutionCap(v);           } },
@@ -155,7 +155,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
     this.__session.addEventListener('pauseError',     (function(a,b){   this.__fire('pauseError',a,b); }).bind(this));
     this.__session.addEventListener('resetError',     (function(a,b){   this.__fire('resetError',a,b); }).bind(this));
     this.__session.addEventListener('hibernateError', (function(a,b){   this.__fire('hibernateError',a,b); }).bind(this));
-    this.__session.addEventListener('apiAvailable',   (function(a,b){   this.__fire('apiAvailable', a,b); }).bind(this));
+    this.__session.addEventListener('apiAvailable',   (function(a,b){   this.__fire('apiAvailable', a,'http://'+b); }).bind(this));
     this.__session.addEventListener('apiUnavailable', (function() {     this.__fire('apiUnavailable'); }).bind(this));
 
     // Smart progress events
