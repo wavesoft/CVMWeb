@@ -25,6 +25,7 @@
 #include "Utilities.h"
 
 #include <boost/function.hpp>
+#include <boost/thread/mutex.hpp>
 
 /* Hypervisor types */
 #define HV_NONE                 0
@@ -161,7 +162,7 @@ public:
     callbackVoid            onClose;
     callbackError           onError;
     callbackProgress        onProgress;
-    
+
 };
 
 /**
@@ -266,6 +267,8 @@ public:
 protected:
     int                     sessionID;
     DownloadProviderPtr     downloadProvider;
+    boost::mutex            m_execMutex;
+
     
 };
 

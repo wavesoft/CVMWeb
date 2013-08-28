@@ -303,14 +303,20 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
  * Cross-platform exec and return for the hypervisor control binary
  */
 int Hypervisor::exec( string args, vector<string> * stdoutList ) {
-    
-    /* Build cmdline */
-    string cmdline( this->hvBinary );
-    cmdline += " " + args;
-    
-    /* Execute */
-    return sysExec( cmdline, stdoutList );
+    int execRes = 0;
+    {
+        /* Use only one exec thread */
+        boost::unique_lock<boost::mutex> lock(m_execMutex);
 
+        /* Build cmdline */
+        string cmdline( this->hvBinary );
+        cmdline += " " + args;
+    
+        /* Execute */
+        return sysExec( cmdline, stdoutList );
+
+    }
+    return execRes;
 }
 
 /**
