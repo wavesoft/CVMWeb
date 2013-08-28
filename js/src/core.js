@@ -379,7 +379,13 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
             }
             
             // Banner of the webAPI 
-            console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with " + __pluginSingleton.hypervisorName + " version " + __pluginSingleton.hypervisorVersion);
+            if (__pluginSingleton.version == undefined) {
+                console.log("CernVM WebAPI not installed");
+            } else if (__pluginSingleton.hypervisorVersion == "") {
+                console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with no hypervisor installed");
+            } else {
+                console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with " + __pluginSingleton.hypervisorName + " version " + __pluginSingleton.hypervisorVersion);
+            }
 
         }
         
