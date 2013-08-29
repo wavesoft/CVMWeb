@@ -426,7 +426,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                             if (BrowserDetect.browser == "Firefox") {
                                 
                                 // For firefox, just point to the XPI, the user will be prompted
-                                window.location = "http://cernvm.cern.ch/releases/webapi/plugin/cvmwebapi-1.2.7.xpi";
+                                window.location = "http://cernvm.cern.ch/releases/webapi/plugin/cvmwebapi-latest.xpi";
                                 
                             } else if (BrowserDetect.browser == "Chrome") {
                                 
