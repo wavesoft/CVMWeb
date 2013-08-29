@@ -153,7 +153,7 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
     if (this->onDebug) (this->onDebug)("Executing '"+cmd+"'");
     
     /* Run command */
-    ans = this->host->exec( cmd, stdoutList );
+    ans = this->host->exec( cmd, stdoutList, this->m_ipcMutex );
     
     /* Debug log response */
     if (this->onDebug) {
@@ -199,6 +199,7 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         return ans;
     } else {
         this->uuid = uuid;
+        this->updateSharedMemoryID( uuid );
     }
     
     /* Find a random free port for VRDE */
@@ -2006,6 +2007,7 @@ int Virtualbox::loadSessions() {
             HVSession * session = this->allocateSession( name, secret );
             session->uuid = "{" + uuid + "}";
             session->key = secret;
+            session->updateSharedMemoryID( session->uuid );
 
             /* Update session info */
             updateSession( session, false );
