@@ -211,14 +211,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     string bootMedium = "dvd";
     if ((flags & HVF_DEPLOYMENT_HDD) != 0) bootMedium = "disk";
     
-    /* Pick the appropriate values for GUI components */
-    string vDragDrop = "disabled";
-    string vClipboard = "disabled";
-    if ((flags & HVF_GRAPHICAL) != 0) {
-        vDragDrop = "hosttoguest";
-        vClipboard = "bidirectional";
-    }
-    
     /* (2) Set parameters */
     args.str("");
     args << "modifyvm "
@@ -238,10 +230,15 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         << " --boot3 "                  << "none" 
         << " --boot4 "                  << "none"
         << " --nic1 "                   << "nat"
-        << " --natdnshostresolver1 "    << "on"
-        << " --draganddrop "            << vDragDrop
-        << " --clipboard "              << vClipboard;
+        << " --natdnshostresolver1 "    << "on";
     
+    /* Enable graphical additions if instructed to do so */
+    if ((flags & HVF_GRAPHICAL) != 0) {
+        args
+        << " --draganddrop "            << "hosttoguest"
+        << " --clipboard "              << "bidirectional";
+    }
+
     /* Check if we are NATing or if we are using the second NIC */
     if ((this->flags & HVF_DUAL_NIC) != 0) {
 
