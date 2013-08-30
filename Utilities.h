@@ -167,7 +167,7 @@ int                                                 sha256_bin   ( std::string p
  * 
  * This function will wait for the command to finish and it will return it's exit code
  */
-int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList );
+int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr );
 
 /**
  * Cross-platform function to return the temporary folder path

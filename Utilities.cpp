@@ -285,6 +285,9 @@ int parseLines( std::vector< std::string > * lines, std::map< std::string, std::
  */
 void splitLines( string rawString, vector<string> * out ) {
     
+    /* Ignore invalid output buffer */
+    if (out == NULL) return;
+
     /* Pass output into an input stream */
     istringstream ss( rawString );
 
@@ -436,50 +439,112 @@ std::string getTmpFile( string suffix, string folder ) {
  * Cross-platform exec and return function
  */
 #ifndef _WIN32
-int sysExec( string cmdline, vector<string> * stdoutList ) {
+int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
     
     int ret;
-    char data[1035];
+    pid_t pidChild;
     string item;
     string rawStdout = "";
+    if (rawStderr != NULL) *rawStderr = "";
     FILE *fp;
 
-    /* Open process and red contents using the POSIX pipe interface */
-    fp = popen(cmdline.c_str(), "r");
+    /* Prepare the two pipes */
+    int outfd[2]; pipe(outfd);
+    int errfd[2]; pipe(errfd);
 
-    /* Check for error */
-    if (fp == NULL) return HVE_IO_ERROR;
+    int oldstdout = dup(1); // Save current stdout
+    int oldstderr = dup(2); // Save current stderr
 
-    /* Read the output a line at a time - output it. */
-    if (stdoutList != NULL) {
+    close(1); dup2(outfd[1],1); // Make the write end of outfd pipe as stdout
+    close(2); dup2(errfd[1],2); // Make the write end of errfd pipe as stderr
+
+    /* Fork to create child instance */
+    if(!(pidChild = fork())) {
         
-        /* Read to buffer */
-        while (fgets(data, sizeof(data)-1, fp) != NULL) {
-            rawStdout += data;
+        /* Pipes are not required for the child */
+        close(outfd[0]); close(errfd[0]); 
+        close(outfd[1]); close(errfd[1]);
+        
+        /* Replace with the given command-line */
+        CVMWA_LOG("Debug", "Executing:" << cmdline);
+        execv(cmdline.c_str());
+
+    } else {
+        char data[1035];
+
+        /* Restore the original std fds of parent */
+        close(1); dup2(oldstdout, 1);
+        close(2); dup2(oldstderr, 2);
+
+        /* These are being used by the child */
+        close(outfd[1]); close(errfd[1]);
+
+        /* Prepare the poll fd list */
+        struct pollfd fds[2];
+        fds[0].fd = outfd[0]; fds[0].events = POLLIN;
+        fds[1].fd = errfd[0]; fds[1].events = POLLIN;
+
+        /* Start reading stdin/err */
+        for (;;;) {
+
+            /* Poll descriptors */
+            ret = poll(fds, 2, 10);
+            if (ret > 0) {
+
+                /* An event on one of the fds has occurred. */
+                for (i=0; i<2; i++) {
+                    if (fds[i].revents & POLLIN) {
+                        // Data is available on fds[i]
+                        if (fgets(data, sizeof(data)-1, fds[i].fd) != NULL) {
+                            if (i == 0) {
+                                rawStdout += data;
+                            } else {
+                                CVMWA_LOG("Debug", "STDERR:" << chBuf);
+                                if (rawStderr != NULL) 
+                                    *rawStderr += data;
+                            }
+                        } else {
+                            // Error while reading
+                            ret = -1;
+                        }
+                    }
+                    if (fds[i].revents & POLLHUP) {
+                        // pipe hung-up.
+                        // Set ret to -1 to flag termination
+                        ret = -1;
+                    }
+                }
+            }
+
+            /* Exit on error */
+            if (ret < 0) 
+                break;
+
         }
-        
-        /* Split lines into stdout */
+
+        /* Split stdout lines */
         splitLines( rawStdout, stdoutList );
-        
+
+        /* Wait forked pid to exit */
+        waitpid(pidChild, &ret, 0);
+        return ret;
     }
 
-    /* close */
-    ret = pclose(fp);
-
-    /* Return exit code */
-    return ret;
 }
 #else
-int sysExec( string cmdline, vector<string> * stdoutList ) {
+int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
 
 	HANDLE g_hChildStdOut_Rd = NULL;
 	HANDLE g_hChildStdOut_Wr = NULL;
-	DWORD ret, dwRead;
+	HANDLE g_hChildStdErr_Rd = NULL;
+	HANDLE g_hChildStdErr_Wr = NULL;
+	DWORD ret, dwRead, dwAvailable;
 	CHAR chBuf[4096];
 	PROCESS_INFORMATION piProcInfo;
 	STARTUPINFOA siStartInfo;
 	BOOL bSuccess = FALSE;
 	string rawStdout;
+    if (rawStderr != NULL) *rawStderr = "";
 
 	SECURITY_ATTRIBUTES sAttr;
 	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
@@ -492,6 +557,12 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
 	if (!SetHandleInformation(g_hChildStdOut_Rd, HANDLE_FLAG_INHERIT, 0))
 		return HVE_IO_ERROR;
 
+    /* Create STDERR pipe */
+	if (!CreatePipe(&g_hChildStdErr_Rd, &g_hChildStdErr_Wr, &sAttr, 0)) 
+		return HVE_IO_ERROR;
+	if (!SetHandleInformation(g_hChildStdErr_Rd, HANDLE_FLAG_INHERIT, 0))
+		return HVE_IO_ERROR;
+
     /* Clean structures */
 	ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION));
 	ZeroMemory( &siStartInfo, sizeof( STARTUPINFOA ));
@@ -499,9 +570,11 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
     /* Prepare startup information */
 	siStartInfo.cb = sizeof(STARTUPINFOA);
 	siStartInfo.hStdOutput = g_hChildStdOut_Wr;
+    siStartInfo.hStdError = g_hChildStdErr_Wr;
 	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
     /* Create process */
+    CVMWA_LOG("Debug", "Exec CMDLINE: " << cmdline);
 	if (!CreateProcessA(
 		NULL,
 		(LPSTR)cmdline.c_str(),
@@ -516,24 +589,52 @@ int sysExec( string cmdline, vector<string> * stdoutList ) {
 
     /* Process STDOUT */
 	CloseHandle( g_hChildStdOut_Wr );
+	CloseHandle( g_hChildStdErr_Wr );
 	if ( stdoutList != NULL ) {
 	    
-	    /* Read to buffer */
+	    /* Read to buffers */
     	for (;;) {
-    		bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
-    		if ( !bSuccess || dwRead == 0 ) break;
-    		rawStdout.append( chBuf, dwRead );
-    	}
-    	
+
+            /* Check for STDERR data (Never break on errors here) */
+            if (PeekNamedPipe( g_hChildStdErr_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) {
+                if (dwAvailable > 0) {
+    		        bSuccess = ReadFile( g_hChildStdErr_Rd, chBuf, 4096, &dwRead, NULL);
+    		        if ( bSuccess && (dwRead > 0) ) {
+    		            if (rawStderr != NULL) 
+                            rawStderr->append( chBuf, dwRead );
+                    }
+                }
+            }
+
+            /* Check for STDOUT data */
+            if (!PeekNamedPipe( g_hChildStdOut_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) break;
+            if (dwAvailable > 0) {
+    		    bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
+    		    if ( !bSuccess || dwRead == 0 ) break;
+    		    rawStdout.append( chBuf, dwRead );
+            }
+
+            /* Sleep a teensy bit not to stress the CPU on the
+             * infinite loop we are currently in */
+            Sleep( 10 );
+
+        }
+
+        /* Debug STDERR */
+        if ((rawStderr != NULL) && (!rawStderr->empty()))
+            CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
+
 	    /* Split lines into stdout */
         splitLines( rawStdout, stdoutList );
         
 	}
 	CloseHandle( g_hChildStdOut_Rd );
+	CloseHandle( g_hChildStdErr_Rd );
 
     /* Wait for completion */
 	WaitForSingleObject( piProcInfo.hProcess, INFINITE );
 	GetExitCodeProcess( piProcInfo.hProcess, &ret );
+    CVMWA_LOG("Debug", "Exec EXIT_CODE: " << ret);
 
     /* Close hanles */
 	CloseHandle( piProcInfo.hProcess );
@@ -994,6 +1095,7 @@ void explode( std::string const &input, char sep, std::vector<std::string> * out
  */
 void getLinuxInfo ( LINUX_INFO * info ) {
     std::vector< std::string > vLines;
+    std::string stdError;
     
     // Check if we have gksudo
     info->hasGKSudo = file_exists("/usr/bin/gksudo");
@@ -1014,7 +1116,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
         
         // First, get release
         std::string cmdline = "/usr/bin/lsb_release -i -s";
-        if (sysExec( cmdline, &vLines ) == 0) {
+        if (sysExec( cmdline, &vLines, stdError ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 info->osDistID = vLines[0];
             }
@@ -1022,7 +1124,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
         
         // Then get codename
         cmdline = "/usr/bin/lsb_release -c -s";
-        if (sysExec( cmdline, &vLines ) == 0) {
+        if (sysExec( cmdline, &vLines, stdError ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 // Put separator and get version
                 info->osDistID += "-";

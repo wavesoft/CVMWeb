@@ -344,7 +344,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
-int Hypervisor::exec( string args, vector<string> * stdoutList, boost::interprocess::interprocess_mutex * m_execMutex ) {
+int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex ) {
     int execRes = 0;
     {
         /* Use only one exec per session, using inteprocess mutexes */
@@ -356,8 +356,13 @@ int Hypervisor::exec( string args, vector<string> * stdoutList, boost::interproc
         cmdline += " " + args;
     
         /* Execute */
-        return sysExec( cmdline, stdoutList );
+        string execError;
+        execRes = sysExec( cmdline, stdoutList, &execError );
+        if (stderrMsg != NULL) *stderrMsg = execError;
 
+        /* Store the last error occured */
+        if (!execError.empty())
+            this->lastExecError = execError;
     }
     return execRes;
 }
@@ -387,8 +392,9 @@ Hypervisor::Hypervisor() {
  */
 void Hypervisor::detectVersion() {
     vector<string> out;
+    string err;
     if (this->type == HV_VIRTUALBOX) {
-        this->exec("--version", &out);
+        this->exec("--version", &out, &err);
         
     } else {
         this->verString = "Unknown";
@@ -397,6 +403,9 @@ void Hypervisor::detectVersion() {
         return;
     }
     
+    /* We don't have enough information */
+    if (out.size() == 0) return;
+
     /* Get version string */
     string ver = out[0];
     unsigned nl = ver.find_first_of("\r\n");
@@ -910,11 +919,12 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     /**
      * OS-Dependant installation process
      */
+    string errorMsg;
     #if defined(__APPLE__) && defined(__MACH__)
 
 		CVMWA_LOG( "Info", "Attaching" );
 		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
-		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines);
+		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines, &errorMsg);
 		if (res != 0) {
 			::remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
@@ -927,16 +937,16 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     
 		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
 		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
-		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL);
+		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
 		if (res != 0) {
 			CVMWA_LOG( "Info", "Detaching" );
-			res = sysExec("hdiutil detach " + dskDev, NULL);
+			res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
 			::remove( tmpHypervisorInstall.c_str() );
 			return HVE_EXTERNAL_ERROR;
 		}
 		CVMWA_LOG( "Info", "Detaching" );
 		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-		res = sysExec("hdiutil detach " + dskDev, NULL);
+		res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
 		::remove( tmpHypervisorInstall.c_str() );
 
 	#elif defined(_WIN32)

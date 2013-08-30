@@ -727,6 +727,19 @@ bool CVMWebAPI::unsafeConfirm( std::string msg ) {
 }
 
 /**
+ * Return the last Error that occured to the plug-in
+ */
+std::string CVMWebAPI::get_lastError() {
+    CVMWebPtr p = this->getPlugin();
+    if (p->hv == NULL) return "No hypervisor available";
+
+    /* Get and reset last error */
+    string lastError = p->hv->lastExecError;
+    p->hv->lastExecError = "";
+    return lastError;
+}
+
+/**
  * Show a confirmation dialog using browser's API
  */
 bool CVMWebAPI::confirm( std::string msg ) {

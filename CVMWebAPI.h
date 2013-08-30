@@ -80,6 +80,7 @@ public:
         registerProperty("hypervisorName",    make_property(this, &CVMWebAPI::get_hv_name));
         registerProperty("hypervisorVersion", make_property(this, &CVMWebAPI::get_hv_version));
         registerProperty("domain",            make_property(this, &CVMWebAPI::getDomainName));
+        registerProperty("lastError",         make_property(this, &CVMWebAPI::get_lastError));
         
         // Beautification
         registerMethod("toString",          make_method(this, &CVMWebAPI::toString));
@@ -133,6 +134,7 @@ public:
     std::string get_version();
     std::string get_hv_name();
     std::string get_hv_version();
+    std::string get_lastError();
 
     // Threads
     void thread_install( );
