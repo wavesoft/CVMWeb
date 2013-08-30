@@ -57,11 +57,13 @@
 #define SOCKET          int
 #include <fcntl.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <poll.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <stdio.h>

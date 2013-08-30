@@ -449,8 +449,8 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
     FILE *fp;
 
     /* Prepare the two pipes */
-    int outfd[2]; pipe(outfd);
-    int errfd[2]; pipe(errfd);
+    int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
+    int errfd[2]; if (pipe(errfd) < 0) return HVE_IO_ERROR;
 
     int oldstdout = dup(1); // Save current stdout
     int oldstderr = dup(2); // Save current stderr
@@ -467,7 +467,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
         
         /* Replace with the given command-line */
         CVMWA_LOG("Debug", "Executing:" << cmdline);
-        execv(cmdline.c_str());
+        execl("/bin/sh", "sh", "-c", cmdline.c_str(), (char*)NULL);
 
     } else {
         char data[1035];
@@ -485,21 +485,21 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
         fds[1].fd = errfd[0]; fds[1].events = POLLIN;
 
         /* Start reading stdin/err */
-        for (;;;) {
+        for (;;) {
 
             /* Poll descriptors */
             ret = poll(fds, 2, 10);
             if (ret > 0) {
 
                 /* An event on one of the fds has occurred. */
-                for (i=0; i<2; i++) {
+                for (int i=0; i<2; i++) {
                     if (fds[i].revents & POLLIN) {
                         // Data is available on fds[i]
                         if (fgets(data, sizeof(data)-1, fds[i].fd) != NULL) {
                             if (i == 0) {
                                 rawStdout += data;
                             } else {
-                                CVMWA_LOG("Debug", "STDERR:" << chBuf);
+                                CVMWA_LOG("Debug", "STDERR:" << data);
                                 if (rawStderr != NULL) 
                                     *rawStderr += data;
                             }
@@ -1116,7 +1116,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
         
         // First, get release
         std::string cmdline = "/usr/bin/lsb_release -i -s";
-        if (sysExec( cmdline, &vLines, stdError ) == 0) {
+        if (sysExec( cmdline, &vLines, &stdError ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 info->osDistID = vLines[0];
             }
@@ -1124,7 +1124,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
         
         // Then get codename
         cmdline = "/usr/bin/lsb_release -c -s";
-        if (sysExec( cmdline, &vLines, stdError ) == 0) {
+        if (sysExec( cmdline, &vLines, &stdError ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 // Put separator and get version
                 info->osDistID += "-";
