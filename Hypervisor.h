@@ -288,7 +288,7 @@ protected:
  */
 Hypervisor *                    detectHypervisor    ( );
 void                            freeHypervisor      ( Hypervisor * );
-int                             installHypervisor   ( std::string clientVersion, callbackProgress progress, DownloadProviderPtr downloadProvider );
+int                             installHypervisor   ( std::string clientVersion, callbackProgress progress, DownloadProviderPtr downloadProvider, int retries = 4 );
 std::string                     hypervisorErrorStr  ( int error );
 
 

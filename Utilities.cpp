@@ -446,7 +446,6 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
     string item;
     string rawStdout = "";
     if (rawStderr != NULL) *rawStderr = "";
-    FILE *fp;
 
     /* Prepare the two pipes */
     int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
@@ -495,7 +494,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
                 for (int i=0; i<2; i++) {
                     if (fds[i].revents & POLLIN) {
                         // Data is available on fds[i]
-                        if (fgets(data, sizeof(data)-1, fds[i].fd) != NULL) {
+                        if (read(fds[i].fd, data, sizeof(data)-1) > 0) {
                             if (i == 0) {
                                 rawStdout += data;
                             } else {

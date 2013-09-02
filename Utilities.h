@@ -318,6 +318,19 @@ inline long getMillis() {
 }
 
 /**
+ * Cross-platform function to wait for some milliseconds
+ */
+void sleepMs(int sleepMs) {
+#ifdef LINUX
+    usleep(sleepMs * 1000);   // usleep takes sleep time in us
+#endif
+#ifdef WINDOWS
+    Sleep(sleepMs);
+#endif
+}
+
+
+/**
  * Convert to lowercase the given string
  */
 #define toLowerCase(x)  std::transform( x.begin(), x.end(), x.begin(), ::tolower)
