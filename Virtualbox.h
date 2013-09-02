@@ -58,7 +58,7 @@ public:
     virtual int             updateFast();
     
     /* VirtualBox-specific functions */
-    int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg = NULL );
+    int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg = NULL, int retries = 1 );
     int                     getMachineUUID( std::string mname, std::string * ans_uuid,  int flags );
     std::string             getDataFolder       ();
     std::string             getHostOnlyAdapter  ();

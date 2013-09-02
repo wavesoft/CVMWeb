@@ -144,43 +144,57 @@ std::string VBoxSession::getDataFolder() {
 /**
  * Execute command and log debug message
  */
-int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg ) {
+int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries ) {
     ostringstream oss;
     string line;
     string stderrLocal;
     int ans;
     
-    /* Debug log command */
-    if (this->onDebug) (this->onDebug)("Executing '"+cmd+"'");
+    /* Start tries loop */
+    for (int i=0; i<retries; i++) {
     
-    /* Run command */
-    ans = this->host->exec( cmd, stdoutList, &stderrLocal, this->m_ipcMutex );
+        /* Debug log command */
+        if (this->onDebug) (this->onDebug)("Executing '"+cmd+"'");
     
-    /* Debug log response */
-    if (this->onDebug) {
+        /* Run command */
+        ans = this->host->exec( cmd, stdoutList, &stderrLocal, this->m_ipcMutex );
+    
+        /* Debug log response */
+        if (this->onDebug) {
 
-        // Parsed STDOUT
-        if (stdoutList != NULL) {
-            for (vector<string>::iterator i = stdoutList->begin(); i != stdoutList->end(); i++) {
-                line = *i;
-                (this->onDebug)("Line: "+line);
+            // Parsed STDOUT
+            if (stdoutList != NULL) {
+                for (vector<string>::iterator i = stdoutList->begin(); i != stdoutList->end(); i++) {
+                    line = *i;
+                    (this->onDebug)("Line: "+line);
+                }
+            } else {
+                (this->onDebug)("(Output ignored)");
             }
-        } else {
-            (this->onDebug)("(Output ignored)");
+
+            // Raw STDERR
+            if (!stderrLocal.empty())
+                (this->onDebug)("Error: " + stderrLocal);
+
+            // Exit code
+            oss << "return = " << ans;
+            (this->onDebug)(oss.str());
         }
 
-        // Raw STDERR
-        if (!stderrLocal.empty())
-            (this->onDebug)("Error: " + stderrLocal);
+        /* Forward stderr */
+        if (stderrMsg != NULL) *stderrMsg = stderrLocal;
 
-        // Exit code
-        oss << "return = " << ans;
-        (this->onDebug)(oss.str());
+        /* Check for retries */
+        if (ans == 0) {
+            /* Succeeded */
+            break;
+        } else {
+            /* Wait and retry */
+            sleepMs(1000);
+        }
+
     }
-
-    /* Forward stderr */
-    if (stderrMsg != NULL) *stderrMsg = stderrLocal;
-
+    
     /* Return exit code */
     return ans;
 
@@ -923,9 +937,9 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     /* Start VM */
     if (this->onProgress) (this->onProgress)(6, 7, "Starting VM");
     if ((this->flags & HVF_HEADFUL) != 0) {
-        ans = this->wrapExec("startvm " + this->uuid + " --type gui", NULL);
+        ans = this->wrapExec("startvm " + this->uuid + " --type gui", NULL, NULL, 4);
     } else {
-        ans = this->wrapExec("startvm " + this->uuid + " --type headless", NULL);
+        ans = this->wrapExec("startvm " + this->uuid + " --type headless", NULL, NULL, 4);
     }
     CVMWA_LOG( "Info", "Start VM=" << ans  );
     if (ans != 0) {
@@ -972,7 +986,7 @@ int VBoxSession::close() {
         if (machineInfo["State"].find("saved") != string::npos) {
             
             if (this->onProgress) (this->onProgress)(2, 10, "Discarding saved VM state");
-            ans = this->wrapExec("discardstate " + this->uuid, NULL);
+            ans = this->wrapExec("discardstate " + this->uuid, NULL, NULL, 4);
             CVMWA_LOG( "Info", "Discarded VM state=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
@@ -1268,6 +1282,10 @@ int VBoxSession::setExecutionCap(int cap) {
 
     } else {
         
+        /* Reject invalid values of cap */
+        if ((cap <=0) || (cap > 100))
+            return HVE_USAGE_ERROR;
+        
         // VM Active -> Control
         os << "cpuexecutioncap " << cap;
         ans = this->controlVM( os.str());
@@ -1298,11 +1316,11 @@ std::string VBoxSession::getHostOnlyAdapter() {
     
     /* Check if there is really nothing */
     if (lines.size() == 0) {
-        ans = this->wrapExec("hostonlyif create", NULL);
+        ans = this->wrapExec("hostonlyif create", NULL, NULL, 2);
         if (ans != 0) return "";
     
         /* Repeat check */
-        ans = this->wrapExec("list hostonlyifs", &lines);
+        ans = this->wrapExec("list hostonlyifs", &lines, NULL, 2);
         if (ans != 0) return "";
         
         /* Still couldn't pick anything? Error! */
@@ -1378,7 +1396,7 @@ std::string VBoxSession::getHostOnlyAdapter() {
                             " --netmask " + iface["NetworkMask"] +
                             " --lowerip " + ipMin +
                             " --upperip " + ipMax
-                             , NULL);
+                             , NULL, NULL, 2);
                         if (ans != 0) continue;
                     
                     }
@@ -1474,7 +1492,7 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
  * Send a controlVM something
  */
 int VBoxSession::controlVM( std::string how ) {
-    int ans = this->wrapExec("controlvm "+this->uuid+" "+how, NULL);
+    int ans = this->wrapExec("controlvm "+this->uuid+" "+how, NULL, NULL, 4);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
 }
@@ -1483,7 +1501,7 @@ int VBoxSession::controlVM( std::string how ) {
  * Start the Virtual Machine
  */
 int VBoxSession::startVM() {
-    int ans = this->wrapExec("startvm "+this->uuid+" --type headless", NULL);
+    int ans = this->wrapExec("startvm "+this->uuid+" --type headless", NULL, NULL, 4);
     if (ans != 0) return HVE_CONTROL_ERROR;
 
     /* Check for daemon need */
@@ -1817,6 +1835,8 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         } else if (state.find("paused") != string::npos) {
             session->state = STATE_PAUSED;
         } else if (state.find("saved") != string::npos) {
+            session->state = STATE_OPEN;
+        } else if (state.find("aborted") != string::npos) {
             session->state = STATE_OPEN;
         }
     }

@@ -439,14 +439,12 @@ std::string getTmpFile( string suffix, string folder ) {
  * Cross-platform exec and return function
  */
 #ifndef _WIN32
-int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
+int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns ) {
     
     int ret;
     pid_t pidChild;
     string item;
-    string rawStdout = "";
-    if (rawStderr != NULL) *rawStderr = "";
-    FILE *fp;
+    string rawStdout = "", rawStderr = "";
 
     /* Prepare the two pipes */
     int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
@@ -496,13 +494,12 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
                 for (int i=0; i<2; i++) {
                     if (fds[i].revents & POLLIN) {
                         // Data is available on fds[i]
-                        if (( dataLen = fgets(data, sizeof(data)-1, fds[i].fd)) != NULL) {
+                        if (( dataLen = read(fds[i].fd, data, sizeof(data)-1)) > 0) {
                             if (i == 0) {
                                 rawStdout.append(data, dataLen);
                             } else {
                                 CVMWA_LOG("Debug", "STDERR:" << data);
-                                if (rawStderr != NULL) 
-                                    *rawStderr->append(data, dataLen);
+                                rawStderr.append(data, dataLen);
                             }
                         } else {
                             // Error while reading
@@ -516,6 +513,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
                     }
                 }
             }
+            
 
             /* Exit on error */
             if (ret < 0) 
@@ -528,12 +526,22 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
 
         /* Wait forked pid to exit */
         waitpid(pidChild, &ret, 0);
+
+        /* Return error buffer */
+        if (rawStderrAns != NULL)
+            *rawStderrAns = rawStderr;
+
+        /* Return error if the word 'ERROR' or 'error' is found in the string */
+        if ((rawStderr.find("error") != string::npos) || (rawStderr.find("ERROR") != string::npos))
+            return 254;
+
+        /* Otherwise, return the error code */
         return ret;
     }
 
 }
 #else
-int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
+int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns ) {
 
 	HANDLE g_hChildStdOut_Rd = NULL;
 	HANDLE g_hChildStdOut_Wr = NULL;
@@ -544,8 +552,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
 	PROCESS_INFORMATION piProcInfo;
 	STARTUPINFOA siStartInfo;
 	BOOL bSuccess = FALSE;
-	string rawStdout;
-    if (rawStderr != NULL) *rawStderr = "";
+	string rawStdout = "", rawStderr = "";
 
 	SECURITY_ATTRIBUTES sAttr;
 	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
@@ -601,8 +608,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
                 if (dwAvailable > 0) {
     		        bSuccess = ReadFile( g_hChildStdErr_Rd, chBuf, 4096, &dwRead, NULL);
     		        if ( bSuccess && (dwRead > 0) ) {
-    		            if (rawStderr != NULL) 
-                            rawStderr->append( chBuf, dwRead );
+                        rawStderr.append( chBuf, dwRead );
                     }
                 }
             }
@@ -622,8 +628,8 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
         }
 
         /* Debug STDERR */
-        if ((rawStderr != NULL) && (!rawStderr->empty()))
-            CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
+        if (!rawStderr.empty())
+            CVMWA_LOG("Debug", "Exec STDERR: " << rawStderr);
 
 	    /* Split lines into stdout */
         splitLines( rawStdout, stdoutList );
@@ -640,6 +646,14 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
     /* Close hanles */
 	CloseHandle( piProcInfo.hProcess );
 	CloseHandle( piProcInfo.hThread );
+    
+    /* Return error buffer */
+    if (rawStderrAns != NULL)
+        *rawStderrAns = rawStderr;
+
+    /* Return error if the word 'ERROR' or 'error' is found in the string */
+    if ((rawStderr.find("error") != string::npos) || (rawStderr.find("ERROR") != string::npos))
+        return 254;
 
     /* Return exit code */
 	return ret;

@@ -800,17 +800,33 @@ bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider ) {
+int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider, int retries ) {
     const int maxSteps = 200;
+    Hypervisor * hv;
+    int res;
+    string tmpHypervisorInstall;
+    string checksum;
 
     /**
      * Contact the information point
      */
     string requestBuf;
-    CVMWA_LOG( "Info", "Fetching data" );
-    if (cbProgress) (cbProgress)(1, maxSteps, "Checking the appropriate hypervisor for your system");
-    int res = downloadProvider->downloadText( "http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf );
-    if ( res != HVE_OK ) return res;
+    
+    /* Download trials */
+    for (int tries=0; tries<retries; tries++) {
+        CVMWA_LOG( "Info", "Fetching data" );
+        if (cbProgress) (cbProgress)(1, maxSteps, "Checking the appropriate hypervisor for your system");
+        res = downloadProvider->downloadText( "http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf );
+        if ( res != HVE_OK ) {
+            if (tries<retries) {
+                CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+        		if (cbProgress) (cbProgress)(1, maxSteps, "Retrying download");
+                sleepMs(1000);
+                continue;
+            }
+            return res;
+        }
+    }
     
     /**
      * Extract information
@@ -897,186 +913,268 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     feedback.callback = cbProgress;
     feedback.message = "Downloading hypervisor";
 
-    /**
-     * Download
-     */
-    string tmpHypervisorInstall = getTmpFile( kFileExt );
-    if (cbProgress) (cbProgress)(2, maxSteps, "Downloading hypervisor");
-    CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
-    res = downloadProvider->downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
-    CVMWA_LOG( "Info", "    : Got " << res  );
-    if ( res != HVE_OK ) return res;
-    
-    /**
-     * Validate checksum
-     */
-    string checksum;
-    sha256_file( tmpHypervisorInstall, &checksum );
-    if (cbProgress) (cbProgress)(90, maxSteps, "Validating download");
-    CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kChecksum]  );
-    if (checksum.compare( data[kChecksum] ) != 0) return HVE_NOT_VALIDATED;
+    /* Download trials */
+    for (int tries=0; tries<retries; tries++) {
+        
+        /**
+         * Download
+         */
+        tmpHypervisorInstall = getTmpFile( kFileExt );
+        if (cbProgress) (cbProgress)(2, maxSteps, "Downloading hypervisor");
+        CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
+        res = downloadProvider->downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
+        CVMWA_LOG( "Info", "    : Got " << res  );
+        if ( res != HVE_OK ) {
+            if (tries<retries) {
+                CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+        		if (cbProgress) (cbProgress)(2, maxSteps, "Retrying download");
+                sleepMs(1000);
+                continue;
+            }
+            return res;
+        }
+        
+        /**
+         * Validate checksum
+         */
+        sha256_file( tmpHypervisorInstall, &checksum );
+        if (cbProgress) (cbProgress)(90, maxSteps, "Validating download");
+        CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kChecksum]  );
+        if (checksum.compare( data[kChecksum] ) != 0) {
+            if (tries<retries) {
+                CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+        		if (cbProgress) (cbProgress)(2, maxSteps, "Retrying download");
+                sleepMs(1000);
+                continue;
+            }
+			::remove( tmpHypervisorInstall.c_str() );
+            return HVE_NOT_VALIDATED;
+        }
+    }
     
     /**
      * OS-Dependant installation process
      */
     string errorMsg;
-    #if defined(__APPLE__) && defined(__MACH__)
+    for (int tries=0; tries<retries; tries++) {
+        #if defined(__APPLE__) && defined(__MACH__)
 
-		CVMWA_LOG( "Info", "Attaching" );
-		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
-		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines, &errorMsg);
-		if (res != 0) {
-			::remove( tmpHypervisorInstall.c_str() );
-			return HVE_EXTERNAL_ERROR;
-		}
-		string infoLine = lines.back();
-		string dskDev, dskVolume, extra;
-		getKV( infoLine, &dskDev, &extra, ' ', 0);
-		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
-		CVMWA_LOG( "Info", "Got disk '" << dskDev << "', volume: '" << dskVolume  );
+    		CVMWA_LOG( "Info", "Attaching" << tmpHypervisorInstall );
+    		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
+    		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines, &errorMsg);
+    		if (res != 0) {
+                if (tries<retries) {
+                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+            		if (cbProgress) (cbProgress)(94, maxSteps, "Retrying installation");
+                    sleepMs(1000);
+                    continue;
+                }
+    			::remove( tmpHypervisorInstall.c_str() );
+    			return HVE_EXTERNAL_ERROR;
+    		}
+    		string infoLine = lines.back();
+    		string dskDev, dskVolume, extra;
+    		getKV( infoLine, &dskDev, &extra, ' ', 0);
+    		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
+    		CVMWA_LOG( "Info", "Got disk '" << dskDev << "', volume: '" << dskVolume  );
     
-		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
-		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
-		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
-		if (res != 0) {
-			CVMWA_LOG( "Info", "Detaching" );
-			res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
-			::remove( tmpHypervisorInstall.c_str() );
-			return HVE_EXTERNAL_ERROR;
-		}
-		CVMWA_LOG( "Info", "Detaching" );
-		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-		res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
-		::remove( tmpHypervisorInstall.c_str() );
-
-	#elif defined(_WIN32)
-
-		/* Start installer */
-		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
-		CVMWA_LOG( "Info", "Starting installer" );
-
-		/* CreateProcess does not work because we need elevated permissions,
-		 * use the classic ShellExecute to run the installer... */
-		SHELLEXECUTEINFOA shExecInfo = {0};
-		shExecInfo.cbSize = sizeof( SHELLEXECUTEINFO );
-		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-		shExecInfo.hwnd = NULL;
-		shExecInfo.lpVerb = NULL;
-		shExecInfo.lpFile = (LPCSTR)tmpHypervisorInstall.c_str();
-		shExecInfo.lpParameters = (LPCSTR)"";
-		shExecInfo.lpDirectory = NULL;
-		shExecInfo.nShow = SW_SHOW;
-		shExecInfo.hInstApp = NULL;
-
-		/* Validate handle */
-		if ( !ShellExecuteExA( &shExecInfo ) ) {
-			cout << "ERROR: Installation could not start! Error = " << res << endl;
-			::remove( tmpHypervisorInstall.c_str() );
-			return HVE_EXTERNAL_ERROR;
-		}
-
-        /* Validate hProcess */
-        if (shExecInfo.hProcess == 0) {
-			cout << "ERROR: Installation could not start! Error = " << res << endl;
-			::remove( tmpHypervisorInstall.c_str() );
-			return HVE_EXTERNAL_ERROR;
-        }
-
-		/* Wait for termination */
-		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
-
-		/* Cleanup */
-		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-		::remove( tmpHypervisorInstall.c_str() );
-
-	#elif defined(__linux__)
-
-        /* Check if our environment has what the installer needs */
-		if (cbProgress) (cbProgress)(92, maxSteps, "Validating OS environment");
-        if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
-            cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
-			::remove( tmpHypervisorInstall.c_str() );
-            return HVE_NOT_FOUND;
-        }
-
-        /* (1) If we have xdg-open, use it to prompt the user using the system's default GUI */
-		if (cbProgress) (cbProgress)(94, maxSteps, "Installing hypervisor");
-        if (linuxInfo.hasXDGOpen) {
-            string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
-            res = system( cmdline.c_str() );
-    		if (res < 0) {
-    			cout << "ERROR: Could not start. Return code: " << res << endl;
+    		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
+    		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
+    		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
+    		if (res != 0) {
+    			CVMWA_LOG( "Info", "Detaching" );
+    			res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
+                if (tries<retries) {
+                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+            		if (cbProgress) (cbProgress)(94, maxSteps, "Retrying installation");
+                    sleepMs(1000);
+                    continue;
+                }
     			::remove( tmpHypervisorInstall.c_str() );
     			return HVE_EXTERNAL_ERROR;
     		}
-            
-            /* At some point the process that xdg-open launches is
-             * going to open the file in order to read it's contnets. 
-             * Wait for 10 sec for it to happen */
-    		if (cbProgress) (cbProgress)(95, maxSteps, "Waiting for the installation to begin");
-            if (!waitFileOpen( tmpHypervisorInstall, true, 60000 )) { // 1 min until it's captured
-    			cout << "ERROR: Could not wait for file handler capture: " << res << endl;
-    			::remove( tmpHypervisorInstall.c_str() );
-    			return HVE_STILL_WORKING;
-            }
-
-            /* Wait for it to be released */
-    		if (cbProgress) (cbProgress)(96, maxSteps, "Waiting for the installation to complete");
-            if (!waitFileOpen( tmpHypervisorInstall, false, 900000 )) { // 15 mins until it's released
-    			cout << "ERROR: Could not wait for file handler release: " << res << endl;
-                // We can't remove the file, it's in use :(
-    			return HVE_STILL_WORKING;
-            }
-
-            // Done
-     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-        	::remove( tmpHypervisorInstall.c_str() );
-        
-        /* (2) If we have GKSudo, do directly dpkg/yum install */
-        } else if (linuxInfo.hasGKSudo) {
-            string cmdline = "/bin/sh '" + tmpHypervisorInstall + "'";
-            if ( installerType == PMAN_YUM ) {
-                cmdline = "/usr/bin/yum localinstall '" + tmpHypervisorInstall + "' -y";
-            } else if ( installerType == PMAN_DPKG ) {
-                cmdline = "/usr/bin/dpkg -i '" + tmpHypervisorInstall + "'";
-            }
-            
-            /* Use GKSudo to invoke the cmdline */
-    		cmdline = "/usr/bin/gksudo \"" + cmdline + "\"";
-    		res = system( cmdline.c_str() );
-    		if (res < 0) {
-    			cout << "ERROR: Could not start. Return code: " << res << endl;
-    			::remove( tmpHypervisorInstall.c_str() );
-    			return HVE_EXTERNAL_ERROR;
-    		}
-
-            /* Cleanup */
+    		CVMWA_LOG( "Info", "Detaching" );
     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-        	::remove( tmpHypervisorInstall.c_str() );
-    	
-        /* (3) Otherwise create a bash script and prompt the user */
-        } else {
+    		res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
+    		::remove( tmpHypervisorInstall.c_str() );
+
+    	#elif defined(_WIN32)
+
+    		/* Start installer */
+    		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
+    		CVMWA_LOG( "Info", "Starting installer" );
+
+    		/* CreateProcess does not work because we need elevated permissions,
+    		 * use the classic ShellExecute to run the installer... */
+    		SHELLEXECUTEINFOA shExecInfo = {0};
+    		shExecInfo.cbSize = sizeof( SHELLEXECUTEINFO );
+    		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+    		shExecInfo.hwnd = NULL;
+    		shExecInfo.lpVerb = NULL;
+    		shExecInfo.lpFile = (LPCSTR)tmpHypervisorInstall.c_str();
+    		shExecInfo.lpParameters = (LPCSTR)"";
+    		shExecInfo.lpDirectory = NULL;
+    		shExecInfo.nShow = SW_SHOW;
+    		shExecInfo.hInstApp = NULL;
+
+    		/* Validate handle */
+    		if ( !ShellExecuteExA( &shExecInfo ) ) {
+    			cout << "ERROR: Installation could not start! Error = " << res << endl;
+                if (tries<retries) {
+            		if (cbProgress) (cbProgress)(97, maxSteps, "Retrying installation");
+                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                    sleepMs(1000);
+                    continue;
+                }
+    			::remove( tmpHypervisorInstall.c_str() );
+    			return HVE_EXTERNAL_ERROR;
+    		}
+
+            /* Validate hProcess */
+            if (shExecInfo.hProcess == 0) {
+    			cout << "ERROR: Installation could not start! Error = " << res << endl;
+                if (tries<retries) {
+            		if (cbProgress) (cbProgress)(97, maxSteps, "Retrying installation");
+                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                    sleepMs(1000);
+                    continue;
+                }
+    			::remove( tmpHypervisorInstall.c_str() );
+    			return HVE_EXTERNAL_ERROR;
+            }
+
+    		/* Wait for termination */
+    		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
+
+    		/* Cleanup */
+    		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+    		::remove( tmpHypervisorInstall.c_str() );
+
+    	#elif defined(__linux__)
+
+            /* Check if our environment has what the installer needs */
+    		if (cbProgress) (cbProgress)(92, maxSteps, "Validating OS environment");
+            if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
+                cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
+                if (tries<retries) {
+            		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                    sleepMs(1000);
+                    continue;
+                }
+    			::remove( tmpHypervisorInstall.c_str() );
+                return HVE_NOT_FOUND;
+            }
+
+            /* (1) If we have xdg-open, use it to prompt the user using the system's default GUI */
+    		if (cbProgress) (cbProgress)(94, maxSteps, "Installing hypervisor");
+            if (linuxInfo.hasXDGOpen) {
+                string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
+                res = system( cmdline.c_str() );
+        		if (res < 0) {
+        			cout << "ERROR: Could not start. Return code: " << res << endl;
+                    if (tries<retries) {
+                		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                        CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                        sleepMs(1000);
+                        continue;
+                    }
+        			::remove( tmpHypervisorInstall.c_str() );
+        			return HVE_EXTERNAL_ERROR;
+        		}
             
-            /* TODO: I can't do much here :( */
-            return HVE_NOT_IMPLEMENTED;
-            
-        }
+                /* At some point the process that xdg-open launches is
+                 * going to open the file in order to read it's contnets. 
+                 * Wait for 10 sec for it to happen */
+        		if (cbProgress) (cbProgress)(95, maxSteps, "Waiting for the installation to begin");
+                if (!waitFileOpen( tmpHypervisorInstall, true, 60000 )) { // 1 min until it's captured
+        			cout << "ERROR: Could not wait for file handler capture: " << res << endl;
+                    if (tries<retries) {
+                		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                        CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                        sleepMs(1000);
+                        continue;
+                    }
+        			::remove( tmpHypervisorInstall.c_str() );
+        			return HVE_STILL_WORKING;
+                }
+
+                /* Wait for it to be released */
+        		if (cbProgress) (cbProgress)(96, maxSteps, "Waiting for the installation to complete");
+                if (!waitFileOpen( tmpHypervisorInstall, false, 900000 )) { // 15 mins until it's released
+                if (tries<retries) {
+            		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                    sleepMs(1000);
+                    continue;
+                }
+        			cout << "ERROR: Could not wait for file handler release: " << res << endl;
+                    // We can't remove the file, it's in use :(
+        			return HVE_STILL_WORKING;
+                }
+
+                // Done
+         		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+            	::remove( tmpHypervisorInstall.c_str() );
         
-    #endif
+            /* (2) If we have GKSudo, do directly dpkg/yum install */
+            } else if (linuxInfo.hasGKSudo) {
+                string cmdline = "/bin/sh '" + tmpHypervisorInstall + "'";
+                if ( installerType == PMAN_YUM ) {
+                    cmdline = "/usr/bin/yum localinstall '" + tmpHypervisorInstall + "' -y";
+                } else if ( installerType == PMAN_DPKG ) {
+                    cmdline = "/usr/bin/dpkg -i '" + tmpHypervisorInstall + "'";
+                }
+            
+                /* Use GKSudo to invoke the cmdline */
+        		cmdline = "/usr/bin/gksudo \"" + cmdline + "\"";
+        		res = system( cmdline.c_str() );
+        		if (res < 0) {
+        			cout << "ERROR: Could not start. Return code: " << res << endl;
+                    if (tries<retries) {
+                		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                        CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                        sleepMs(1000);
+                        continue;
+                    }
+        			::remove( tmpHypervisorInstall.c_str() );
+        			return HVE_EXTERNAL_ERROR;
+        		}
+
+                /* Cleanup */
+        		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+            	::remove( tmpHypervisorInstall.c_str() );
+    	
+            /* (3) Otherwise create a bash script and prompt the user */
+            } else {
+            
+                /* TODO: I can't do much here :( */
+                return HVE_NOT_IMPLEMENTED;
+            
+            }
+        
+        #endif
     
-    /**
-     * Check if it was successful
-     */
-    Hypervisor * hv = detectHypervisor();
-    if (hv == NULL) {
-        CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
-        return HVE_NOT_VALIDATED;
-    };
+        /**
+         * Check if it was successful
+         */
+        hv = detectHypervisor();
+        if (hv == NULL) {
+            CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
+            if (tries<retries) {
+        		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                sleepMs(1000);
+                continue;
+            }
+            return HVE_NOT_VALIDATED;
+        };
+        
+    }
 
     /**
      * If we are installing VirtualBox, make sure the VBOX Extension pack are installed
      */
-
     if (hv->type == HV_VIRTUALBOX) {
         if ( !((Virtualbox*)hv)->hasExtPack() ) {
 
