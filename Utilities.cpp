@@ -471,6 +471,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
 
     } else {
         char data[1035];
+        size_t dataLen;
 
         /* Restore the original std fds of parent */
         close(1); dup2(oldstdout, 1);
@@ -495,13 +496,13 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderr ) {
                 for (int i=0; i<2; i++) {
                     if (fds[i].revents & POLLIN) {
                         // Data is available on fds[i]
-                        if (fgets(data, sizeof(data)-1, fds[i].fd) != NULL) {
+                        if (( dataLen = fgets(data, sizeof(data)-1, fds[i].fd)) != NULL) {
                             if (i == 0) {
-                                rawStdout += data;
+                                rawStdout.append(data, dataLen);
                             } else {
                                 CVMWA_LOG("Debug", "STDERR:" << data);
                                 if (rawStderr != NULL) 
-                                    *rawStderr += data;
+                                    *rawStderr->append(data, dataLen);
                             }
                         } else {
                             // Error while reading
