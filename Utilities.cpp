@@ -418,7 +418,10 @@ std::string getTmpFile( string suffix, string folder ) {
 
         /* Make unique name */
         int i = mkstemp(fName);
-        if (i < 0) return "";
+        if (i < 0) {
+            delete[] fName;
+            return "";
+        }
 
         /* Close and cleanup file */
         close(i);
@@ -451,7 +454,9 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
     int errfd[2]; if (pipe(errfd) < 0) return HVE_IO_ERROR;
 
     int oldstdout = dup(1); // Save current stdout
+    if (oldstdout < 0) return HVE_IO_ERROR;
     int oldstderr = dup(2); // Save current stderr
+    if (oldstderr < 0) return HVE_IO_ERROR;
 
     close(1); dup2(outfd[1],1); // Make the write end of outfd pipe as stdout
     close(2); dup2(errfd[1],2); // Make the write end of errfd pipe as stderr
@@ -469,11 +474,11 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
 
     } else {
         char data[1035];
-        size_t dataLen;
+        ssize_t dataLen;
 
         /* Restore the original std fds of parent */
-        close(1); dup2(oldstdout, 1);
-        close(2); dup2(oldstderr, 2);
+        close(1); dup2(oldstdout, 1); close(oldstdout);
+        close(2); dup2(oldstderr, 2); close(oldstderr);
 
         /* These are being used by the child */
         close(outfd[1]); close(errfd[1]);
@@ -494,7 +499,8 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
                 for (int i=0; i<2; i++) {
                     if (fds[i].revents & POLLIN) {
                         // Data is available on fds[i]
-                        if (( dataLen = read(fds[i].fd, data, sizeof(data)-1)) > 0) {
+                        dataLen = read(fds[i].fd, data, sizeof(data)-1);
+                        if (dataLen > 0) {
                             if (i == 0) {
                                 rawStdout.append(data, dataLen);
                             } else {
@@ -538,6 +544,9 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
         /* Otherwise, return the error code */
         return ret;
     }
+
+     /* Should not reach this point, but what the heck */
+     return ret;
 
 }
 #else
@@ -829,6 +838,7 @@ bool isPortOpen( const char * host, int port, unsigned char handshake ) {
     
     // Open a connection
     sock = (SOCKET) socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return false;
     int result = connect(sock, (struct sockaddr *) &client,sizeof(client));
 
     // Check for open failures

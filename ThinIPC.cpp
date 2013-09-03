@@ -58,8 +58,8 @@ ThinIPCMessage ThinIPCMessage::__shorthandInstance;
 ThinIPCMessage::ThinIPCMessage( ) {
     size = 0;
     this->data = NULL;
-    __chunkPos = 0;
-    __ioPos = 0;
+    this->__chunkPos = 0;
+    this->__ioPos = 0;
 
 };
 
@@ -67,13 +67,15 @@ ThinIPCMessage::ThinIPCMessage( ) {
  * Initialize with data
  */
 ThinIPCMessage::ThinIPCMessage( char* payload, short size ) {
+
+    this->__chunkPos = 0;
+    this->__ioPos = 0;
+    this->size = size;
+
     this->data = (char*) malloc( size );
     if (this->data == NULL) return;
 
     memcpy( this->data, payload, size );
-    this->size = size;
-    __chunkPos = 0;
-    __ioPos = 0;
 
 };
 

@@ -148,7 +148,7 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
     ostringstream oss;
     string line;
     string stderrLocal;
-    int ans;
+    int ans = 0;
     
     /* Start tries loop */
     for (int i=0; i<retries; i++) {
@@ -2120,9 +2120,9 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     map<string, string> data = tokenize( &lines, '=' );
     
     /* Get the version of Virtualbox currently installed */
-    unsigned verPart = this->verString.find(" ");
+    size_t verPart = this->verString.find(" ");
     if (verPart == string::npos) verPart = this->verString.length();
-    unsigned revPart = this->verString.find("r");
+    size_t revPart = this->verString.find("r");
     if (revPart == string::npos) revPart = verPart;
 
     /* Build version string (it will be something like "vbox-2.4.12") */

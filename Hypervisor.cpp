@@ -802,7 +802,7 @@ bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
  */
 int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider, int retries ) {
     const int maxSteps = 200;
-    Hypervisor * hv;
+    Hypervisor * hv = NULL;
     int res;
     string tmpHypervisorInstall;
     string checksum;
@@ -1168,14 +1168,19 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
                 continue;
             }
             return HVE_NOT_VALIDATED;
-        };
+        } else {
+
+            /* Everything worked like a charm */
+            break;
+
+        }
         
     }
 
     /**
      * If we are installing VirtualBox, make sure the VBOX Extension pack are installed
      */
-    if (hv->type == HV_VIRTUALBOX) {
+    if ((hv != NULL) && (hv->type == HV_VIRTUALBOX)) {
         if ( !((Virtualbox*)hv)->hasExtPack() ) {
 
             // Install extension pack, and fail on error
