@@ -103,6 +103,9 @@ void CVMWeb::onPluginReady()
     // PluginWindow may or may not have already fire the AttachedEvent at
     // this point.
 
+    // Reset shutdown flag
+    shuttingDown = false;
+
     // Enable sysExec()
     initSysExec();
 
@@ -125,6 +128,9 @@ void CVMWeb::shutdown()
     // object should be released here so that this object can be safely
     // destroyed. This is the last point that shared_from_this and weak_ptr
     // references to this object will be valid
+
+    // Mark a shutdown
+    shuttingDown = true;
 
     // Abort command that is waiting for response (via sysExec() utility function)
     abortSysExec();

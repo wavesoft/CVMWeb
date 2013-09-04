@@ -35,6 +35,9 @@
 #include "CVMWebAPISession.h"
 #include <boost/thread.hpp>
 
+// Helper macro to prohibit the function to be called when the plugin is shutting down
+#define  NOT_ON_SHUTDOWN    CVMWebPtr p = this->getPlugin(); if (p != NULL) if (p->shuttingDown) return;
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWebPtr CVMWebAPISession::getPlugin()
 ///
@@ -429,14 +432,17 @@ std::string CVMWebAPISession::get_apiEntryPoint() {
 }
 
 void CVMWebAPISession::onProgress(const size_t v, const size_t tot, const std::string& msg) {
+    NOT_ON_SHUTDOWN;
     this->fire_progress(v,tot,msg);
 }
 
 void CVMWebAPISession::onOpen() {
+    NOT_ON_SHUTDOWN;
     this->fire_open();
 }
 
 void CVMWebAPISession::onError( const std::string& msg, const int code, const std::string& category) {
+    NOT_ON_SHUTDOWN;
     this->fire_error(msg, code, category);
     if (category.compare("open") == 0) this->fire_openError(msg, code);
     if (category.compare("start") == 0) this->fire_startError(msg, code);
@@ -447,18 +453,22 @@ void CVMWebAPISession::onError( const std::string& msg, const int code, const st
 }
 
 void CVMWebAPISession::onDebug( const std::string& line ) {
+    NOT_ON_SHUTDOWN;
     this->fire_debug( line );
 }
 
 void CVMWebAPISession::onStart() {
+    NOT_ON_SHUTDOWN;
     this->fire_start();
 }
 
 void CVMWebAPISession::onClose() {
+    NOT_ON_SHUTDOWN;
     this->fire_close();
 }
 
 void CVMWebAPISession::onStop() {
+    NOT_ON_SHUTDOWN;
     this->fire_stop();
 }
 

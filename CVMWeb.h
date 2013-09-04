@@ -62,6 +62,7 @@ public:
     std::string                         getPluginFolderPath();
     std::string                         getDaemonBin();
     std::string                         getPluginBin();
+    bool                                shuttingDown;
 
     // Cryptography class
     CVMWebCrypto *                      crypto;
