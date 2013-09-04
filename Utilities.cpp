@@ -359,9 +359,7 @@ int splitArguments( std::string source, char ** charBuffer, int bufferSize, int 
                 qPos = dqPos;
             }
 
-            // Stack back what we got so far
-            chunk = source.substr( iPos, qPos - iPos );
-            args.push_back( chunk );
+            // Mark beginning
             iPos = qPos+1;
 
         // State 3a: Looking for single quote only (')
@@ -572,13 +570,13 @@ void abortSysExec() {
 /**
  * Cross-platform exec and return function (called by sysExec())
  */
-int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns ) {
+int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr ) {
 #ifndef _WIN32
     
     int ret;
     pid_t pidChild;
     string item;
-    string rawStdout = "", rawStderr = "";
+    string rawStdout = "";
 
     /* Prepare the two pipes */
     int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
@@ -625,10 +623,11 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         fds[1].fd = errfd[0]; fds[1].events = POLLIN;
 
         /* Start reading stdin/err */
+        long startTime = getMillis();
         for (;;) {
 
             /* Poll descriptors */
-            ret = poll(fds, 2, 10);
+            ret = poll(fds, 2, 100);
             if (ret > 0) {
 
                 /* An event on one of the fds has occurred. */
@@ -640,7 +639,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                             if (i == 0) {
                                 rawStdout.append(data, dataLen);
                             } else {
-                                rawStderr.append(data, dataLen);
+                                rawStderr->append(data, dataLen);
                             }
                         } else {
                             // Error while reading
@@ -654,23 +653,24 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                     }
                 }
             }
-            
-            /* Kill child PID */
-            if (sysExecAborted) {
+
+            /* Abort if it takes way too long */
+            if ( sysExecAborted || ((getMillis() - startTime) > SYSEXEC_TIMEOUT) ) {
+                CVMWA_LOG("Debug", "Aborting execution");
 
                 // Kill process
                 kill( pidChild, SIGKILL );
 
                 // Abort execution
-                *rawStderrAns = "ERROR: Aborted";
+                *rawStderr = "ERROR: Aborted";
                 return 255;
 
             }
 
             /* Debug log stderror */
 #if defined(DEBUG) || defined(LOGGING)
-            if (!rawStderr.empty()) {
-                CVMWA_LOG("Debug", "STDERR:" << rawStderr);
+            if (!rawStderr->empty()) {
+                CVMWA_LOG("Debug", "STDERR:" << *rawStderr);
             }
 #endif
 
@@ -685,13 +685,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 
         /* Wait forked pid to exit */
         waitpid(pidChild, &ret, 0);
-
-        /* Return error buffer */
-        *rawStderrAns = rawStderr;
-
-        /* Return error if the word 'ERROR' or 'error' is found in the string */
-        if ((rawStderr.find("error") != string::npos) || (rawStderr.find("ERROR") != string::npos))
-            return 254;
 
         /* Otherwise, return the error code */
         return ret;
@@ -709,7 +702,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	PROCESS_INFORMATION piProcInfo;
 	STARTUPINFOA siStartInfo;
 	BOOL bSuccess = FALSE;
-	string rawStdout = "", rawStderr = "";
+	string rawStdout = "";
 
 	SECURITY_ATTRIBUTES sAttr;
 	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
@@ -773,7 +766,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                 if (dwAvailable > 0) {
     		        bSuccess = ReadFile( g_hChildStdErr_Rd, chBuf, 4096, &dwRead, NULL);
     		        if ( bSuccess && (dwRead > 0) ) {
-                        rawStderr.append( chBuf, dwRead );
+                        rawStderr->append( chBuf, dwRead );
                     }
                 }
             }
@@ -793,8 +786,8 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         }
 
         /* Debug STDERR */
-        if (!rawStderr.empty())
-            CVMWA_LOG("Debug", "Exec STDERR: " << rawStderr);
+        if (!rawStderr->empty())
+            CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
 
 	    /* Split lines into stdout */
         splitLines( rawStdout, stdoutList );
@@ -815,18 +808,10 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 
     /* Process exited successfully */
 	GetExitCodeProcess( piProcInfo.hProcess, &ret );
-    CVMWA_LOG("Debug", "Exec EXIT_CODE: " << ret);
 
     /* Close hanles */
 	CloseHandle( piProcInfo.hProcess );
 	CloseHandle( piProcInfo.hThread );
-    
-    /* Return error buffer */
-    *rawStderrAns = rawStderr;
-
-    /* Return error if the word 'ERROR' or 'error' is found in the string */
-    if ((rawStderr.find("error") != string::npos) || (rawStderr.find("ERROR") != string::npos))
-        return 254;
 
     /* Return exit code */
 	return ret;
@@ -844,7 +829,8 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
     for (int tries = 0; tries < retries; tries++ ) {
         
         // Call the wrapper function
-        res = __sysExec( app, cmdline, stdoutList, rawStderrAns );
+        res = __sysExec( app, cmdline, stdoutList, &stdError );
+        CVMWA_LOG("Debug", "Exec EXIT_CODE: " << res);
 
         // Check for "Error" in the stderr
         // (Caused by a weird bug on VirtualBox)
@@ -853,7 +839,7 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
             return 254;
         }
 
-        // If it was successful, or we were aborted, return now
+        // If it was successful, or we were aborted, return now. No retries.
         if ((res == 0) || (res == 255)) {
             break;
         } else {
