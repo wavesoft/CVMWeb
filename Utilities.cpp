@@ -573,7 +573,7 @@ void abortSysExec() {
 int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr ) {
 #ifndef _WIN32
     
-    int ret;
+    int ret = 253;
     pid_t pidChild;
     string item;
     string rawStdout = "";
@@ -585,7 +585,10 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     int oldstdout = dup(1); // Save current stdout
     if (oldstdout < 0) return HVE_IO_ERROR;
     int oldstderr = dup(2); // Save current stderr
-    if (oldstderr < 0) return HVE_IO_ERROR;
+    if (oldstderr < 0) {
+        close(oldstdout);
+        return HVE_IO_ERROR;
+    }
 
     close(1); dup2(outfd[1],1); // Make the write end of outfd pipe as stdout
     close(2); dup2(errfd[1],2); // Make the write end of errfd pipe as stderr
@@ -597,14 +600,18 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         close(outfd[0]); close(errfd[0]); 
         close(outfd[1]); close(errfd[1]);
 
+        /* Close other handles */
+        close(oldstdout);
+        close(oldstderr);
+
         /* Split cmdline into string components */
-        char ** parts = new char*[512];
+        char *parts[512];
         parts[0] = (char *)app.c_str();
         splitArguments( cmdline, parts, 512, 1 );
         
-        /* Replace with the given command-line */
-        CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
+        /* Launch given process */
         execv(app.c_str(), parts);
+
 
     } else {
         char data[1035];
@@ -697,7 +704,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	HANDLE g_hChildStdOut_Wr = NULL;
 	HANDLE g_hChildStdErr_Rd = NULL;
 	HANDLE g_hChildStdErr_Wr = NULL;
-	DWORD ret, dwRead, dwAvailable;
+	DWORD ret = 253, dwRead, dwAvailable;
 	CHAR chBuf[4096];
 	PROCESS_INFORMATION piProcInfo;
 	STARTUPINFOA siStartInfo;
@@ -823,7 +830,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
  */
 int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries ) {
     string stdError;
-    int res;
+    int res = 253;
 
     // Start the retry loop
     for (int tries = 0; tries < retries; tries++ ) {

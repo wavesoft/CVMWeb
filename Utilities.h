@@ -366,7 +366,7 @@ inline void sleepMs(int sleepMs) {
             do { std::stringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0);
     #else
         #define CVMWA_LOG(kind, ...) \
-             do { std::cerr << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0);
+             do { std::cerr << "[" << getpid() << "][" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0);
     #endif
 #else
     #define CVMWA_LOG(...) ;
