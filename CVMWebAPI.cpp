@@ -461,6 +461,8 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
     
     } catch (...) {
 
+        CVMWA_LOG("Error", "Exception occured!");
+
         // Forward failure CB
         if (IS_CB_AVAILABLE(failureCb)) 
             failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_EXTERNAL_ERROR ));

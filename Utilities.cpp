@@ -559,6 +559,7 @@ HANDLE  sysExecAbortMutex = NULL;
  * Global initialization to sysExec
  */
 void initSysExec() {
+    CVMWA_LOG("Debug", "Initializing sysExec()");
 #ifndef _WIN32
     sysExecAborted = false;
 #else
@@ -570,6 +571,7 @@ void initSysExec() {
  * Global trigger to abort execution
  */
 void abortSysExec() {
+    CVMWA_LOG("Debug", "Aborting sysExec()");
 #ifndef _WIN32
     sysExecAborted = true;
 #else
@@ -588,6 +590,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     pid_t pidChild;
     string item;
     string rawStdout = "";
+    *rawStderr = "";
 
     /* Prepare the two pipes */
     int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
@@ -683,7 +686,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 
             /* Abort if it takes way too long */
             if ( sysExecAborted || ((getMillis() - startTime) > SYSEXEC_TIMEOUT) ) {
-                CVMWA_LOG("Debug", "Aborting execution");
 
                 // Kill process
                 kill( pidChild, SIGKILL );
@@ -692,8 +694,15 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                 waitpid(pidChild, &ret, 0);
 
                 // Set stderror (just for the heck of it)
-                *rawStderr = "ERROR: Aborted";
-                return 255;
+                if (sysExecAborted) {
+                    CVMWA_LOG("Debug", "Aborting execution");
+                    *rawStderr = "ERROR: Aborted";
+                    return 254;
+                } else {
+                    CVMWA_LOG("Debug", "Timed out while waiting for response");
+                    *rawStderr = "ERROR: Timed out";
+                    return 255;
+                }
 
             }
 
@@ -733,6 +742,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	STARTUPINFOA siStartInfo;
 	BOOL bSuccess = FALSE;
 	string rawStdout = "";
+    *rawStderr = "";
 
 	SECURITY_ATTRIBUTES sAttr;
 	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
@@ -781,53 +791,60 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     /* Process STDOUT */
 	CloseHandle( g_hChildStdOut_Wr );
 	CloseHandle( g_hChildStdErr_Wr );
-	if ( stdoutList != NULL ) {
 	    
-	    /* Read to buffers */
-    	for (;;) {
+	/* Read to buffers */
+    for (;;) {
 
-            /* Check for STDERR data (Never break on errors here) */
-            if (PeekNamedPipe( g_hChildStdErr_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) {
-                if (dwAvailable > 0) {
-    		        bSuccess = ReadFile( g_hChildStdErr_Rd, chBuf, 4096, &dwRead, NULL);
-    		        if ( bSuccess && (dwRead > 0) ) {
-                        rawStderr->append( chBuf, dwRead );
-                    }
+        /* Check for STDERR data (Never break on errors here) */
+        if (PeekNamedPipe( g_hChildStdErr_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) {
+            if (dwAvailable > 0) {
+    		    bSuccess = ReadFile( g_hChildStdErr_Rd, chBuf, 4096, &dwRead, NULL);
+    		    if ( bSuccess && (dwRead > 0) ) {
+                    rawStderr->append( chBuf, dwRead );
                 }
             }
-
-            /* Check for STDOUT data */
-            if (!PeekNamedPipe( g_hChildStdOut_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) break;
-            if (dwAvailable > 0) {
-    		    bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
-    		    if ( !bSuccess || dwRead == 0 ) break;
-    		    rawStdout.append( chBuf, dwRead );
-            }
-
-            /* Sleep a teensy bit not to stress the CPU on the
-             * infinite loop we are currently in */
-            Sleep( 10 );
-
         }
 
-        /* Debug STDERR */
-        if (!rawStderr->empty())
-            CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
+        /* Check for STDOUT data */
+        if (!PeekNamedPipe( g_hChildStdOut_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) break;
+        if (dwAvailable > 0) {
+    		bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
+    		if ( !bSuccess || dwRead == 0 ) break;
+        	if ( stdoutList != NULL )
+    	    	rawStdout.append( chBuf, dwRead );
+        }
 
-	    /* Split lines into stdout */
-        splitLines( rawStdout, stdoutList );
+        /* Sleep a teensy bit not to stress the CPU on the
+            * infinite loop we are currently in */
+        Sleep( 10 );
+
+    }
+
+    /* Debug STDERR */
+    if (!rawStderr->empty())
+        CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
+
+	/* Split lines into stdout */
+    splitLines( rawStdout, stdoutList );
         
-	}
 	CloseHandle( g_hChildStdOut_Rd );
 	CloseHandle( g_hChildStdErr_Rd );
 
     /* Wait for completion */
     const HANDLE handles[] = { sysExecAbortMutex, piProcInfo.hProcess }; 
-	DWORD ans = WaitForMultipleObjects( 2, handles, FALSE, INFINITE );
+	DWORD ans = WaitForMultipleObjects( 2, handles, FALSE, SYSEXEC_TIMEOUT );
+
+    /* Check for timeout */
+    if (ans == WAIT_TIMEOUT) {
+        CVMWA_LOG("Debug", "Timed out");
+        *rawStderr = "ERROR: Timed out";
+        return 2554;
+    }
 
     /* Check for aborted */
-    if ((ans - WAIT_OBJECT_0) == 0) {
-        CVMWA_LOG("Debug", "Exec aborted");
+    if ((ans - WAIT_OBJECT_0) == 1) {
+        CVMWA_LOG("Debug", "Aborting execution");
+        *rawStderr = "ERROR: Aborted";
         return 255;
     }
 

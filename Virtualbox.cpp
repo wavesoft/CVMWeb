@@ -1502,7 +1502,10 @@ map<string, string> VBoxSession::getMachineInfo() {
     
     /* Perform property update */
     int ans = this->wrapExec("showvminfo "+this->uuid, &lines);
-    if (ans != 0) return dat;
+    if (ans != 0) {
+        dat[":ERROR:"] = ntos<int>( ans );
+        return dat;
+    }
     
     /* Tokenize response */
     return tokenize( &lines, ':' );
@@ -1609,7 +1612,10 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     
     /* Perform property update */
     int ans = this->exec("showvminfo "+uuid, &lines, &err, NULL, 4 );
-    if (ans != 0) return dat;
+    if (ans != 0) {
+        dat[":ERROR:"] = ntos<int>( ans );
+        return dat;
+    }
     
     /* Tokenize response */
     return tokenize( &lines, ':' );
@@ -1843,6 +1849,8 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     map<string, string> info = this->getMachineInfo( uuid );
     if (info.empty()) 
         return HVE_NOT_FOUND;
+    if (info.find(":ERROR:") != info.end())
+        return HVE_IO_ERROR;
     
     /* Reset flags */
     session->flags = 0;
