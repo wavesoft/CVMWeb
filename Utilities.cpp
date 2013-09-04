@@ -596,33 +596,37 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
     int errfd[2]; if (pipe(errfd) < 0) return HVE_IO_ERROR;
 
-    int oldstdout = dup(1); // Save current stdout
-    if (oldstdout < 0) return HVE_IO_ERROR;
-    int oldstderr = dup(2); // Save current stderr
-    if (oldstderr < 0) {
-        close(oldstdout);
-        return HVE_IO_ERROR;
-    }
-
-    close(1); dup2(outfd[1],1); // Make the write end of outfd pipe as stdout
-    close(2); dup2(errfd[1],2); // Make the write end of errfd pipe as stderr
-
     /* Fork to create child instance */
     pidChild = fork();
     if (pidChild == -1) {
+
+        /* Close pipes */
+        close(outfd[0]); close(outfd[1]);
+        close(errfd[0]); close(errfd[1]);
 
         /* Return error code if something went wrong */
         return 254;
 
     } else if(!pidChild) {
-        
-        /* Pipes are not required for the child */
-        close(outfd[0]); close(errfd[0]); 
-        close(outfd[1]); close(errfd[1]);
 
-        /* Close other handles */
-        close(oldstdout);
-        close(oldstderr);
+        /* Close unused read end */
+        close(outfd[0]); close(errfd[0]);
+
+        /* Close standard outs */
+        close(1); close(2);
+
+        /* Replace standard outs */
+        if (dup(outfd[1], 1) < 0) {
+            close(outfd[1]); close(errfd[1]);
+            return HVE_IO_ERROR;
+        }
+        if (dup(errfd[1], 2) < 0) {
+            close(outfd[1]); close(errfd[1]);
+            return HVE_IO_ERROR;
+        }
+
+        /* Release the writing end */
+        close(outfd[1]); close(errfd[1]);
 
         /* Split cmdline into string components */
         char *parts[512];
@@ -640,11 +644,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         char data[1035];
         ssize_t dataLen;
 
-        /* Restore the original std fds of parent */
-        close(1); dup2(oldstdout, 1); close(oldstdout);
-        close(2); dup2(oldstderr, 2); close(oldstderr);
-
-        /* These are being used by the child */
+        /* Close unused write end */
         close(outfd[1]); close(errfd[1]);
 
         /* Prepare the poll fd list */
@@ -687,6 +687,9 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             /* Abort if it takes way too long */
             if ( sysExecAborted || ((getMillis() - startTime) > SYSEXEC_TIMEOUT) ) {
 
+                // Close pipes
+                close(outfd[0]); close(errfd[0]);
+
                 // Kill process
                 kill( pidChild, SIGKILL );
 
@@ -721,6 +724,9 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 
         /* Split stdout lines */
         splitLines( rawStdout, stdoutList );
+
+        /* Close pipes */
+        close(outfd[0]); close(errfd[0]);
 
         /* Wait forked pid to exit */
         waitpid(pidChild, &ret, 0);
