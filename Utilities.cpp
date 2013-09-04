@@ -594,7 +594,13 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     close(2); dup2(errfd[1],2); // Make the write end of errfd pipe as stderr
 
     /* Fork to create child instance */
-    if(!(pidChild = fork())) {
+    pidChild = fork();
+    if (pidChild == -1) {
+
+        /* Return error code if something went wrong */
+        return 254;
+
+    } else if(!pidChild) {
         
         /* Pipes are not required for the child */
         close(outfd[0]); close(errfd[0]); 
@@ -612,8 +618,11 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         /* Launch given process */
         execv(app.c_str(), parts);
 
+        /* We reach this point if execv fails */
+        return 254;
 
     } else {
+
         char data[1035];
         ssize_t dataLen;
 
