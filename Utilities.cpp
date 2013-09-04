@@ -556,6 +556,17 @@ HANDLE  sysExecAbortMutex = NULL;
 #endif
 
 /**
+ * Global initialization to sysExec
+ */
+void initSysExec() {
+#ifndef _WIN32
+    sysExecAborted = false;
+#else
+    sysExecAbortMutex = CreateMutex(NULL,FALSE,NULL);
+#endif
+}
+
+/**
  * Global trigger to abort execution
  */
 void abortSysExec() {
@@ -725,11 +736,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	sAttr.bInheritHandle = TRUE;
 	sAttr.lpSecurityDescriptor = NULL;
 
-    /* On the first time we call sysExec(), setup the mutex to be
-       used on abortSysExec() */
-    if (sysExecAbortMutex == NULL)
-        sysExecAbortMutex = CreateMutex(NULL,FALSE,NULL);
-
     /* Create STDOUT pipe */
 	if (!CreatePipe(&g_hChildStdOut_Rd, &g_hChildStdOut_Wr, &sAttr, 0)) 
 		return HVE_IO_ERROR;
@@ -845,6 +851,7 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
     for (int tries = 0; tries < retries; tries++ ) {
         
         // Call the wrapper function
+        CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
         res = __sysExec( app, cmdline, stdoutList, &stdError );
         CVMWA_LOG("Debug", "Exec EXIT_CODE: " << res);
 

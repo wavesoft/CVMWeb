@@ -103,6 +103,9 @@ void CVMWeb::onPluginReady()
     // PluginWindow may or may not have already fire the AttachedEvent at
     // this point.
 
+    // Enable sysExec()
+    initSysExec();
+
     // Allocate a download provider that uses browser for I/O
     browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
     

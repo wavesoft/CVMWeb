@@ -177,6 +177,11 @@ int                                                 sha256_bin   ( std::string p
 int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1 );
 
 /**
+ * Initialize sysExec() environment
+ */
+void                                                initSysExec     ( );
+
+/**
  * Abort an actively running sysExec() command
  */
 void                                                abortSysExec    ( );
