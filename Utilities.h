@@ -42,6 +42,7 @@
 
 #include <boost/function.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/thread.hpp>
 
 // Only for WIN32
 #ifdef _WIN32
@@ -169,7 +170,12 @@ int                                                 sha256_bin   ( std::string p
  * 
  * This function will wait for the command to finish and it will return it's exit code
  */
-int                                                 sysExec         ( std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr );
+int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1 );
+
+/**
+ * Abort an actively running sysExec() command
+ */
+void                                                abortSysExec    ( );
 
 /**
  * Cross-platform function to return the temporary folder path
@@ -322,7 +328,7 @@ inline long getMillis() {
  */
 inline void sleepMs(int sleepMs) {
     #ifdef LINUX
-    usleep(sleepMs * 1000);   // usleep takes sleep time in us
+    nanosleep(sleepMs * 1000000 );   // usleep takes sleep time in us
     #endif
     #ifdef WINDOWS
     Sleep(sleepMs);

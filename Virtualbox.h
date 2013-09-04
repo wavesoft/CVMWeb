@@ -92,6 +92,7 @@ public:
         std::string>        getMachineInfo      ( std::string uuid );
     std::string             getProperty         ( std::string uuid, std::string name );
     std::vector< std::map< std::string, std::string > > getDiskList();
+    std::map<std::string, std::string> getAllProperties  ( std::string uuid );
 
     /* Overloads */
     virtual int             loadSessions        ( );

@@ -439,10 +439,31 @@ std::string getTmpFile( string suffix, string folder ) {
 }
 
 /**
- * Cross-platform exec and return function
+ * Global variables shared with abortSysExec() and sysExec()
  */
 #ifndef _WIN32
-int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns ) {
+bool    sysExecAborted = false;
+#else
+HANDLE  sysExecAbortMutex = NULL;
+#endif
+
+/**
+ * Global trigger to abort execution
+ */
+void abortSysExec() {
+#ifndef _WIN32
+    sysExecAborted = true;
+#else
+    if (sysExecAbortMutex != NULL)
+        ReleaseMutex( sysExecAbortMutex );
+#endif
+}
+
+/**
+ * Cross-platform exec and return function (called by sysExec())
+ */
+int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns ) {
+#ifndef _WIN32
     
     int ret;
     pid_t pidChild;
@@ -470,7 +491,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
         
         /* Replace with the given command-line */
         CVMWA_LOG("Debug", "Executing:" << cmdline);
-        execl("/bin/sh", "sh", "-c", cmdline.c_str(), (char*)NULL);
+        execl(app.c_str(), cmdline.c_str(), (char*)NULL);
 
     } else {
         char data[1035];
@@ -504,7 +525,6 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
                             if (i == 0) {
                                 rawStdout.append(data, dataLen);
                             } else {
-                                CVMWA_LOG("Debug", "STDERR:" << data);
                                 rawStderr.append(data, dataLen);
                             }
                         } else {
@@ -520,6 +540,24 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
                 }
             }
             
+            /* Kill child PID */
+            if (sysExecAborted) {
+
+                // Kill process
+                kill( pidChild, SIGKILL );
+
+                // Abort execution
+                *rawStderrAns = "ERROR: Aborted";
+                return 255;
+
+            }
+
+            /* Debug log stderror */
+#if defined(DEBUG) || defined(LOGGING)
+            if (!rawStderr.empty()) {
+                CVMWA_LOG("Debug", "STDERR:" << rawStderr);
+            }
+#endif
 
             /* Exit on error */
             if (ret < 0) 
@@ -534,8 +572,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
         waitpid(pidChild, &ret, 0);
 
         /* Return error buffer */
-        if (rawStderrAns != NULL)
-            *rawStderrAns = rawStderr;
+        *rawStderrAns = rawStderr;
 
         /* Return error if the word 'ERROR' or 'error' is found in the string */
         if ((rawStderr.find("error") != string::npos) || (rawStderr.find("ERROR") != string::npos))
@@ -547,11 +584,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
 
      /* Should not reach this point, but what the heck */
      return ret;
-
-}
 #else
-int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns ) {
-
 	HANDLE g_hChildStdOut_Rd = NULL;
 	HANDLE g_hChildStdOut_Wr = NULL;
 	HANDLE g_hChildStdErr_Rd = NULL;
@@ -567,6 +600,11 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
 	sAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
 	sAttr.bInheritHandle = TRUE;
 	sAttr.lpSecurityDescriptor = NULL;
+
+    /* On the first time we call sysExec(), setup the mutex to be
+       used on abortSysExec() */
+    if (sysExecAbortMutex == NULL)
+        sysExecAbortMutex = CreateMutex(NULL,FALSE,NULL);
 
     /* Create STDOUT pipe */
 	if (!CreatePipe(&g_hChildStdOut_Rd, &g_hChildStdOut_Wr, &sAttr, 0)) 
@@ -590,11 +628,14 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
     siStartInfo.hStdError = g_hChildStdErr_Wr;
 	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
+    /* Build cmdline */
+    string execpath = "\"" + app + "\" " + cmdline;
+
     /* Create process */
     CVMWA_LOG("Debug", "Exec CMDLINE: " << cmdline);
 	if (!CreateProcessA(
 		NULL,
-		(LPSTR)cmdline.c_str(),
+		(LPSTR)execpath.c_str(),
 		NULL,
 		NULL,
 		TRUE,
@@ -648,7 +689,16 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
 	CloseHandle( g_hChildStdErr_Rd );
 
     /* Wait for completion */
-	WaitForSingleObject( piProcInfo.hProcess, INFINITE );
+    const HANDLE handles[] = { sysExecAbortMutex, piProcInfo.hProcess }; 
+	DWORD ans = WaitForMultipleObjects( 2, handles, FALSE, INFINITE );
+
+    /* Check for aborted */
+    if ((ans - WAIT_OBJECT_0) == 0) {
+        CVMWA_LOG("Debug", "Exec aborted");
+        return 255;
+    }
+
+    /* Process exited successfully */
 	GetExitCodeProcess( piProcInfo.hProcess, &ret );
     CVMWA_LOG("Debug", "Exec EXIT_CODE: " << ret);
 
@@ -657,8 +707,7 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
 	CloseHandle( piProcInfo.hThread );
     
     /* Return error buffer */
-    if (rawStderrAns != NULL)
-        *rawStderrAns = rawStderr;
+    *rawStderrAns = rawStderr;
 
     /* Return error if the word 'ERROR' or 'error' is found in the string */
     if ((rawStderr.find("error") != string::npos) || (rawStderr.find("ERROR") != string::npos))
@@ -666,8 +715,41 @@ int sysExec( string cmdline, vector<string> * stdoutList, string * rawStderrAns 
 
     /* Return exit code */
 	return ret;
-}
 #endif
+}
+
+/**
+ * Cross-platform exec function with retry functionality
+ */
+int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries ) {
+    string stdError;
+    int res;
+
+    // Start the retry loop
+    for (int tries = 0; tries < retries; tries++ ) {
+        
+        // Call the wrapper function
+        res = __sysExec( app, cmdline, stdoutList, rawStderrAns );
+
+        // Check for "Error" in the stderr
+        // (Caused by a weird bug on VirtualBox)
+        if ((stdError.find("error") != string::npos) || (stdError.find("ERROR") != string::npos) || (stdError.find("Error") != string::npos)) {
+            if (rawStderrAns != NULL) *rawStderrAns = stdError;
+            return 254;
+        }
+
+        // If it was successful, or we were aborted, return now
+        if ((res == 0) || (res == 255)) {
+            break;
+        } else {
+            // Wait and retry
+            CVMWA_LOG( "Info", "Going to retry in 1s. Try " << (tries+1) << "/" << retries  );
+            sleepMs( 1000 );
+        }
+    }
+
+    return res;
+}
 
 /**
  * Compare two paths for eqality (ignoring different kinds of slashes)
@@ -990,7 +1072,7 @@ void hexDump (const char *desc, void *addr, int len) {
  * Check if the given string contains only the specified chars
  */
 bool isSanitized( std::string * check, const char * chars ) {
-    int numChars = strlen(chars);
+    int numChars = strlen(chars); /* < 'chars' is always provided by the developer */
     bool foundInChars = false;
     for (size_t j=0; j<check->length(); j++) {
         foundInChars = false;
@@ -1140,16 +1222,14 @@ void getLinuxInfo ( LINUX_INFO * info ) {
     if (file_exists("/usr/bin/lsb_release")) {
         
         // First, get release
-        std::string cmdline = "/usr/bin/lsb_release -i -s";
-        if (sysExec( cmdline, &vLines, &stdError ) == 0) {
+        if (sysExec( "/usr/bin/lsb_release", "-i -s", &vLines, &stdError ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 info->osDistID = vLines[0];
             }
         }
         
         // Then get codename
-        cmdline = "/usr/bin/lsb_release -c -s";
-        if (sysExec( cmdline, &vLines, &stdError ) == 0) {
+        if (sysExec( "/usr/bin/lsb_release", "-c -s", &vLines, &stdError ) == 0) {
             if (vLines[0].compare("n/a") != 0) {
                 // Put separator and get version
                 info->osDistID += "-";

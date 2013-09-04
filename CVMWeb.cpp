@@ -123,6 +123,9 @@ void CVMWeb::shutdown()
     // destroyed. This is the last point that shared_from_this and weak_ptr
     // references to this object will be valid
 
+    // Abort command that is waiting for response (via sysExec() utility function)
+    abortSysExec();
+
     // Release download provider
     this->hv->setDownloadProvider( DownloadProviderPtr() );
     browserDownloadProvider.reset();

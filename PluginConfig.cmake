@@ -39,7 +39,7 @@ set(MOZILLA_PLUGINID "cernvm.cern.ch/CVMWeb")
 # strings
 set(FBSTRING_CompanyName "CernVM Group - CERN")
 set(FBSTRING_PluginDescription "CernVM Web Access Plugin")
-set(FBSTRING_PLUGIN_VERSION "1.2.9")
+set(FBSTRING_PLUGIN_VERSION "1.2.10")
 set(FBSTRING_LegalCopyright "Copyright 2013 CernVM Group - CERN")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "CernVM Web API")

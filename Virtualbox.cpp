@@ -150,50 +150,36 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
     string stderrLocal;
     int ans = 0;
     
-    /* Start tries loop */
-    for (int i=0; i<retries; i++) {
+    /* Debug log command */
+    if (this->onDebug) (this->onDebug)("Executing '"+cmd+"'");
     
-        /* Debug log command */
-        if (this->onDebug) (this->onDebug)("Executing '"+cmd+"'");
+    /* Run command */
+    ans = this->host->exec( cmd, stdoutList, &stderrLocal, this->m_ipcMutex, retries );
     
-        /* Run command */
-        ans = this->host->exec( cmd, stdoutList, &stderrLocal, this->m_ipcMutex );
-    
-        /* Debug log response */
-        if (this->onDebug) {
+    /* Debug log response */
+    if (this->onDebug) {
 
-            // Parsed STDOUT
-            if (stdoutList != NULL) {
-                for (vector<string>::iterator i = stdoutList->begin(); i != stdoutList->end(); i++) {
-                    line = *i;
-                    (this->onDebug)("Line: "+line);
-                }
-            } else {
-                (this->onDebug)("(Output ignored)");
+        // Parsed STDOUT
+        if (stdoutList != NULL) {
+            for (vector<string>::iterator i = stdoutList->begin(); i != stdoutList->end(); i++) {
+                line = *i;
+                (this->onDebug)("Line: "+line);
             }
-
-            // Raw STDERR
-            if (!stderrLocal.empty())
-                (this->onDebug)("Error: " + stderrLocal);
-
-            // Exit code
-            oss << "return = " << ans;
-            (this->onDebug)(oss.str());
-        }
-
-        /* Forward stderr */
-        if (stderrMsg != NULL) *stderrMsg = stderrLocal;
-
-        /* Check for retries */
-        if (ans == 0) {
-            /* Succeeded */
-            break;
         } else {
-            /* Wait and retry */
-            sleepMs(1000);
+            (this->onDebug)("(Output ignored)");
         }
 
+        // Raw STDERR
+        if (!stderrLocal.empty())
+            (this->onDebug)("Error: " + stderrLocal);
+
+        // Exit code
+        oss << "return = " << ans;
+        (this->onDebug)(oss.str());
     }
+
+    /* Forward stderr */
+    if (stderrMsg != NULL) *stderrMsg = stderrLocal;
     
     /* Return exit code */
     return ans;
@@ -1158,16 +1144,14 @@ int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid, int 
     if (ans != 0) return HVE_MODIFY_ERROR;
     
     /* (3c) If we are using floppyIO, include a floppy controller */
-    if ((flags & HVF_FLOPPY_IO) != 0) {
-        args.str("");
-        args << "storagectl "
-            << uuid
-            << " --name "       << FLOPPYIO_CONTROLLER
-            << " --add "        << "floppy";
+    args.str("");
+    args << "storagectl "
+        << uuid
+        << " --name "       << FLOPPYIO_CONTROLLER
+        << " --add "        << "floppy";
 
-        ans = this->wrapExec(args.str(), NULL);
-        if (ans != 0) return HVE_MODIFY_ERROR;
-    }
+    ans = this->wrapExec(args.str(), NULL);
+    if (ans != 0) return HVE_MODIFY_ERROR;
     
     /* OK */
     *ans_uuid = "{" + uuid + "}";
@@ -1611,7 +1595,6 @@ std::string VBoxSession::getExtraInfo( int extraInfo ) {
     return "";
 }
 
-
 /** =========================================== **\
             Virtualbox Implementation
 \** =========================================== **/
@@ -1625,12 +1608,50 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     string err;
     
     /* Perform property update */
-    int ans = this->exec("showvminfo "+uuid, &lines, &err);
+    int ans = this->exec("showvminfo "+uuid, &lines, &err, NULL, 4 );
     if (ans != 0) return dat;
     
     /* Tokenize response */
     return tokenize( &lines, ':' );
 };
+
+/**
+ * Return all the properties of the guest
+ */
+map<string, string> Virtualbox::getAllProperties( string uuid ) {
+    map<string, string> ans;
+    vector<string> lines;
+    string errOut;
+
+    /* Get guest properties */
+    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, NULL, 4 ) == 0) {
+        for (vector<string>::iterator it = lines.begin(); it < lines.end(); it++) {
+            string line = *it;
+
+            /* Find the anchor locations */
+            size_t kBegin = line.find("Name: ");
+            if (kBegin == string::npos) continue;
+            size_t kEnd = line.find(", value:");
+            if (kEnd == string::npos) continue;
+            size_t vEnd = line.find(", timestamp:");
+            if (vEnd == string::npos) continue;
+
+            /* Get key */
+            kBegin += 6;
+            string vKey = line.substr( kBegin, kEnd - kBegin );
+
+            /* Get value */
+            size_t vBegin = kEnd + 8;
+            string vValue = line.substr( vBegin, vEnd - vBegin );
+
+            /* Store values */
+            ans[vKey] = vValue;
+
+        }
+    }
+
+    return ans;
+}
 
 /**
  * Load sessions if they are not yet loaded
@@ -1673,7 +1694,7 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
     string err;
     
     /* Invoke property query */
-    int ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err);
+    int ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, NULL, 2);
     if (ans != 0) return "";
     if (lines.empty()) return "";
     
@@ -1711,7 +1732,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     int v;
     
     /* List the CPUID information */
-    int ans = this->exec("list hostcpuids", &lines, &err);
+    int ans = this->exec("list hostcpuids", &lines, &err, NULL, 2);
     if (ans != 0) return HVE_QUERY_ERROR;
     if (lines.empty()) return HVE_EXTERNAL_ERROR;
     
@@ -1764,7 +1785,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
         ( (caps->cpu.featuresC & 0x20000000) != 0 ); // Long mode 'lm'
         
     /* List the system properties */
-    ans = this->exec("list systemproperties", &lines, &err);
+    ans = this->exec("list systemproperties", &lines, &err, NULL, 2);
     if (ans != 0) return HVE_QUERY_ERROR;
     if (lines.empty()) return HVE_EXTERNAL_ERROR;
 
@@ -1796,7 +1817,7 @@ std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
     string err;
 
     /* List the running VMs in the system */
-    int ans = this->exec("list hdds", &lines, &err);
+    int ans = this->exec("list hdds", &lines, &err, NULL, 2);
     if (ans != 0) return resMap;
     if (lines.empty()) return resMap;
 
@@ -1954,7 +1975,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         kk = kk.substr(0, kk.length()-1);
         
         /* Collect disk info */
-        int ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err);
+        int ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err, NULL, 2);
         if (ans == 0) {
         
             /* Tokenize data */
@@ -1981,45 +2002,46 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         
     }
     
-    /* Parse daemon information */
+    /* Parse all properties concurrently */
     if (!fast) {
-        string strProp;
-        strProp = this->getProperty( uuid, "/CVMWeb/daemon/controlled" );
-        if (strProp.empty()) {
+        map<string, string> allProps = this->getAllProperties( uuid );
+
+        if (allProps.find("/CVMWeb/daemon/controlled") == allProps.end()) {
             session->daemonControlled = false;
         } else {
-            session->daemonControlled = (strProp.compare("1") == 0);
+            session->daemonControlled = (allProps["/CVMWeb/daemon/controlled"].compare("1") == 0);
         }
-        strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/min" );
-        if (strProp.empty()) {
+
+        if (allProps.find("/CVMWeb/daemon/cap/min") == allProps.end()) {
             session->daemonMinCap = 0;
         } else {
-            session->daemonMinCap = ston<int>(strProp);
+            session->daemonMinCap = ston<int>(allProps["/CVMWeb/daemon/cap/min"]);
         }
-        strProp = this->getProperty( uuid, "/CVMWeb/daemon/cap/max" );
-        if (strProp.empty()) {
-            session->daemonMaxCap = 100;
+
+        if (allProps.find("/CVMWeb/daemon/cap/max") == allProps.end()) {
+            session->daemonMaxCap = 0;
         } else {
-            session->daemonMaxCap = ston<int>(strProp);
+            session->daemonMaxCap = ston<int>(allProps["/CVMWeb/daemon/cap/max"]);
         }
-        strProp = this->getProperty( uuid, "/CVMWeb/daemon/flags" );
-        if (strProp.empty()) {
+
+        if (allProps.find("/CVMWeb/daemon/flags") == allProps.end()) {
             session->daemonFlags = 0;
         } else {
-            session->daemonFlags = ston<int>(strProp);
+            session->daemonFlags = ston<int>(allProps["/CVMWeb/daemon/flags"]);
         }
-        strProp = this->getProperty( uuid, "/CVMWeb/userData" );
-        if (strProp.empty()) {
+
+        if (allProps.find("/CVMWeb/userData") == allProps.end()) {
             session->userData = "";
         } else {
-            session->userData = base64_decode(strProp);
+            session->userData = base64_decode(allProps["/CVMWeb/userData"]);
         }
-        strProp = this->getProperty( uuid, "/CVMWeb/localApiPort" );
-        if (strProp.empty()) {
+
+        if (allProps.find("/CVMWeb/localApiPort") == allProps.end()) {
             ((VBoxSession *)session)->localApiPort = 0;
         } else {
-            ((VBoxSession *)session)->localApiPort = ston<int>(strProp);
+            ((VBoxSession *)session)->localApiPort = ston<int>(allProps["/CVMWeb/localApiPort"]);
         }
+
     }
 
     /* Updated successfuly */
@@ -2036,7 +2058,7 @@ int Virtualbox::loadSessions() {
     string err;
     
     /* List the running VMs in the system */
-    int ans = this->exec("list vms", &lines, &err);
+    int ans = this->exec("list vms", &lines, &err, NULL, 2);
     if (ans != 0) return HVE_QUERY_ERROR;
 
     /* Tokenize */
@@ -2081,7 +2103,7 @@ bool Virtualbox::hasExtPack() {
      */
     vector<string> lines;
     string err;
-    this->exec("list extpacks", &lines, &err);
+    this->exec("list extpacks", &lines, &err, NULL, 2);
     for (std::vector<std::string>::iterator l = lines.begin(); l != lines.end(); l++) {
         if (l->find("Oracle VM VirtualBox Extension Pack") != string::npos) {
             return true;
@@ -2172,7 +2194,7 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     /* Install extpack on virtualbox */
     currProgress += progressStep;
     if (cbProgress) (cbProgress)(currProgress, progressTotal, "Installing extension pack");
-    res = this->exec("extpack install \"" + tmpExtpackFile + "\"", NULL, &err);
+    res = this->exec("extpack install \"" + tmpExtpackFile + "\"", NULL, &err, NULL, 2);
     if (res != HVE_OK) return HVE_EXTERNAL_ERROR;
 
     /* Cleanup */

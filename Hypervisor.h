@@ -260,7 +260,7 @@ public:
     virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
     
     /* Tool functions (used internally or from session objects) */
-    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, boost::interprocess::interprocess_mutex * mutex = NULL );
+    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, boost::interprocess::interprocess_mutex * mutex = NULL, int retries = 2 );
     void                    detectVersion       ( );
     int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback );
     int                     cernVMCached        ( std::string version, std::string * filename );

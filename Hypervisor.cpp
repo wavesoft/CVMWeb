@@ -344,20 +344,16 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
-int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex ) {
+int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex, int retries ) {
     int execRes = 0;
     {
         /* Use only one exec per session, using inteprocess mutexes */
         if (m_execMutex != NULL)
             boost::interprocess::scoped_lock< boost::interprocess::interprocess_mutex > lock( *m_execMutex );
-
-        /* Build cmdline */
-        string cmdline( this->hvBinary );
-        cmdline += " " + args;
     
         /* Execute */
         string execError;
-        execRes = sysExec( cmdline, stdoutList, &execError );
+        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries );
         if (stderrMsg != NULL) *stderrMsg = execError;
 
         /* Store the last error occured */
@@ -961,7 +957,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
     		CVMWA_LOG( "Info", "Attaching" << tmpHypervisorInstall );
     		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
-    		res = sysExec("hdiutil attach " + tmpHypervisorInstall, &lines, &errorMsg);
+    		res = sysExec("/usr/bin/hdiutil", "attach " + tmpHypervisorInstall, &lines, &errorMsg);
     		if (res != 0) {
                 if (tries<retries) {
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
@@ -980,10 +976,10 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     
     		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
     		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
-    		res = sysExec("open -W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
+    		res = sysExec("/usr/bin/open", "-W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
     		if (res != 0) {
     			CVMWA_LOG( "Info", "Detaching" );
-    			res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
+    			res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
                 if (tries<retries) {
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
             		if (cbProgress) (cbProgress)(94, maxSteps, "Retrying installation");
@@ -995,7 +991,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		}
     		CVMWA_LOG( "Info", "Detaching" );
     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-    		res = sysExec("hdiutil detach " + dskDev, NULL, &errorMsg);
+    		res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
     		::remove( tmpHypervisorInstall.c_str() );
 
     	#elif defined(_WIN32)
