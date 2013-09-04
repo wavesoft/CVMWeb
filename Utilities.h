@@ -64,6 +64,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <signal.h>
 #include <poll.h>
 #include <unistd.h>
 #include <pwd.h>
