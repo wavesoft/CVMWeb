@@ -221,6 +221,12 @@ int                                                 trimSplit       ( std::strin
 int                                                 parseLines       ( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value );
 
 /**
+ * Split the given string into a vector of strings using white space as delimiter, while preserving
+ * strin contents found in double quotes.
+ */
+int                                                 splitArguments  ( std::string source, std::vector< std::string > * args );
+
+/**
  * Check if the specified port is accepting connections
  */
 bool                                                isPortOpen      ( const char * host, int port, unsigned char handshake = HSK_NONE );

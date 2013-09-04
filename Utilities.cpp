@@ -312,6 +312,116 @@ void splitLines( string rawString, vector<string> * out ) {
 }
 
 /**
+ * Split the given string into a vector of strings using white space as delimiter, while preserving
+ * strin contents found in double quotes.
+ */
+int splitArguments( std::string source, char ** charBuffer, int bufferSize, int bufferOffset ) {
+    static vector<string> args;
+    size_t wsPos=0, sqPos=0, dqPos=0, qPos=0, iPos=0;
+    string chunk; char nextChar = ' ';
+
+    // Clear static args array
+    args.clear();
+
+    // Start analyzer
+    while (iPos < source.length()) {
+        wsPos = source.find(' ', iPos);
+        sqPos = source.find('"', iPos);
+        dqPos = source.find('\'', iPos);
+
+        // Nothing found? We ran out of string
+        if ((wsPos == string::npos) && (sqPos == string::npos) && (dqPos == string::npos)) {
+
+            // Stack all the remains
+            chunk = source.substr( iPos, source.length() - iPos );
+            args.push_back( chunk );
+            break;
+        
+        // State 1: Checking for whitespace
+        } else if ((nextChar == ' ') && (wsPos < sqPos) && (wsPos < sqPos)) {
+            chunk = source.substr( iPos, wsPos - iPos );
+            args.push_back( chunk );
+            iPos = wsPos+1;
+
+        // State 2: Starting quote
+        } else if ((nextChar == ' ') && (
+            ( (wsPos == string::npos) && (sqPos != string::npos) ) || /* Only single quote found */
+            ( (wsPos == string::npos) && (dqPos != string::npos) ) || /* Only double quote found */
+            ( (wsPos > sqPos ) || (wsPos > dqPos ) )                  /* Or whitespace found after a quote */
+            )) {
+            
+            // Switch to quote capture mode
+            if ((dqPos == string::npos) || (dqPos > sqPos)) {
+                nextChar = '\''; /* Only single quote found, or it's before the double */
+                qPos = sqPos;
+            } else {
+                nextChar = '"'; /* Any other case is double quote */
+                qPos = dqPos;
+            }
+
+            // Stack back what we got so far
+            chunk = source.substr( iPos, qPos - iPos );
+            args.push_back( chunk );
+            iPos = qPos+1;
+
+        // State 3a: Looking for single quote only (')
+        } else if ((nextChar == '\'') && (sqPos != string::npos)) {
+
+            // Stack the string contents
+            chunk = source.substr( iPos, sqPos - iPos );
+            args.push_back( chunk );
+            iPos = sqPos+1;
+
+            // Exit quote maching mode
+            nextChar = ' ';
+
+        // State 3b: Looking for double quote only (")
+        } else if ((nextChar == '"') && (dqPos != string::npos)) {
+
+            // Stack the string contents
+            chunk = source.substr( iPos, dqPos - iPos );
+            args.push_back( chunk );
+            iPos = dqPos+1;
+
+            // Exit quote maching mode
+            nextChar = ' ';
+
+        } else {
+
+            // We should NEVER reach this point
+            CVMWA_LOG("Error", "Unhandled case");
+
+        }
+
+    }
+
+    // Cast back to the charBuffer
+    int i = bufferOffset;
+    for (vector<string>::iterator it = args.begin(); it < args.end(); it++) {
+
+        // Check if we filled the buffer
+        if ((i+1) >= bufferSize) {
+            charBuffer[i] = (char*)NULL;
+            break;
+        }
+
+        /* CHECK: My guess is that since 'args' is static, the
+                  pointer to the buffer within the string will 
+                  be preserved even when the function exit. 
+                  Is it true? */
+        charBuffer[i++] = (char *)(*it).c_str();
+
+    }
+
+    // Put a null char on the end
+    charBuffer[i] = (char*)NULL;
+
+    // Return how many components were placed in the charBuffer
+    return i;
+
+}
+
+/**
  * Tokenize a key-value like output from VBoxManage into an easy-to-use hashmap
  */
 map<string, string> tokenize( vector<string> * lines, char delim ) {
@@ -488,10 +598,15 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         /* Pipes are not required for the child */
         close(outfd[0]); close(errfd[0]); 
         close(outfd[1]); close(errfd[1]);
+
+        /* Split cmdline into string components */
+        char ** parts = new char*[512];
+        parts[0] = (char *)app.c_str();
+        splitArguments( cmdline, parts, 512, 1 );
         
         /* Replace with the given command-line */
-        CVMWA_LOG("Debug", "Executing:" << cmdline);
-        execl(app.c_str(), cmdline.c_str(), (char*)NULL);
+        CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
+        execv(app.c_str(), parts);
 
     } else {
         char data[1035];

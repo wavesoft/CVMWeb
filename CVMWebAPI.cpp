@@ -359,7 +359,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
             onProgress.fire( 40, 50, "Starting new session" );
 
             // Newline-specific split
-            string msg = "The website '" + domain + "' is trying to allocate a " + this->get_hv_name() + " Virtual Machine. This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
+            string msg = "The website " + domain + " is trying to allocate a " + this->get_hv_name() + " Virtual Machine \"" + vmName + "\". This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
 
             // Prompt user
             // (It is safe to use unsafe confirm, since we trust the domain - Therefore we also get rid of all the platform-dependant code)
