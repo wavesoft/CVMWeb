@@ -546,16 +546,19 @@ HVSession * Hypervisor::sessionGet( int id ) {
 /* Check if we need to start or stop the daemon */
 int Hypervisor::checkDaemonNeed() {
     
-    CVMWA_LOG( "checkDaemonNeed", "Checking daemon needs" );
+    CVMWA_LOG( "Info", "Checking daemon needs" );
     
     // If we haven't specified where the daemon is, we cannot do much
-    if (daemonBinPath.empty()) return HVE_NOT_SUPPORTED;
+    if (daemonBinPath.empty()) {
+        CVMWA_LOG( "Warning", "Daemon binary was not specified or misssing" );
+        return HVE_NOT_SUPPORTED;
+    }
     
     // Check if at least one session uses daemon
     bool daemonNeeded = false;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        CVMWA_LOG( "checkDaemonNeed", "Session " << sess->uuid << ", daemonControlled=" << sess->daemonControlled << ", state=" << sess->state );
+        CVMWA_LOG( "Info", "Session " << sess->uuid << ", daemonControlled=" << sess->daemonControlled << ", state=" << sess->state );
         if ( sess->daemonControlled && ((sess->state == STATE_OPEN) || (sess->state == STATE_STARTED) || (sess->state == STATE_PAUSED)) ) {
             daemonNeeded = true;
             break;
@@ -564,13 +567,13 @@ int Hypervisor::checkDaemonNeed() {
     
     // Check if the daemon state is valid
     bool daemonState = isDaemonRunning();
-    CVMWA_LOG( "checkDaemonNeed", "Daemon is " << daemonState << ", daemonNeed is " << daemonNeeded );
+    CVMWA_LOG( "Info", "Daemon is " << daemonState << ", daemonNeed is " << daemonNeeded );
     if (daemonNeeded != daemonState) {
         if (daemonNeeded) {
-            CVMWA_LOG( "checkDaemonNeed", "Starting daemon" );
+            CVMWA_LOG( "Info", "Starting daemon" );
             return daemonStart( daemonBinPath ); /* START the daemon */
         } else {
-            CVMWA_LOG( "checkDaemonNeed", "Stopping daemon" );
+            CVMWA_LOG( "Info", "Stopping daemon" );
             return daemonStop(); /* KILL the daemon */
         }
     }

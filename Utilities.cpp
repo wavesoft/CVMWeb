@@ -688,7 +688,10 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                 // Kill process
                 kill( pidChild, SIGKILL );
 
-                // Abort execution
+                // Reap process
+                waitpid(pidChild, &ret, 0);
+
+                // Set stderror (just for the heck of it)
                 *rawStderr = "ERROR: Aborted";
                 return 255;
 

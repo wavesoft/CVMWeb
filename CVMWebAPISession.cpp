@@ -547,8 +547,10 @@ void CVMWebAPISession::thread_update() {
     int oldState = this->session->state;
     
     // Update session info from driver
+    CVMWA_LOG("Debug", "Invoking session update");
     int ans = this->session->update();
     if (ans < 0) {
+        CVMWA_LOG("Debug", "Update session returned error = " << ans);
         
         // Check if the session went away
         if (ans == HVE_NOT_FOUND) {
@@ -577,10 +579,12 @@ void CVMWebAPISession::thread_update() {
     }
     
     // Check state differences
+    CVMWA_LOG("Debug", "Session update completed. Before=" << oldState << ", now=" << this->session->state);
     if (oldState != this->session->state) {
         switch (this->session->state) {
             
             case STATE_OPEN:
+                CVMWA_LOG("Debug", "Session switched to OPEN");
             
                 /* Start probing timer */
                 this->probeTimer->start();
@@ -590,6 +594,7 @@ void CVMWebAPISession::thread_update() {
                 break;
             
             case STATE_STARTED:
+                CVMWA_LOG("Debug", "Session switched to STARTED");
             
                 /* Start probing timer */
                 this->probeTimer->start();
@@ -599,6 +604,7 @@ void CVMWebAPISession::thread_update() {
                 break;
             
             case STATE_PAUSED:
+                CVMWA_LOG("Debug", "Session switched to PAUSED");
 
                 /* Stop probing timer */
                 this->probeTimer->stop();
@@ -614,12 +620,15 @@ void CVMWebAPISession::thread_update() {
                 break;
             
             case STATE_ERROR:
+                CVMWA_LOG("Debug", "Session switched to ERROR");
                 
                 // TODO: Am I really using this somewhere? :P :P
                 break;
             
         }
     }
+    
+    CVMWA_LOG("Debug", "Update completed, releasing update flag");
     
     /* Everything was OK */
     this->updating = false;
