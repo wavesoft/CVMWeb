@@ -368,7 +368,7 @@ int splitArguments( std::string source, char ** charBuffer, int bufferSize, int 
             // Stack the string contents
             chunk = source.substr( iPos, sqPos - iPos );
             args.push_back( chunk );
-            iPos = sqPos+1;
+            iPos = sqPos+2;
 
             // Exit quote maching mode
             nextChar = ' ';
@@ -379,7 +379,7 @@ int splitArguments( std::string source, char ** charBuffer, int bufferSize, int 
             // Stack the string contents
             chunk = source.substr( iPos, dqPos - iPos );
             args.push_back( chunk );
-            iPos = dqPos+1;
+            iPos = dqPos+2;
 
             // Exit quote maching mode
             nextChar = ' ';
@@ -616,11 +616,11 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         close(1); close(2);
 
         /* Replace standard outs */
-        if (dup(outfd[1], 1) < 0) {
+        if (dup2(outfd[1], 1) < 0) {
             close(outfd[1]); close(errfd[1]);
             return HVE_IO_ERROR;
         }
-        if (dup(errfd[1], 2) < 0) {
+        if (dup2(errfd[1], 2) < 0) {
             close(outfd[1]); close(errfd[1]);
             return HVE_IO_ERROR;
         }
