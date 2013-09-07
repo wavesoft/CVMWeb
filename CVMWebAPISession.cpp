@@ -33,10 +33,12 @@
 #include "DaemonCtl.h"
 #include "Hypervisor.h"
 #include "CVMWebAPISession.h"
+
 #include <boost/thread.hpp>
 
 // Helper macro to prohibit the function to be called when the plugin is shutting down
-#define  NOT_ON_SHUTDOWN    CVMWebPtr p = this->getPlugin(); if (p != NULL) if (p->shuttingDown) return;
+#define  NOT_ON_SHUTDOWN    if (CVMWeb::shuttingDown) return;
+#define  WHEN_SAFE          if (!CVMWeb::shuttingDown)
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWebPtr CVMWebAPISession::getPlugin()
@@ -67,7 +69,7 @@ int CVMWebAPISession::pause() {
     /* Make it unavailable */
     if (this->isAlive) {
         this->isAlive = false;
-        this->fire_apiUnavailable();
+        WHEN_SAFE this->fire_apiUnavailable();
     }
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
@@ -77,10 +79,10 @@ int CVMWebAPISession::pause() {
 void CVMWebAPISession::thread_pause() {
     int ans = this->session->pause();
     if (ans == 0) {
-        this->fire_pause();
+        WHEN_SAFE this->fire_pause();
     } else {
-        this->fire_pauseError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "pause");
+        WHEN_SAFE this->fire_pauseError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "pause");
     }
 }
 
@@ -98,7 +100,7 @@ int CVMWebAPISession::close(){
     /* Make it unavailable */
     if (this->isAlive) {
         this->isAlive = false;
-        this->fire_apiUnavailable();
+        WHEN_SAFE this->fire_apiUnavailable();
     }
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
@@ -108,10 +110,10 @@ int CVMWebAPISession::close(){
 void CVMWebAPISession::thread_close(){
     int ans = this->session->close();
     if (ans == 0) {
-        this->fire_close();
+        WHEN_SAFE this->fire_close();
     } else {
-        this->fire_closeError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "close");
+        WHEN_SAFE this->fire_closeError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "close");
     }
     
     /* The needs of having a daemon might have changed */
@@ -135,10 +137,10 @@ int CVMWebAPISession::resume(){
 void CVMWebAPISession::thread_resume(){
     int ans = this->session->resume();
     if (ans == 0) {
-        this->fire_resume();
+        WHEN_SAFE this->fire_resume();
     } else {
-        this->fire_resumeError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "resume");
+        WHEN_SAFE this->fire_resumeError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "resume");
     }
 }
 
@@ -150,7 +152,7 @@ int CVMWebAPISession::reset(){
     /* Make API unavailable but don't stop the timer */
     if (this->isAlive) {
         this->isAlive = false;
-        this->fire_apiUnavailable();
+        WHEN_SAFE this->fire_apiUnavailable();
     }
     
     // Start the reset thread
@@ -161,10 +163,10 @@ int CVMWebAPISession::reset(){
 void CVMWebAPISession::thread_reset(){
     int ans = this->session->reset();
     if (ans == 0) {
-        this->fire_reset();
+        WHEN_SAFE this->fire_reset();
     } else {
-        this->fire_resetError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "reset");
+        WHEN_SAFE this->fire_resetError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "reset");
     }
 }
 
@@ -176,7 +178,7 @@ int CVMWebAPISession::stop(){
     /* Make it unavailable */
     if (this->isAlive) {
         this->isAlive = false;
-        this->fire_apiUnavailable();
+        WHEN_SAFE this->fire_apiUnavailable();
     }
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
@@ -186,10 +188,10 @@ int CVMWebAPISession::stop(){
 void CVMWebAPISession::thread_stop(){
     int ans = this->session->stop();
     if (ans == 0) {
-        this->fire_stop();
+        WHEN_SAFE this->fire_stop();
     } else {
-        this->fire_stopError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "stop");
+        WHEN_SAFE this->fire_stopError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "stop");
     }
 }
 
@@ -201,7 +203,7 @@ int CVMWebAPISession::hibernate(){
     /* Make it unavailable */
     if (this->isAlive) {
         this->isAlive = false;
-        this->fire_apiUnavailable();
+        WHEN_SAFE this->fire_apiUnavailable();
     }
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_hibernate, this ));
@@ -211,10 +213,10 @@ int CVMWebAPISession::hibernate(){
 void CVMWebAPISession::thread_hibernate(){
     int ans = this->session->hibernate();
     if (ans == 0) {
-        this->fire_hibernate();
+        WHEN_SAFE this->fire_hibernate();
     } else {
-        this->fire_hibernateError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "hibernate");
+        WHEN_SAFE this->fire_hibernateError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "hibernate");
     }
 }
 
@@ -296,7 +298,7 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     // Open session with the given flags
     ans = this->session->open( cpus, ram, disk, ver, flags );
     if (ans == 0) {
-        this->fire_open();
+        WHEN_SAFE this->fire_open();
         
     } else {
         
@@ -304,8 +306,8 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
         this->session->close();
         
         // Then fire errors
-        this->fire_openError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "open");
+        WHEN_SAFE this->fire_openError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "open");
     }
     
     // The requirements of having a daemon might have changed
@@ -352,11 +354,11 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
             daemonGet( DIPC_RELOAD );
 
         // Notify browser that the session has started
-        this->fire_start();
+        WHEN_SAFE this->fire_start();
 
     } else {
-        this->fire_startError(hypervisorErrorStr(ans), ans);
-        this->fire_error(hypervisorErrorStr(ans), ans, "start");
+        WHEN_SAFE this->fire_startError(hypervisorErrorStr(ans), ans);
+        WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "start");
     }
 }
 
@@ -571,11 +573,11 @@ void CVMWebAPISession::thread_update() {
             /* Make it unavailable */
             if (this->isAlive) {
                 this->isAlive = false;
-                this->fire_apiUnavailable();
+                WHEN_SAFE this->fire_apiUnavailable();
             }
             
             /* Session closed */
-            this->fire_close();
+            WHEN_SAFE this->fire_close();
             
             /* Mark the session closed and exit */
             this->session->state = STATE_CLOSED;
@@ -610,7 +612,7 @@ void CVMWebAPISession::thread_update() {
                 this->probeTimer->start();
                 
                 /* Session started */
-                this->fire_start();
+                WHEN_SAFE this->fire_start();
                 break;
             
             case STATE_PAUSED:
@@ -622,11 +624,11 @@ void CVMWebAPISession::thread_update() {
                 /* Make it unavailable */
                 if (this->isAlive) {
                     this->isAlive = false;
-                    this->fire_apiUnavailable();
+                    WHEN_SAFE this->fire_apiUnavailable();
                 }
     
                 /* Session paused */
-                this->fire_pause();
+                WHEN_SAFE this->fire_pause();
                 break;
             
             case STATE_ERROR:

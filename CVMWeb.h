@@ -46,6 +46,7 @@ class CVMWeb : public FB::PluginCore
 public:
     static void StaticInitialize();
     static void StaticDeinitialize();
+    static bool shuttingDown;
     Hypervisor  * hv;
 
 public:
@@ -62,7 +63,6 @@ public:
     std::string                         getPluginFolderPath();
     std::string                         getDaemonBin();
     std::string                         getPluginBin();
-    bool                                shuttingDown;
 
     // Cryptography class
     CVMWebCrypto *                      crypto;

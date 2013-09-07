@@ -37,6 +37,8 @@
 #include "Utilities.h"
 #include "Dialogs.h"
 
+bool CVMWeb::shuttingDown = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn CVMWeb::StaticInitialize()
 ///
@@ -104,7 +106,7 @@ void CVMWeb::onPluginReady()
     // this point.
 
     // Reset shutdown flag
-    shuttingDown = false;
+    CVMWeb::shuttingDown = false;
 
     // Enable sysExec()
     initSysExec();
@@ -130,7 +132,7 @@ void CVMWeb::shutdown()
     // references to this object will be valid
 
     // Mark a shutdown
-    shuttingDown = true;
+    CVMWeb::shuttingDown = true;
 
     // Abort command that is waiting for response (via sysExec() utility function)
     abortSysExec();
