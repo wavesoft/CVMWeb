@@ -302,10 +302,23 @@ var currentProgressTotal = 0,
  * error callback (if it's valid)
  */
 function callError( userCallback, message, code ) {
+
+    // Console log is first, no matter what
+    var lastError = "";
+    if (__pluginSingleton != null) {
+        lastError = __pluginSingleton.lastError;
+        if ((lastError != undefined) && (lastError != ""))
+            lastError = " ("+lastError+")";
+    }
+    console.error("[CernVM Web API] Error #" + code + ": " + message + lastError);
+
+    // Handle user's callback first
     if (userCallback)
         if (userCallback(message, code)) return;
-    console.error("[CernVM Web API] Error #" + code + ": " + message);
+
+    // And global error callback last
     globalErrorHandler( message, code );
+
 };
 
 /**
