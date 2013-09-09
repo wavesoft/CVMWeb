@@ -29,10 +29,11 @@
 
 #else
 
-	#include "Utilities.h"
+    #include <iostream>
  	#include <sstream>
 	#include <string.h>
 	#include <curl/curl.h>
+	#include "Utilities.h"
 
 	#define CRASH_REPORT_FROM 			"<cvmwebapi.error-report@cern.ch>"
 	#define CRASH_REPORT_TO 			"<cvmwebapi.error-report@cern.ch>"
@@ -101,7 +102,7 @@
 	void 			crashReportCleanup();
 
 	/* Register log entry to the crash report scroll-back buffer */
-	void 			crashReportStoreLog( std::ostringstream oss );
+	void 			crashReportStoreLog( std::ostringstream & oss );
 
 	/* Compiler-specific way of building the stack trace */
 	std::string		crashReportBuildStackTrace();

@@ -370,10 +370,10 @@ inline void sleepMs(int sleepMs) {
 #if defined(CRASH_REPORTING)
     #ifdef _WIN32
         #define CVMWA_REPORT_LOG(kind, ...) \
-            do { std::stringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
+            do { std::ostringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
     #else
         #define CVMWA_REPORT_LOG(kind, ...) \
-            do { std::stringstream ss; ss << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
+            do { std::ostringstream ss; ss << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
     #endif
 #else
     #define CVMWA_REPORT_LOG(...) ;
@@ -381,7 +381,7 @@ inline void sleepMs(int sleepMs) {
 #if defined(DEBUG) || defined(LOGGING)
     #ifdef _WIN32
         #define CVMWA_LOG(kind, ...) \
-            do { std::stringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0); \
+            do { std::ostringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0); \
             CVMWA_REPORT_LOG(kind, __VA_ARGS__ )
     #else
         #define CVMWA_LOG(kind, ...) \
@@ -389,7 +389,7 @@ inline void sleepMs(int sleepMs) {
             CVMWA_REPORT_LOG(kind, __VA_ARGS__ )
     #endif
 #else
-    #define CVMWA_LOG(...) ;
+    #define CVMWA_LOG(kind, ...) CVMWA_REPORT_LOG(kind, __VA_ARGS__)
 #endif
 #define WTF_LOG(sth) \
      std::cerr << "[WTF][" << __func__ << "](" << __FILE__ << ":" << __LINE__ << ") " << sth << std::endl;

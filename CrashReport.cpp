@@ -54,7 +54,7 @@ void crashReportAddInfo( std::string key, std::string value ) {
 }
 
 /* Register log entry to the crash report scroll-back buffer */
-void crashReportStoreLog( ostringstream oss ) {
+void crashReportStoreLog( ostringstream & oss ) {
 
 	// Until we reach the buffer size, stack entries
 	if (scrollBackPosition < CRASH_LOG_SCROLLBACK) {
