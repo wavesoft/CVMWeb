@@ -50,15 +50,18 @@
 ///////////////////////////////////////////////////////////////////////////////
 CVMWebPtr CVMWebAPISession::getPlugin()
 {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr plugin(m_plugin.lock());
     if (!plugin) {
         throw FB::script_error("The plugin is invalid");
     }
     return plugin;
+    CRASH_REPORT_END;
 }
 
 // Functions
 int CVMWebAPISession::pause() {
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
@@ -74,9 +77,11 @@ int CVMWebAPISession::pause() {
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_pause() {
+    CRASH_REPORT_BEGIN;
     int ans = this->session->pause();
     if (ans == 0) {
         WHEN_SAFE this->fire_pause();
@@ -84,9 +89,11 @@ void CVMWebAPISession::thread_pause() {
         WHEN_SAFE this->fire_pauseError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "pause");
     }
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::close(){
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if ((this->session->state != STATE_OPEN) && 
@@ -105,9 +112,11 @@ int CVMWebAPISession::close(){
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_close(){
+    CRASH_REPORT_BEGIN;
     int ans = this->session->close();
     if (ans == 0) {
         WHEN_SAFE this->fire_close();
@@ -120,9 +129,11 @@ void CVMWebAPISession::thread_close(){
     CVMWebPtr p = this->getPlugin();
     if (p->hv != NULL) p->hv->checkDaemonNeed();
     
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::resume(){
+    CRASH_REPORT_BEGIN;
 
     /* Validate state */
     if (this->session->state != STATE_PAUSED) return HVE_INVALID_STATE;
@@ -132,9 +143,11 @@ int CVMWebAPISession::resume(){
     
     boost::thread t(boost::bind(&CVMWebAPISession::thread_resume, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_resume(){
+    CRASH_REPORT_BEGIN;
     int ans = this->session->resume();
     if (ans == 0) {
         WHEN_SAFE this->fire_resume();
@@ -142,9 +155,11 @@ void CVMWebAPISession::thread_resume(){
         WHEN_SAFE this->fire_resumeError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "resume");
     }
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::reset(){
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
@@ -158,9 +173,11 @@ int CVMWebAPISession::reset(){
     // Start the reset thread
     boost::thread t(boost::bind(&CVMWebAPISession::thread_reset, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_reset(){
+    CRASH_REPORT_BEGIN;
     int ans = this->session->reset();
     if (ans == 0) {
         WHEN_SAFE this->fire_reset();
@@ -168,9 +185,11 @@ void CVMWebAPISession::thread_reset(){
         WHEN_SAFE this->fire_resetError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "reset");
     }
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::stop(){
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
@@ -183,9 +202,11 @@ int CVMWebAPISession::stop(){
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_stop(){
+    CRASH_REPORT_BEGIN;
     int ans = this->session->stop();
     if (ans == 0) {
         WHEN_SAFE this->fire_stop();
@@ -193,9 +214,11 @@ void CVMWebAPISession::thread_stop(){
         WHEN_SAFE this->fire_stopError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "stop");
     }
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::hibernate(){
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
@@ -208,9 +231,11 @@ int CVMWebAPISession::hibernate(){
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_hibernate, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_hibernate(){
+    CRASH_REPORT_BEGIN;
     int ans = this->session->hibernate();
     if (ans == 0) {
         WHEN_SAFE this->fire_hibernate();
@@ -218,9 +243,11 @@ void CVMWebAPISession::thread_hibernate(){
         WHEN_SAFE this->fire_hibernateError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "hibernate");
     }
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::open( const FB::variant& o ){
+    CRASH_REPORT_BEGIN;
 
     /* Validate state */
     if ((this->session->state != STATE_CLOSED) && 
@@ -231,6 +258,7 @@ int CVMWebAPISession::open( const FB::variant& o ){
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_open, this, o ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 /**
@@ -238,13 +266,16 @@ int CVMWebAPISession::open( const FB::variant& o ){
  * to override particular variables from javascript.
  */
 bool __canOverride( const std::string& vname, HVSession * sess ) {
+    CRASH_REPORT_BEGIN;
     return (std::find(sess->overridableVars.begin(), sess->overridableVars.end(), vname) != sess->overridableVars.end());
+    CRASH_REPORT_END;
 }
 
 /**
  * Asynchronous function to open a new session
  */
 void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
+    CRASH_REPORT_BEGIN;
     int cpus = this->session->cpus;
     int ram = this->session->memory;
     int disk = this->session->disk;
@@ -314,9 +345,11 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     CVMWebPtr p = this->getPlugin();
     if (p->hv != NULL) p->hv->checkDaemonNeed();
     
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::start( const FB::variant& cfg ) {
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if (this->session->state != STATE_OPEN) return HVE_INVALID_STATE;
@@ -326,9 +359,12 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_start, this, cfg ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
+    CRASH_REPORT_BEGIN;
+
     int ans;
     std::map<std::string, std::string> vmUserData;
     std::map<std::string, std::string> * dataPtr = NULL;
@@ -360,90 +396,126 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
         WHEN_SAFE this->fire_startError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "start");
     }
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::setExecutionCap(int cap) {
+    CRASH_REPORT_BEGIN;
     return this->session->setExecutionCap( cap );
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::setProperty( const std::string& name, const std::string& value ) {
+    CRASH_REPORT_BEGIN;
     if (name.compare("/CVMWeb/secret") == 0) return HVE_NOT_ALLOWED;
     return this->session->setProperty( name, value );
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::getProperty( const std::string& name ) {
+    CRASH_REPORT_BEGIN;
     if (name.compare("/CVMWeb/secret") == 0) return "";
     return this->session->getProperty( name );
+    CRASH_REPORT_END;
 }
 
 // Read-only parameters
 int CVMWebAPISession::get_executionCap() {
+    CRASH_REPORT_BEGIN;
     return this->session->executionCap;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_disk() {
+    CRASH_REPORT_BEGIN;
     return this->session->disk;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_cpus() {
+    CRASH_REPORT_BEGIN;
     return this->session->cpus;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_memory() {
+    CRASH_REPORT_BEGIN;
     return this->session->memory;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_state() {
+    CRASH_REPORT_BEGIN;
     return this->session->state;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_flags() {
+    CRASH_REPORT_BEGIN;
     return this->session->flags;
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::get_rdp() {
+    CRASH_REPORT_BEGIN;
     return this->session->getRDPHost();
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::get_version() {
+    CRASH_REPORT_BEGIN;
     return this->session->version;
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::get_name() {
+    CRASH_REPORT_BEGIN;
     return this->session->name;
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::get_ip() {
+    CRASH_REPORT_BEGIN;
     return this->session->getAPIHost();
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::get_resolution() {
+    CRASH_REPORT_BEGIN;
 
     // Get screen screen resolution as extra info
     return this->session->getExtraInfo(EXIF_VIDEO_MODE);
 
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::get_apiEntryPoint() {
+    CRASH_REPORT_BEGIN;
     std::string apiURL = this->session->getAPIHost();
     if (apiURL.empty()) return "";
     int apiPort = this->session->getAPIPort();
     if (apiPort == 0) return "";
     apiURL += ":" + ntos<int>( apiPort );
     return apiURL;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onProgress(const size_t v, const size_t tot, const std::string& msg) {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_progress(v,tot,msg);
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onOpen() {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_open();
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onError( const std::string& msg, const int code, const std::string& category) {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_error(msg, code, category);
     if (category.compare("open") == 0) this->fire_openError(msg, code);
@@ -452,33 +524,45 @@ void CVMWebAPISession::onError( const std::string& msg, const int code, const st
     if (category.compare("pause") == 0) this->fire_pauseError(msg, code);
     if (category.compare("resume") == 0) this->fire_resumeError(msg, code);
     if (category.compare("reset") == 0) this->fire_resetError(msg, code);
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onDebug( const std::string& line ) {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_debug( line );
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onStart() {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_start();
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onClose() {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_close();
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::onStop() {
+    CRASH_REPORT_BEGIN;
     NOT_ON_SHUTDOWN;
     this->fire_stop();
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPISession::toString() {
+    CRASH_REPORT_BEGIN;
     return "[CVMWebAPISession]";
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::cb_timer() {
+    CRASH_REPORT_BEGIN;
     if (!isAlive) {
         if (this->session->state == STATE_STARTED) {
             if (this->session->isAPIAlive( HSK_HTTP )) {
@@ -492,62 +576,84 @@ void CVMWebAPISession::cb_timer() {
             fire_apiUnavailable();
         }
     }
+    CRASH_REPORT_END;
 }
 
 bool CVMWebAPISession::get_live() {
+    CRASH_REPORT_BEGIN;
     return this->isAlive;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_daemonMinCap() {
+    CRASH_REPORT_BEGIN;
     return this->session->daemonMinCap;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_daemonMaxCap() {
+    CRASH_REPORT_BEGIN;
     return this->session->daemonMaxCap;
+    CRASH_REPORT_END;
 }
 
 bool CVMWebAPISession::get_daemonControlled() {
+    CRASH_REPORT_BEGIN;
     return this->session->daemonControlled;
+    CRASH_REPORT_END;
 }
 
 int CVMWebAPISession::get_daemonFlags() {
+    CRASH_REPORT_BEGIN;
     return this->session->daemonFlags;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::set_daemonMinCap( int cap ) {
+    CRASH_REPORT_BEGIN;
     this->session->daemonMinCap = cap;
     this->setProperty("/CVMWeb/daemon/cap/min", ntos<int>(cap));
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::set_daemonMaxCap( int cap ) {
+    CRASH_REPORT_BEGIN;
     this->session->daemonMaxCap = cap;
     this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(cap));
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::set_daemonControlled( bool controled ) {
+    CRASH_REPORT_BEGIN;
     this->session->daemonControlled = controled;
     this->setProperty("/CVMWeb/daemon/controlled", (controled ? "1" : "0"));
 
     /* The needs of having a daemon might have changed */
     CVMWebPtr p = this->getPlugin();
     if (p->hv != NULL) p->hv->checkDaemonNeed();
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPISession::set_daemonFlags( int flags ) {
+    CRASH_REPORT_BEGIN;
     this->session->daemonFlags = flags;
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(flags));
+    CRASH_REPORT_END;
 }
 
 /**
  * Update session information from hypervisor session
  */
 int CVMWebAPISession::update() {
+    CRASH_REPORT_BEGIN;
     if (this->updating) return HVE_STILL_WORKING;
     this->updating = true;
     boost::thread t(boost::bind(&CVMWebAPISession::thread_update, this ));
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 void CVMWebAPISession::thread_update() {
+    CRASH_REPORT_BEGIN;
 
     // Don't do anything if we are in the middle of something
     if ((this->session->state == STATE_OPPENING) || (this->session->state == STATE_STARTING)) {
@@ -645,4 +751,5 @@ void CVMWebAPISession::thread_update() {
     /* Everything was OK */
     this->updating = false;
     
+    CRASH_REPORT_END;
 }

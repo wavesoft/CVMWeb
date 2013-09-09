@@ -22,6 +22,7 @@
 #define DOWNLOADPROVIDERS_H
 
 #include "Utilities.h"
+#include "CrashReport.h"
 
 #include <ostream>
 #include <iostream>

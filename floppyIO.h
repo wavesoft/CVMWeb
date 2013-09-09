@@ -22,6 +22,8 @@
 #ifndef FLOPPYIO_H
 #define	FLOPPYIO_H
 
+#include "CrashReport.h"
+
 #include <iostream>
 #include <fstream>
 #include <string.h>

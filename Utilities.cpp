@@ -98,6 +98,7 @@ template std::string ntos<size_t>( size_t &value );
  *
  */
 std::string prepareAppDataPath() {
+    CRASH_REPORT_BEGIN;
     std::string homeDir;
     std::string subDir;
     
@@ -153,12 +154,14 @@ std::string prepareAppDataPath() {
     /* Return the home directory */
     return homeDir;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Remove a trailing folder from the given path
  */
 std::string stripComponent( std::string path ) {
+    CRASH_REPORT_BEGIN;
     /* Find the last trailing slash */
     size_t iPos = path.find_last_of('/');
     if (iPos == std::string::npos) { // Check for windows-like trailing path
@@ -167,12 +170,14 @@ std::string stripComponent( std::string path ) {
     
     /* Keep only path */
     return path.substr(0, iPos);
+    CRASH_REPORT_END;
 }
 
 /**
  * Cross-platform implementation of basename
  */
 std::string getFilename ( std::string path ) {
+    CRASH_REPORT_BEGIN;
     std::string ans = "";
     #ifndef _WIN32
     
@@ -204,21 +209,25 @@ std::string getFilename ( std::string path ) {
         
     #endif
     return ans;
+    CRASH_REPORT_END;
 }
 
 /**
  * Run prepareAppDataPath only once, then use string singleton
  */
 std::string getAppDataPath() {
+    CRASH_REPORT_BEGIN;
     if (appDataDir.empty())
         appDataDir = prepareAppDataPath();
     return appDataDir;
+    CRASH_REPORT_END;
 }
 
 /**
  * Split the given line into a key and value using the delimited provided
  */
 int getKV( string line, string * key, string * value, unsigned char delim, int offset ) {
+    CRASH_REPORT_BEGIN;
     size_t a = line.find( delim, offset );
     if (a == string::npos) return 0;
     *key = line.substr(offset, a-offset);
@@ -226,12 +235,14 @@ int getKV( string line, string * key, string * value, unsigned char delim, int o
     while ( (b<line.length()) && ((line[b] == ' ') || (line[b] == '\t')) ) b++;
     *value = line.substr(b, string::npos);
     return a;
+    CRASH_REPORT_END;
 }
 
 /**
  * Split the given string into 
  */
 int trimSplit( std::string * line, std::vector< std::string > * parts, std::string split, std::string trim ) {
+    CRASH_REPORT_BEGIN;
     size_t i, pos, nextPos, ofs = 0;
     parts->clear();
     while (ofs < line->length()) {
@@ -261,12 +272,14 @@ int trimSplit( std::string * line, std::vector< std::string > * parts, std::stri
     }
     
     return parts->size();
+    CRASH_REPORT_END;
 }
 
 /**
  * Read the specified list of lines and create a map
  */
 int parseLines( std::vector< std::string > * lines, std::map< std::string, std::string > * map, std::string csplit, std::string ctrim, size_t key, size_t value ) {
+    CRASH_REPORT_BEGIN;
     string line;
     vector<string> parts;
     map->clear();
@@ -278,12 +291,14 @@ int parseLines( std::vector< std::string > * lines, std::map< std::string, std::
         }
     }
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Split lines from the given raw buffer
  */
 void splitLines( string rawString, vector<string> * out ) {
+    CRASH_REPORT_BEGIN;
     
     /* Ignore invalid output buffer */
     if (out == NULL) return;
@@ -309,6 +324,7 @@ void splitLines( string rawString, vector<string> * out ) {
         out->push_back(item);
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
@@ -316,6 +332,7 @@ void splitLines( string rawString, vector<string> * out ) {
  * strin contents found in double quotes.
  */
 int splitArguments( std::string source, char ** charBuffer, int bufferSize, int bufferOffset ) {
+    CRASH_REPORT_BEGIN;
     static vector<string> args;
     size_t wsPos=0, sqPos=0, dqPos=0, qPos=0, iPos=0;
     string chunk; char nextChar = ' ';
@@ -417,12 +434,14 @@ int splitArguments( std::string source, char ** charBuffer, int bufferSize, int 
     // Return how many components were placed in the charBuffer
     return i;
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Tokenize a key-value like output from VBoxManage into an easy-to-use hashmap
  */
 map<string, string> tokenize( vector<string> * lines, char delim ) {
+    CRASH_REPORT_BEGIN;
     map<string, string> ans;
     string line, key, value;
     if (lines->empty()) return ans;
@@ -436,12 +455,14 @@ map<string, string> tokenize( vector<string> * lines, char delim ) {
         }
     }
     return ans;
+    CRASH_REPORT_END;
 };
 
 /**
  * Tokenize a list of repeating key-value groups
  */
 vector< map<string, string> > tokenizeList( vector<string> * lines, char delim ) {
+    CRASH_REPORT_BEGIN;
     vector< map<string, string> > ans;
     map<string, string> row;
     string line, key, value;
@@ -457,12 +478,14 @@ vector< map<string, string> > tokenizeList( vector<string> * lines, char delim )
     }
     if (!row.empty()) ans.push_back(row);
     return ans;
+    CRASH_REPORT_END;
 };
 
 /**
  * Cross-platform function to return the temporary folder name
  */
 std::string getTmpDir() {
+    CRASH_REPORT_BEGIN;
 #ifdef _WIN32
     char tmpPath[MAX_PATH];
     DWORD wRet = GetTempPathA( MAX_PATH, tmpPath );
@@ -474,12 +497,14 @@ std::string getTmpDir() {
 #else
     return "/tmp";
 #endif
+    CRASH_REPORT_END;
 }
 
 /**
  * Return a temporary filename
  */
 std::string getTmpFile( string suffix, string folder ) {
+    CRASH_REPORT_BEGIN;
     #ifdef _WIN32
         DWORD wRet;
         int lRet;
@@ -544,6 +569,7 @@ std::string getTmpFile( string suffix, string folder ) {
         return tmpFile;
 
     #endif
+    CRASH_REPORT_END;
 }
 
 /**
@@ -559,18 +585,21 @@ HANDLE  sysExecAbortMutex = NULL;
  * Global initialization to sysExec
  */
 void initSysExec() {
+    CRASH_REPORT_BEGIN;
     CVMWA_LOG("Debug", "Initializing sysExec()");
 #ifndef _WIN32
     sysExecAborted = false;
 #else
     sysExecAbortMutex = CreateMutex(NULL,FALSE,NULL);
 #endif
+    CRASH_REPORT_END;
 }
 
 /**
  * Global trigger to abort execution
  */
 void abortSysExec() {
+    CRASH_REPORT_BEGIN;
     CVMWA_LOG("Debug", "Aborting sysExec()");
 #ifndef _WIN32
     sysExecAborted = true;
@@ -578,12 +607,14 @@ void abortSysExec() {
     if (sysExecAbortMutex != NULL)
         ReleaseMutex( sysExecAbortMutex );
 #endif
+    CRASH_REPORT_END;
 }
 
 /**
  * Cross-platform exec and return function (called by sysExec())
  */
 int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr ) {
+    CRASH_REPORT_BEGIN;
 #ifndef _WIN32
     
     int ret = 253;
@@ -864,12 +895,14 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     /* Return exit code */
 	return ret;
 #endif
+    CRASH_REPORT_END;
 }
 
 /**
  * Cross-platform exec function with retry functionality
  */
 int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries ) {
+    CRASH_REPORT_BEGIN;
     string stdError;
     int res = 253;
 
@@ -883,9 +916,9 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
 
         // Check for "Error" in the stderr
         // (Caused by a weird bug on VirtualBox)
-        if ((stdError.find("error") != string::npos) || (stdError.find("ERROR") != string::npos) || (stdError.find("Error") != string::npos)) {
+        if ((res != 255) && ((stdError.find("error") != string::npos) || (stdError.find("ERROR") != string::npos) || (stdError.find("Error") != string::npos)) ) {
             if (rawStderrAns != NULL) *rawStderrAns = stdError;
-            return 254;
+            res = 254;
         }
 
         // If it was successful, or we were aborted, return now. No retries.
@@ -899,12 +932,14 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
     }
 
     return res;
+    CRASH_REPORT_END;
 }
 
 /**
  * Compare two paths for eqality (ignoring different kinds of slashes)
  */
 bool samePath( std::string pathA, std::string pathB ) {
+    CRASH_REPORT_BEGIN;
     for (size_t i = 0; i < pathA.length(); i++) {
         if (i >= pathB.length()) return false;
         char a = pathA[i], b = pathB[i];
@@ -913,23 +948,27 @@ bool samePath( std::string pathA, std::string pathB ) {
         if (a != b) return false;
     }
     return true;
+    CRASH_REPORT_END;
 }
 
 /**
  * Sha256 from binary to hex
  */
 void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {
+    CRASH_REPORT_BEGIN;
     int i = 0;
     for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
     }
     outputBuffer[64] = 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * OpenSSL SHA256 on file 
  */
 int sha256_file( string path, string * checksum ) {
+    CRASH_REPORT_BEGIN;
     
     FILE *file = fopen(path.c_str(), "rb");
     if(!file) return -534;
@@ -956,13 +995,14 @@ int sha256_file( string path, string * checksum ) {
     *checksum = outputBuffer;
     
     return 0;
-
+    CRASH_REPORT_END;
 }
 
 /**
  * OpenSSL SHA256 on string buffer
  */
 int sha256_buffer( string buffer, string * checksum ) {
+    CRASH_REPORT_BEGIN;
     char outputBuffer[65];
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
@@ -973,64 +1013,69 @@ int sha256_buffer( string buffer, string * checksum ) {
     *checksum = outputBuffer;
     
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * OpenSSL SHA256 on string buffer
  */
 int sha256_bin( string buffer, unsigned char * hash ) {
+    CRASH_REPORT_BEGIN;
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, buffer.c_str(), buffer.length());
     SHA256_Final(hash, &sha256);
     return 0;
+    CRASH_REPORT_END;
 }
 /**
  * Base64-encoding borrowed from:
  * http://stackoverflow.com/questions/5288076/doing-base64-encoding-and-decoding-in-openssl-c
  */
 ::std::string base64_encode( const ::std::string &bindata ) {
-   using ::std::string;
-   using ::std::numeric_limits;
+    CRASH_REPORT_BEGIN;
+    using ::std::string;
+    using ::std::numeric_limits;
 
-   /*
-   if (bindata.size() > (numeric_limits<string::size_type>::max() / 4u) * 3u) {
-      throw ::std::length_error("Converting too large a string to base64.");
-   }
-   */
+    /*
+    if (bindata.size() > (numeric_limits<string::size_type>::max() / 4u) * 3u) {
+       throw ::std::length_error("Converting too large a string to base64.");
+    }
+    */
 
-   const ::std::size_t binlen = bindata.size();
-   // Use = signs so the end is properly padded.
-   string retval((((binlen + 2) / 3) * 4), '=');
-   ::std::size_t outpos = 0;
-   int bits_collected = 0;
-   unsigned int accumulator = 0;
-   const string::const_iterator binend = bindata.end();
+    const ::std::size_t binlen = bindata.size();
+    // Use = signs so the end is properly padded.
+    string retval((((binlen + 2) / 3) * 4), '=');
+    ::std::size_t outpos = 0;
+    int bits_collected = 0;
+    unsigned int accumulator = 0;
+    const string::const_iterator binend = bindata.end();
 
-   for (string::const_iterator i = bindata.begin(); i != binend; ++i) {
-      accumulator = (accumulator << 8) | (*i & 0xffu);
-      bits_collected += 8;
-      while (bits_collected >= 6) {
-         bits_collected -= 6;
-         retval[outpos++] = b64_table[(accumulator >> bits_collected) & 0x3fu];
-      }
-   }
-   if (bits_collected > 0) { // Any trailing bits that are missing.
-      assert(bits_collected < 6);
-      accumulator <<= 6 - bits_collected;
-      retval[outpos++] = b64_table[accumulator & 0x3fu];
-   }
-   assert(outpos >= (retval.size() - 2));
-   assert(outpos <= retval.size());
-   return retval;
+    for (string::const_iterator i = bindata.begin(); i != binend; ++i) {
+       accumulator = (accumulator << 8) | (*i & 0xffu);
+       bits_collected += 8;
+       while (bits_collected >= 6) {
+          bits_collected -= 6;
+          retval[outpos++] = b64_table[(accumulator >> bits_collected) & 0x3fu];
+       }
+    }
+    if (bits_collected > 0) { // Any trailing bits that are missing.
+       assert(bits_collected < 6);
+       accumulator <<= 6 - bits_collected;
+       retval[outpos++] = b64_table[accumulator & 0x3fu];
+    }
+    assert(outpos >= (retval.size() - 2));
+    assert(outpos <= retval.size());
+    return retval;
+    CRASH_REPORT_END;
 }
 
 /**
  * Base64-encoding borrowed from:
  * http://stackoverflow.com/questions/5288076/doing-base64-encoding-and-decoding-in-openssl-c
  */
-::std::string base64_decode(const ::std::string &ascdata)
-{
+::std::string base64_decode(const ::std::string &ascdata) {
+    CRASH_REPORT_BEGIN;
    using ::std::string;
    string retval;
    const string::const_iterator last = ascdata.end();
@@ -1054,12 +1099,14 @@ int sha256_bin( string buffer, unsigned char * hash ) {
       }
    }
    return retval;
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if the given port is open
  */
 bool isPortOpen( const char * host, int port, unsigned char handshake ) {
+    CRASH_REPORT_BEGIN;
     SOCKET sock;
 
     struct sockaddr_in client;
@@ -1159,23 +1206,27 @@ bool isPortOpen( const char * host, int port, unsigned char handshake ) {
     #endif
     return true;
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Dump a map structure
  */
 void mapDump(map<string, string> m) {
+    CRASH_REPORT_BEGIN;
     for (std::map<string, string>::iterator it=m.begin(); it!=m.end(); ++it) {
         string k = (*it).first;
         string v = (*it).second;
         cout << k << " => " << v << "\n";
     }
+    CRASH_REPORT_END;
 };
 
 /**
  * Hex dump of the given buffer
  */
 void hexDump (const char *desc, void *addr, int len) {
+    CRASH_REPORT_BEGIN;
     int i;
     unsigned char buff[17];
     unsigned char *pc = (unsigned char *) addr;
@@ -1216,12 +1267,14 @@ void hexDump (const char *desc, void *addr, int len) {
 
     // And print the final ASCII bit.
     printf ("  %s\n", buff);
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if the given string contains only the specified chars
  */
 bool isSanitized( std::string * check, const char * chars ) {
+    CRASH_REPORT_BEGIN;
     int numChars = strlen(chars); /* < 'chars' is always provided by the developer */
     bool foundInChars = false;
     for (size_t j=0; j<check->length(); j++) {
@@ -1236,12 +1289,14 @@ bool isSanitized( std::string * check, const char * chars ) {
         if (!foundInChars) return false;
     }
     return true;
+    CRASH_REPORT_END;
 }
 
 /**
  * Decompress a GZipped file from src and write it to dst
  */
 int decompressFile( const std::string& src, const std::string& dst ) {
+    CRASH_REPORT_BEGIN;
     
     // Try to open gzfile
     gzFile file;
@@ -1303,6 +1358,7 @@ int decompressFile( const std::string& src, const std::string& dst ) {
         return HVE_OK;
     }
     
+    CRASH_REPORT_END;
 }
 
 
@@ -1310,6 +1366,7 @@ int decompressFile( const std::string& src, const std::string& dst ) {
  * Encode the given string for URL
  */
 std::string urlEncode ( const std::string &s ) {
+    CRASH_REPORT_BEGIN;
 
     //RFC 3986 section 2.3 Unreserved Characters (January 2005)
     const std::string unreserved = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
@@ -1330,16 +1387,19 @@ std::string urlEncode ( const std::string &s ) {
         }
     }
     return escaped;
+    CRASH_REPORT_END;
 }
 
 /**
  * Explode the given string on the given character as separator
  */
 void explode( std::string const &input, char sep, std::vector<std::string> * output ) {
+    CRASH_REPORT_BEGIN;
     std::istringstream buffer(input);
     std::string temp;
     while (std::getline(buffer, temp, sep))
         output->push_back(temp);
+    CRASH_REPORT_END;
 }
 
 // Initialize template
@@ -1351,6 +1411,7 @@ void explode( std::string const &input, char sep, std::vector<std::string> * out
  * (Used by the hypervisor installation system in order to pick the appropriate binary)
  */
 void getLinuxInfo ( LINUX_INFO * info ) {
+    CRASH_REPORT_BEGIN;
     std::vector< std::string > vLines;
     std::string stdError;
     
@@ -1395,6 +1456,7 @@ void getLinuxInfo ( LINUX_INFO * info ) {
             ::tolower);
         
     }
+    CRASH_REPORT_END;
 }
 
 #endif

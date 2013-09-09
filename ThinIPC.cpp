@@ -31,6 +31,7 @@ using namespace std;
  * Global socket initialization for use with Thin IPC
  */
 int thinIPCInitialize() {
+    CRASH_REPORT_BEGIN;
 
     // Initialize Winsock on windows
     #ifdef _WIN32
@@ -43,6 +44,7 @@ int thinIPCInitialize() {
     // Seed random engine
     srand( getMillis() ); 
     return 0;
+    CRASH_REPORT_END;
 }
 
 /* ***************************************************************************** */
@@ -56,17 +58,20 @@ ThinIPCMessage ThinIPCMessage::__shorthandInstance;
  * Empty constructor
  */
 ThinIPCMessage::ThinIPCMessage( ) {
+    CRASH_REPORT_BEGIN;
     size = 0;
     this->data = NULL;
     this->__chunkPos = 0;
     this->__ioPos = 0;
 
+    CRASH_REPORT_END;
 };
 
 /**
  * Initialize with data
  */
 ThinIPCMessage::ThinIPCMessage( char* payload, short size ) {
+    CRASH_REPORT_BEGIN;
 
     this->__chunkPos = 0;
     this->__ioPos = 0;
@@ -77,19 +82,23 @@ ThinIPCMessage::ThinIPCMessage( char* payload, short size ) {
 
     memcpy( this->data, payload, size );
 
+    CRASH_REPORT_END;
 };
 
 /**
  * Destructor
  */
 ThinIPCMessage::~ThinIPCMessage( ) {
+    CRASH_REPORT_BEGIN;
     if (this->data != NULL) free(this->data);
+    CRASH_REPORT_END;
 }
 
 /**
  * Read arbitrary pointer object from stream
  */
 template <typename T> short ThinIPCMessage::readPtr( T * ptr ) {
+    CRASH_REPORT_BEGIN;
     int len = sizeof(T);
     if (len > 0xFFFF) return 0;
     if (__ioPos+len > size) return 0;
@@ -98,12 +107,14 @@ template <typename T> short ThinIPCMessage::readPtr( T * ptr ) {
     __ioPos += len;
 
     return (short) len;
+    CRASH_REPORT_END;
 };
 
 /**
  * Write arbitrary pointer object from stream
  */
 template <typename T> short ThinIPCMessage::writePtr( T * ptr ) {
+    CRASH_REPORT_BEGIN;
     int len = sizeof(T);
     if (len > 0xFFFF) return 0;
     if (__ioPos+len > size) return 0;
@@ -112,12 +123,14 @@ template <typename T> short ThinIPCMessage::writePtr( T * ptr ) {
     __ioPos += len;
 
     return (short) len;
+    CRASH_REPORT_END;
 };
 
 /**
  * Read integer from input stream
  */
 long int ThinIPCMessage::readInt() {
+    CRASH_REPORT_BEGIN;
     long int v;
     if (__ioPos+4 > size) return 0;
 
@@ -127,12 +140,14 @@ long int ThinIPCMessage::readInt() {
     __ioPos += 4;
 
     return v;
+    CRASH_REPORT_END;
 };
 
 /**
  * Read integer from input stream
  */
 short int ThinIPCMessage::readShort() {
+    CRASH_REPORT_BEGIN;
     short int v;
     
     if (__ioPos+2 > size) return 0;
@@ -143,12 +158,14 @@ short int ThinIPCMessage::readShort() {
     __ioPos += 2;
 
     return v;
+    CRASH_REPORT_END;
 };
 
 /**
  * Read string from input stream
  */
 string ThinIPCMessage::readString() {
+    CRASH_REPORT_BEGIN;
     short len;
     if (__ioPos+2 > size) return "";
     
@@ -168,12 +185,14 @@ string ThinIPCMessage::readString() {
     free( buf );
 
     return v;
+    CRASH_REPORT_END;
 };
 
 /**
  * Write integer to output stream
  */
 short ThinIPCMessage::writeInt( long int v ) {
+    CRASH_REPORT_BEGIN;
 
     // Resize buffer
     size += 4;
@@ -194,12 +213,14 @@ short ThinIPCMessage::writeInt( long int v ) {
 
     // Return bytes written
     return 4;
+    CRASH_REPORT_END;
 };
 
 /**
  * Write short integer to output stream
  */
 short ThinIPCMessage::writeShort( short int v ) {
+    CRASH_REPORT_BEGIN;
 
     // Resize buffer
     size += 2;
@@ -220,12 +241,14 @@ short ThinIPCMessage::writeShort( short int v ) {
 
     // Return bytes written
     return 2;
+    CRASH_REPORT_END;
 };
 
 /**
  * Write string to output stream
  */
 short ThinIPCMessage::writeString( string v ) {
+    CRASH_REPORT_BEGIN;
 
     // Resize buffer
     size += 2 + v.length();
@@ -251,25 +274,30 @@ short ThinIPCMessage::writeString( string v ) {
 
     // Return bytes written
     return len;
+    CRASH_REPORT_END;
 };
 
 /**
  * Flush buffers and reset contents
  */
 void ThinIPCMessage::reset() {
+    CRASH_REPORT_BEGIN;
     if (this->data != NULL) free(this->data);
     this->data = NULL;
     size = 0;
     __ioPos = 0;
     __chunkPos = 0;
+    CRASH_REPORT_END;
 };
 
 /**
  * Rewind position of read/write buffer
  */
 void ThinIPCMessage::rewind() {
+    CRASH_REPORT_BEGIN;
     __ioPos = 0;
     __chunkPos = 0;
+    CRASH_REPORT_END;
 }
 
 /**
@@ -278,6 +306,7 @@ void ThinIPCMessage::rewind() {
  * buffer, or 0 when finished.
  */
 short ThinIPCMessage::getChunk( char * buffer, short capacity ) {
+    CRASH_REPORT_BEGIN;
     short cpSize;
     if (__chunkPos >= size) return 0;
     
@@ -317,6 +346,7 @@ short ThinIPCMessage::getChunk( char * buffer, short capacity ) {
     
     // Return the size of bytes copied
     return cpSize;
+    CRASH_REPORT_END;
 };
 
 /**
@@ -325,6 +355,7 @@ short ThinIPCMessage::getChunk( char * buffer, short capacity ) {
  * function will return 0. Otherwise it will return the number of bytes written.
  */
 short ThinIPCMessage::putChunk( char * buffer, short capacity ) {
+    CRASH_REPORT_BEGIN;
     if ( (__chunkPos == size) && (__chunkPos != 0) ) return 0;
     short readSize = capacity;
     
@@ -372,65 +403,77 @@ short ThinIPCMessage::putChunk( char * buffer, short capacity ) {
     
     // Still data left
     return 0;
-    
+    CRASH_REPORT_END;
 }
 
 /**
  * Shorthand : ( int )
  */
 ThinIPCMessage * ThinIPCMessage::I( int v1 ) {
+    CRASH_REPORT_BEGIN;
     __shorthandInstance.reset();
     __shorthandInstance.writeInt( v1 );
     return &__shorthandInstance;
+    CRASH_REPORT_END;
 };
 
 /**
  * Shorthand : ( string )
  */
 ThinIPCMessage * ThinIPCMessage::S( string v1 ) {
+    CRASH_REPORT_BEGIN;
     __shorthandInstance.reset();
     __shorthandInstance.writeString( v1 );
     return &__shorthandInstance;
+    CRASH_REPORT_END;
 };
 
 /**
  * Shorthand : ( int, int )
  */
 ThinIPCMessage * ThinIPCMessage::II( int v1, int v2 ) {
+    CRASH_REPORT_BEGIN;
     __shorthandInstance.reset();
     __shorthandInstance.writeInt( v1 );
     __shorthandInstance.writeInt( v2 );
     return &__shorthandInstance;
+    CRASH_REPORT_END;
 };
 
 /**
  * Shorthand : ( string, string )
  */
 ThinIPCMessage * ThinIPCMessage::SS( string v1, string v2 ) {
+    CRASH_REPORT_BEGIN;
     __shorthandInstance.reset();
     __shorthandInstance.writeString( v1 );
     __shorthandInstance.writeString( v2 );
     return &__shorthandInstance;
+    CRASH_REPORT_END;
 };
 
 /**
  * Shorthand : ( int, string )
  */
 ThinIPCMessage * ThinIPCMessage::IS( int v1, string v2 ) {
+    CRASH_REPORT_BEGIN;
     __shorthandInstance.reset();
     __shorthandInstance.writeInt( v1 );
     __shorthandInstance.writeString( v2 );
     return &__shorthandInstance;
+    CRASH_REPORT_END;
 };
 
 /**
  * Shorthand : ( string, int )
  */
 ThinIPCMessage * ThinIPCMessage::SI( string v1, int v2 ) {
+    CRASH_REPORT_BEGIN;
     __shorthandInstance.reset();
     __shorthandInstance.writeString( v1 );
     __shorthandInstance.writeInt( v2 );
     return &__shorthandInstance;
+    CRASH_REPORT_END;
 };
 
 /* ***************************************************************************** */
@@ -441,6 +484,7 @@ ThinIPCMessage * ThinIPCMessage::SI( string v1, int v2 ) {
  * Create a socket on the given port
  */
 ThinIPCEndpoint::ThinIPCEndpoint( int port ) {
+    CRASH_REPORT_BEGIN;
     
     // Create datagram socket
     this->errorCode = SCKE_OK;
@@ -465,24 +509,28 @@ ThinIPCEndpoint::ThinIPCEndpoint( int port ) {
         return;
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Cleanup
  */
 ThinIPCEndpoint::~ThinIPCEndpoint() {
+    CRASH_REPORT_BEGIN;
 //    std::cout << "INFO: ThinkIPC Cleanup" << std::endl;
 #ifdef _WIN32
     closesocket(this->sock);
 #else
     close(this->sock);
 #endif
+    CRASH_REPORT_END;
 }
 
 /**
  * Send data frame to the socket
  */
 int ThinIPCEndpoint::send( int port, ThinIPCMessage * msg ) {
+    CRASH_REPORT_BEGIN;
     char buf[1024];
     int len, clen, ctotal = 0;
     
@@ -511,13 +559,14 @@ int ThinIPCEndpoint::send( int port, ThinIPCMessage * msg ) {
     
     // Return bytes sent
     return ctotal;
-    
+    CRASH_REPORT_END;
 }
 
 /**
  * Wait for a data frame on the socket
  */
 int ThinIPCEndpoint::recv( int * port, ThinIPCMessage * msg ) {
+    CRASH_REPORT_BEGIN;
     char buf[1024];
     int len;
     
@@ -546,12 +595,14 @@ int ThinIPCEndpoint::recv( int * port, ThinIPCMessage * msg ) {
         
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if there are messages pending in the IPC chain
  */
 bool ThinIPCEndpoint::isPending( int timeout ) {
+    CRASH_REPORT_BEGIN;
     
     /* Prepare timeout */
     struct timeval tv;
@@ -574,4 +625,5 @@ bool ThinIPCEndpoint::isPending( int timeout ) {
      else
          return false;  // Timed out
 
+    CRASH_REPORT_END;
 }

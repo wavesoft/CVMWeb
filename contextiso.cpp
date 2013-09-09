@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "iso9660.h"
+#include "CrashReport.h"
 
 // CD-ROM size for 2KiB of data
 static const int CONTEXTISO_CDROM_SIZE = 358400;
@@ -59,7 +60,8 @@ void isosetl( int x, unsigned char buffer[]) {
  * (Using reference from: http://users.telenet.be/it3.consultants.bvba/handouts/ISO9960.html)
  */
 char * build_simple_cdrom( const char * volume_id, const char * filename, const char * buffer, int size ) {
-    
+    CRASH_REPORT_BEGIN;
+
     // Local variables
     iso_primary_descriptor  descPrimary;
     iso_directory_record    descFile;
@@ -139,4 +141,6 @@ char * build_simple_cdrom( const char * volume_id, const char * filename, const 
     
     // Return the built buffer
     return bytes;
+
+    CRASH_REPORT_END;
 }

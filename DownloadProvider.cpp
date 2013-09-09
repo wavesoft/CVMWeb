@@ -27,22 +27,27 @@ DownloadProviderPtr systemProvider;
  * Get system-wide download provider singleton
  */
 DownloadProviderPtr DownloadProvider::Default() {
+    CRASH_REPORT_BEGIN;
     if (!systemProvider)
         systemProvider = boost::make_shared< CURLProvider >();
     return systemProvider;
+    CRASH_REPORT_END;
 }
 
 /**
  * Set system-wide default provider singleton
  */
 void DownloadProvider::setDefault( const DownloadProviderPtr& provider ) {
+    CRASH_REPORT_BEGIN;
     systemProvider = provider;
+    CRASH_REPORT_END;
 }
 
 /**
  * Local function to fire the progress event accordingly
  */
 void DownloadProvider::fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max ) {
+    CRASH_REPORT_BEGIN;
     if (fb != NULL) {
         
         // Throttle events on 2 per second, unless that's the last one
@@ -70,12 +75,14 @@ void DownloadProvider::fireProgressEvent( ProgressFeedback * fb, size_t pos, siz
         fb->callback( ipos, fb->total, fb->message );
         
     }
+    CRASH_REPORT_END;
 }
 
 /**
  * Local function to write data to osstream
  */
 void DownloadProvider::writeToStream( std::ostream * stream, ProgressFeedback * feedbackPtr, long max_size, const char * ptr, size_t data ) {
+    CRASH_REPORT_BEGIN;
     
     // Write data to the file
     stream->write( ptr, data );
@@ -91,12 +98,14 @@ void DownloadProvider::writeToStream( std::ostream * stream, ProgressFeedback * 
             DownloadProvider::fireProgressEvent( feedbackPtr, cur_size, max_size );
     }
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Extract the content-length from function
  */
 size_t __curl_headerfunc( void *ptr, size_t size, size_t nmemb, CURLProvider * self) {
+    CRASH_REPORT_BEGIN;
     size_t dataLen = size * nmemb;
     
     // Move data to std::String
@@ -108,12 +117,14 @@ size_t __curl_headerfunc( void *ptr, size_t size, size_t nmemb, CURLProvider * s
     }
     
     return dataLen;
+    CRASH_REPORT_END;
 }
 
 /**
  * Callback function for CURL data
  */
 size_t __curl_datacb_file(void *ptr, size_t size, size_t nmemb, CURLProvider * self ) {
+    CRASH_REPORT_BEGIN;
     size_t dataLen = size * nmemb;
 
     //CVMWA_LOG("Debug", "cURL File callback (size=" << dataLen << ")");
@@ -123,12 +134,14 @@ size_t __curl_datacb_file(void *ptr, size_t size, size_t nmemb, CURLProvider * s
     
     // Return data len
     return dataLen;
+    CRASH_REPORT_END;
 }
 
 /**
 * Callback function for CURL data
  */
 size_t __curl_datacb_string(void *ptr, size_t size, size_t nmemb, CURLProvider * self ) {
+    CRASH_REPORT_BEGIN;
     size_t dataLen = size * nmemb;
 
     CVMWA_LOG("Debug", "cURL String callback (size=" << dataLen << ")");
@@ -138,12 +151,14 @@ size_t __curl_datacb_string(void *ptr, size_t size, size_t nmemb, CURLProvider *
 
     // Return data len
     return dataLen;
+    CRASH_REPORT_END;
 }
 
 /**
  * Download a file using CURL
  */
 int CURLProvider::downloadFile( const std::string& url, const std::string& destination, ProgressFeedback * feedback ) {
+    CRASH_REPORT_BEGIN;
     
     // Setup CURL url
     CVMWA_LOG("Debug", "Downloading file from '" << url << "'");
@@ -186,12 +201,14 @@ int CURLProvider::downloadFile( const std::string& url, const std::string& desti
     fStream.close();
     return HVE_OK;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Download a file using CURL
  */
 int CURLProvider::downloadText( const std::string& url, std::string * destination, ProgressFeedback * feedback ) {
+    CRASH_REPORT_BEGIN;
     
     // Setup CURL url
     CVMWA_LOG("Debug", "Downloading string from '" << url << "'");
@@ -232,4 +249,5 @@ int CURLProvider::downloadText( const std::string& url, std::string * destinatio
     CVMWA_LOG("Info", "cURL Download completed" );
     return HVE_OK;
     
+    CRASH_REPORT_END;
 }

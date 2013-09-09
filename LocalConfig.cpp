@@ -24,14 +24,17 @@
  * Create platform configuration file
  */
 LocalConfig::LocalConfig () {
+    CRASH_REPORT_BEGIN;
     this->configDir = getAppDataPath() + "/config";
     this->loadMap( "general", &globalConfig );
+    CRASH_REPORT_END;
 }
 
 /**
  * Save all the lines to the given list file
  */
 bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines ) {
+    CRASH_REPORT_BEGIN;
     
     // Truncate file
     std::string file = this->configDir + "/" + name + ".lst";
@@ -48,12 +51,14 @@ bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines
     ofs.close();
     return true;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Save the string buffer to the given data file
  */
 bool LocalConfig::saveBuffer ( std::string name, std::string * buffer ) {
+    CRASH_REPORT_BEGIN;
     
     // Truncate file
     std::string file = this->configDir + "/" + name + ".dat";
@@ -67,11 +72,13 @@ bool LocalConfig::saveBuffer ( std::string name, std::string * buffer ) {
     ofs.close();
     return true;
 
+    CRASH_REPORT_END;
 }
 /**
  * Save string map to the given config file
  */
 bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string> * map ) {
+    CRASH_REPORT_BEGIN;
     
     // Truncate file
     std::string file = this->configDir + "/" + name + ".conf";
@@ -91,12 +98,14 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     ofs.close();
     return true;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Load all the lines from the given list file
  */
 bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines ) {
+    CRASH_REPORT_BEGIN;
     
     // Load configuration
     std::string file = this->configDir + "/" + name + ".lst";
@@ -114,12 +123,14 @@ bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines
     ifs.close();
     return true;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Read the string buffer from the given data file
  */
 bool LocalConfig::loadBuffer ( std::string name, std::string * buffer ) {
+    CRASH_REPORT_BEGIN;
     
     // Load configuration
     std::string file = this->configDir + "/" + name + ".dat";
@@ -137,12 +148,14 @@ bool LocalConfig::loadBuffer ( std::string name, std::string * buffer ) {
     ifs.close();
     return true;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Load string map from the given config file
  */
 bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string> * map ) {
+    CRASH_REPORT_BEGIN;
     
     // Load configuration
     std::string file = this->configDir + "/" + name + ".conf";
@@ -171,19 +184,25 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     ifs.close();
     return true;
     
+    CRASH_REPORT_END;
 }
 
 std::string LocalConfig::getPath( std::string configFile ) {
+    CRASH_REPORT_BEGIN;
     std::string file = this->configDir + "/" + configFile;
     return file;
+    CRASH_REPORT_END;
 }
 
 bool LocalConfig::exists ( std::string configFile ) {
+    CRASH_REPORT_BEGIN;
     std::string file = this->configDir + "/" + configFile;
     return file_exists( file );
+    CRASH_REPORT_END;
 }
 
 time_t LocalConfig::getLastModified ( std::string configFile ) {
+    CRASH_REPORT_BEGIN;
     std::string file = this->configDir + "/" + configFile;
 
     // Get file modification time
@@ -198,40 +217,53 @@ time_t LocalConfig::getLastModified ( std::string configFile ) {
     // Convert it to time_t
     return attrib.st_mtime;
     
+    CRASH_REPORT_END;
 }
 
 std::string LocalConfig::get ( std::string name ) {
+    CRASH_REPORT_BEGIN;
     if (globalConfig.find(name) == globalConfig.end())
         return "";
     return globalConfig[name];
+    CRASH_REPORT_END;
 }
 
 std::string LocalConfig::getDef  ( std::string name, std::string defaultValue ) {
+    CRASH_REPORT_BEGIN;
     if (globalConfig.find(name) == globalConfig.end())
         return defaultValue;
     return globalConfig[name];
+    CRASH_REPORT_END;
 }
 
 template <typename T> T LocalConfig::getNum ( std::string name ) {
+    CRASH_REPORT_BEGIN;
     if (globalConfig.find(name) == globalConfig.end())
         return 0;
     return ston<T>(globalConfig[name]);
+    CRASH_REPORT_END;
 }
 
 template <typename T> T LocalConfig::getNumDef ( std::string name, T defaultValue ) {
+    CRASH_REPORT_BEGIN;
     if (globalConfig.find(name) == globalConfig.end())
         return defaultValue;
     return ston<T>(globalConfig[name]);
+    CRASH_REPORT_END;
 }
 
 void LocalConfig::set ( std::string name, std::string value ) {
+    CRASH_REPORT_BEGIN;
     globalConfig[name] = value;
     this->saveMap( "general", &globalConfig );
+    CRASH_REPORT_END;
 }
 
 template <typename T> void LocalConfig::setNum ( std::string name, T value ) {
+    CRASH_REPORT_BEGIN;
     globalConfig[name] = ntos<T>( value );
     this->saveMap( "general", &globalConfig );
+    CRASH_REPORT_END;
 }
 
 /* Expose template implementations */

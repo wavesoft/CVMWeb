@@ -30,14 +30,15 @@
 // @param filename The filename of the floppy disk image
 
 FloppyIO::FloppyIO(const char * filename) {
+  CRASH_REPORT_BEGIN;
     
   // Open file
   fstream *fIO = new fstream(filename, fstream::in | fstream::out | fstream::trunc | fstream::binary );
-  
+
   // Prepare floppy info
   this->fIO = fIO;
   this->szFloppy = DEFAULT_FLOPPY_SIZE;
-  
+
   // Setup offsets and sizes of the I/O parts
   this->szOutput = this->szFloppy/2-1;
   this->ofsOutput = 0;
@@ -45,10 +46,11 @@ FloppyIO::FloppyIO(const char * filename) {
   this->ofsInput = this->szOutput;
   this->ofsCtrlByteOut = this->szInput+this->szOutput;
   this->ofsCtrlByteIn = this->szInput+this->szOutput+1;
-  
+
   // Reset floppy file
   this->reset();
 
+  CRASH_REPORT_END;
 }
 
 // Advanced Floppy file constructor
@@ -63,6 +65,7 @@ FloppyIO::FloppyIO(const char * filename) {
 // @param filename The filename of the floppy disk image
 
 FloppyIO::FloppyIO(const char * filename, int flags) {
+  CRASH_REPORT_BEGIN;
     
   // Open file
   ios_base::openmode fOpenFlags = fstream::in | fstream::out;
@@ -111,6 +114,7 @@ FloppyIO::FloppyIO(const char * filename, int flags) {
   // Reset floppy file
   if ((flags & F_NOINIT) == 0) this->reset();
 
+  CRASH_REPORT_END;
 }
 
 
@@ -118,6 +122,7 @@ FloppyIO::FloppyIO(const char * filename, int flags) {
 // Closes the file descriptor and releases used memory
 
 FloppyIO::~FloppyIO() {
+    CRASH_REPORT_BEGIN;
 
     // Make sure we are initialized
     if (this->fIO == NULL) return;
@@ -127,12 +132,15 @@ FloppyIO::~FloppyIO() {
     
     // Release memory
     delete this->fIO;
+
+    CRASH_REPORT_END;
 }
 
 // Reset the floppy disk image
 // This function zeroes-out the contents of the FD image
  
 void FloppyIO::reset() {
+    CRASH_REPORT_BEGIN;
     // Make sure we are initialized
     if (this->fIO == NULL) return;
 
@@ -141,12 +149,14 @@ void FloppyIO::reset() {
     char * buffer = new char[this->szFloppy];
     this->fIO->write(buffer, this->szFloppy);
     delete[] buffer;      
+    CRASH_REPORT_END;
 }
 
 // Send data to the floppy image I/O
 // @param data
 // @return 
 void FloppyIO::send(string strData) {
+    CRASH_REPORT_BEGIN;
 
     // Make sure we are initialized
     if (this->fIO == NULL) return;
@@ -178,6 +188,7 @@ void FloppyIO::send(string strData) {
 
     // Delete buffer
     delete[] dataToSend;
+    CRASH_REPORT_END;
 }
 
 
@@ -185,6 +196,7 @@ void FloppyIO::send(string strData) {
 // @return Returns a string object with the file contents
 
 string FloppyIO::receive() {
+    CRASH_REPORT_BEGIN;
     // Make sure we are initialized
     if (this->fIO == NULL) return "";
 
@@ -210,5 +222,5 @@ string FloppyIO::receive() {
 
     // Return answer buffer
     return ansBuffer;
-    
+    CRASH_REPORT_END;
 }

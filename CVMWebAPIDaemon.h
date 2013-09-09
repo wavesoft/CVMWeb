@@ -29,6 +29,7 @@
 #include "BrowserHost.h"
 #include "CVMWeb.h"
 #include "Hypervisor.h"
+#include "CrashReport.h"
 
 #ifndef H_CVMWebAPIDaemon
 #define H_CVMWebAPIDaemon

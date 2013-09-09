@@ -31,6 +31,7 @@
 #include "CVMWeb.h"
 #include "Hypervisor.h"
 #include "Utilities.h"
+#include "CrashReport.h"
 
 #ifndef H_CVMWebAPISession
 #define H_CVMWebAPISession

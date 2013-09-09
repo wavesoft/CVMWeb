@@ -3,6 +3,7 @@
 #define DAEMONCTL_H_4LFX6MZT
 
 #include "ThinIPC.h"
+#include "CrashReport.h"
 #include <string>
 
 /* Used by daemonLock/~Unlock */

@@ -60,26 +60,32 @@ public:
      * Initialize delegate class
      */
     ProgressDelegate( const FB::variant& o ) {
+        CRASH_REPORT_BEGIN;
         available = false;
         if (IS_CB_AVAILABLE(o)) {
             available = true;
             jsFunction = o.cast<FB::JSObjectPtr>();
         }
+        CRASH_REPORT_END;
     }
 
     /**
      * Delegate function
      */
     void fire(const size_t v, const size_t tot, const std::string& msg) {
+        CRASH_REPORT_BEGIN;
         if (available) 
             jsFunction->InvokeAsync("", FB::variant_list_of(v)(tot)(msg));
+        CRASH_REPORT_END;
     }
 
     /**
      * Get access to the function
      */
     callbackProgress getFunction() {
+        CRASH_REPORT_BEGIN;
         return boost::bind( &ProgressDelegate::fire, this, _1, _2, _3 );
+        CRASH_REPORT_END;
     }
 
 };
@@ -88,7 +94,9 @@ public:
  * Forward progress events
  */
 void CVMWebAPI::onInstallProgress( const size_t step, const size_t total, const std::string& msg ) {
+    CRASH_REPORT_BEGIN;
     this->fire_installProgress( step, total, msg );
+    CRASH_REPORT_END;
 }
 
 /**
@@ -96,6 +104,7 @@ void CVMWebAPI::onInstallProgress( const size_t step, const size_t total, const 
  * specified.
  */
 std::string CVMWebAPI::calculateHostID( std::string& domain ) {
+    CRASH_REPORT_BEGIN;
 
     /* Get a plugin reference */
     CVMWebPtr p = this->getPlugin();
@@ -112,6 +121,8 @@ std::string CVMWebAPI::calculateHostID( std::string& domain ) {
     string checksum = "";
     sha256_buffer( machineID + "|" + domain, &checksum );
     return checksum;
+
+    CRASH_REPORT_END;
 }
 
 
@@ -129,28 +140,35 @@ std::string CVMWebAPI::calculateHostID( std::string& domain ) {
 ///////////////////////////////////////////////////////////////////////////////
 CVMWebPtr CVMWebAPI::getPlugin()
 {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr plugin(m_plugin.lock());
     if (!plugin) {
         throw FB::script_error("The plugin is invalid");
     }
     return plugin;
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if a hypervisor was detected
  */
 bool CVMWebAPI::hasHypervisor() {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) return false;
     return (p->hv->type != 0);
+    CRASH_REPORT_END;
 };
 
 // Read-only property version
 std::string CVMWebAPI::get_version() {
+    CRASH_REPORT_BEGIN;
     return FBSTRING_PLUGIN_VERSION;
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPI::get_hv_name() {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
         return "";
@@ -163,48 +181,58 @@ std::string CVMWebAPI::get_hv_name() {
             return "unknown";
         }
     }
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPI::get_hv_version() {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
         return "";
     } else {
         return p->hv->verString;
     }
+    CRASH_REPORT_END;
 }
 
 /**
  * Grant access to the plugin API
  */
 int CVMWebAPI::authenticate( const std::string& key ) {
+    CRASH_REPORT_BEGIN;
     this->m_authType = 1;
     return HVE_OK;
+    CRASH_REPORT_END;
 };
 
 /**
  * Return the current domain name
  */
 std::string CVMWebAPI::getDomainName() {
+    CRASH_REPORT_BEGIN;
     FB::URI loc = FB::URI::fromString(m_host->getDOMWindow()->getLocation());
     return loc.domain;
+    CRASH_REPORT_END;
 };
 
 /**
  * Check if the current domain is priviledged
  */
 bool CVMWebAPI::isDomainPrivileged() {
+    CRASH_REPORT_BEGIN;
     std::string domain = this->getDomainName();
     
     /* Domain is empty only when we see the plugin from a file:// URL
      * (And yes, even localhost is not considered priviledged) */
     return domain.empty();
+    CRASH_REPORT_END;
 }
 
 /**
  * Check the status of the given session
  */
 FB::variant CVMWebAPI::checkSession( const FB::variant& vm, const FB::variant& secret ) {
+    CRASH_REPORT_BEGIN;
     
     /* Check for invalid plugin */
     CVMWebPtr p = this->getPlugin();
@@ -216,12 +244,14 @@ FB::variant CVMWebAPI::checkSession( const FB::variant& vm, const FB::variant& s
     int ans = p->hv->sessionValidate( vmName, vmSecret );
     return ans;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Request a new session using the safe URL
  */
 FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB ) {
+    CRASH_REPORT_BEGIN;
     
     /* Block requests when reached throttled state */
     if (this->throttleBlock) {
@@ -240,12 +270,14 @@ FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB:
     /* Scheduled for creation */
     return HVE_SCHEDULED;
         
+    CRASH_REPORT_END;
 }
 
 /**
  * The thread of requesting new session
  */
 void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB ) {
+    CRASH_REPORT_BEGIN;
 
     try {
 
@@ -469,12 +501,14 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
 
     }
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Create and return a session object. 
  */
 FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant& secret, const FB::variant &successCb, const FB::variant &failureCb ) {
+    CRASH_REPORT_BEGIN;
 
     /* Fetch domain info */
     std::string domain = this->getDomainName();
@@ -492,9 +526,11 @@ FB::variant CVMWebAPI::requestSession( const FB::variant& vm, const FB::variant&
 
     /* Scheduled for creation */
     return HVE_SCHEDULED;
+    CRASH_REPORT_END;
 }
 
 void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant& secret, const FB::variant &successCb, const FB::variant &failureCb ) {
+    CRASH_REPORT_BEGIN;
     
     /* Fetch domain info once again */
     string domain = this->getDomainName();
@@ -590,12 +626,14 @@ void CVMWebAPI::requestSession_thread( const FB::variant& vm, const FB::variant&
 
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Hypervisor installation thread
  */
 void CVMWebAPI::thread_install() {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, boost::bind(&CVMWebAPI::onInstallProgress, this, _1, _2, _3), p->browserDownloadProvider );
     if (ans == HVE_OK) {
@@ -603,12 +641,14 @@ void CVMWebAPI::thread_install() {
     } else {
         this->fire_installError(hypervisorErrorStr(ans), ans);
     }
+    CRASH_REPORT_END;
 };
 
 /**
  * Request a hypervisor installation
  */
 int CVMWebAPI::installHV( ) {
+    CRASH_REPORT_BEGIN;
 
     /* If we already have a hypervisor, we don't need to install it */
     if ( hasHypervisor() )
@@ -618,12 +658,14 @@ int CVMWebAPI::installHV( ) {
     boost::thread t(boost::bind(&CVMWebAPI::thread_install, this ));
     return HVE_SCHEDULED;
     
+    CRASH_REPORT_END;
 };
 
 /**
  * Javascript confirmation callback for unsafeConfirm + CVM library
  */
 void CVMWebAPI::confirmCallback( const FB::variant& status ) {
+    CRASH_REPORT_BEGIN;
     if (!status.is_of_type<bool>()) return;
 
     // Fetch mapping info
@@ -636,12 +678,14 @@ void CVMWebAPI::confirmCallback( const FB::variant& status ) {
     }
     confirmCond.notify_one();
 
+    CRASH_REPORT_END;
 };
 
 /**
  * Show a confirmation dialog using browser's API
  */
 bool CVMWebAPI::unsafeConfirm( std::string msg ) {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     FB::variant f;
     
@@ -726,12 +770,14 @@ bool CVMWebAPI::unsafeConfirm( std::string msg ) {
         return false;
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Return the last Error that occured to the plug-in
  */
 std::string CVMWebAPI::get_lastError() {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) return "No hypervisor available";
 
@@ -739,12 +785,14 @@ std::string CVMWebAPI::get_lastError() {
     string lastError = p->hv->lastExecError;
     p->hv->lastExecError = "";
     return lastError;
+    CRASH_REPORT_END;
 }
 
 /**
  * Show a confirmation dialog using browser's API
  */
 bool CVMWebAPI::confirm( std::string msg ) {
+    CRASH_REPORT_BEGIN;
     
     #ifdef BROWSER_CONFIRM
     
@@ -757,12 +805,14 @@ bool CVMWebAPI::confirm( std::string msg ) {
 
     #endif
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Get a access to the idle daemon
  */
 FB::variant CVMWebAPI::requestDaemonAccess( const FB::variant &successCb, const FB::variant &failureCb ) {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
@@ -773,12 +823,14 @@ FB::variant CVMWebAPI::requestDaemonAccess( const FB::variant &successCb, const 
         ));
         return HVE_SCHEDULED;
     }
+    CRASH_REPORT_END;
 }
 
 /**
  * Get a access to the control daemon
  */
 FB::variant CVMWebAPI::requestControlAccess( const FB::variant &successCb, const FB::variant &failureCb ) {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
@@ -794,8 +846,11 @@ FB::variant CVMWebAPI::requestControlAccess( const FB::variant &successCb, const
             return HVE_SCHEDULED;
         }
     }
+    CRASH_REPORT_END;
 }
 
 std::string CVMWebAPI::toString() {
+    CRASH_REPORT_BEGIN;
     return "[CVMWebAPI]";
+    CRASH_REPORT_END;
 }

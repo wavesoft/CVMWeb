@@ -39,34 +39,42 @@
 ///////////////////////////////////////////////////////////////////////////////
 CVMWebPtr CVMWebLocalConfig::getPlugin()
 {
+    CRASH_REPORT_BEGIN;
     CVMWebPtr plugin(m_plugin.lock());
     if (!plugin)
         throw FB::script_error("The plugin is invalid");
     return plugin;
+    CRASH_REPORT_END;
 }
 
 /**
  * Return the current domain name
  */
 std::string CVMWebLocalConfig::getDomainName() {
+    CRASH_REPORT_BEGIN;
     FB::URI loc = FB::URI::fromString(m_host->getDOMWindow()->getLocation());
     return loc.domain;
+    CRASH_REPORT_END;
 };
 
 /**
  * Check if the current domain is priviledged
  */
 bool CVMWebLocalConfig::isDomainPrivileged() {
+    CRASH_REPORT_BEGIN;
     std::string domain = this->getDomainName();
     
     /* Domain is empty only when we see the plugin from a file:// URL
      * (And yes, even localhost is not considered priviledged) */
     return domain.empty();
+    CRASH_REPORT_END;
 }
 
 /**
  * Scripting beautification
  */
 std::string CVMWebLocalConfig::toString() {
+    CRASH_REPORT_BEGIN;
     return "[CVMWebLocalConfig]";
+    CRASH_REPORT_END;
 }

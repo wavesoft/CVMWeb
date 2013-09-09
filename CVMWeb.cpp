@@ -37,6 +37,8 @@
 #include "Utilities.h"
 #include "Dialogs.h"
 
+#include "DOM/Window.h"
+
 bool CVMWeb::shuttingDown = false;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,9 +52,13 @@ void CVMWeb::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
+    crashReportInit();
+    crashReportAddInfo( "Plug-in version", FBSTRING_PLUGIN_VERSION );
+    CRASH_REPORT_BEGIN;
     thinIPCInitialize();
     cryptoInitialize();
     CVMInitializeDialogs();
+    CRASH_REPORT_END;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,9 +70,12 @@ void CVMWeb::StaticInitialize()
 ///////////////////////////////////////////////////////////////////////////////
 void CVMWeb::StaticDeinitialize()
 {
+    CRASH_REPORT_BEGIN;
     // Place one-time deinitialization stuff here. As of FireBreath 1.4 this should
     // always be called just before the plugin library is unloaded
     cryptoCleanup();
+    CRASH_REPORT_END;
+    crashReportCleanup();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,12 +85,13 @@ void CVMWeb::StaticDeinitialize()
 ///////////////////////////////////////////////////////////////////////////////
 CVMWeb::CVMWeb()
 {
+    CRASH_REPORT_BEGIN;
     // Detect the hypervisor the user has installed
     this->hv = detectHypervisor(); // !IMPORTANT! Populate the daemonBin
         
     // Create crypto instance
     crypto = new CVMWebCrypto();
-    
+    CRASH_REPORT_END;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -89,6 +99,7 @@ CVMWeb::CVMWeb()
 ///////////////////////////////////////////////////////////////////////////////
 CVMWeb::~CVMWeb()
 {
+    CRASH_REPORT_BEGIN;
     // This is optional, but if you reset m_api (the shared_ptr to your JSAPI
     // root object) and tell the host to free the retained JSAPI objects then
     // unless you are holding another shared_ptr reference to your JSAPI object
@@ -96,10 +107,12 @@ CVMWeb::~CVMWeb()
     delete crypto;
     releaseRootJSAPI();
     m_host->freeRetainedObjects();
+    CRASH_REPORT_END;
 }
 
 void CVMWeb::onPluginReady()
 {
+    CRASH_REPORT_BEGIN;
     // When this is called, the BrowserHost is attached, the JSAPI object is
     // created, and we are ready to interact with the page and such.  The
     // PluginWindow may or may not have already fire the AttachedEvent at
@@ -113,6 +126,9 @@ void CVMWeb::onPluginReady()
 
     // Allocate a download provider that uses browser for I/O
     browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
+
+    // Get details about our current domain
+    crashReportAddInfo( "URL", m_host->getDOMWindow()->getLocation() );
     
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {
@@ -120,11 +136,13 @@ void CVMWeb::onPluginReady()
         CVMWA_LOG("Debug", "Setting browser download provider");
         this->hv->setDownloadProvider( browserDownloadProvider );
     }
-        
+
+    CRASH_REPORT_END;
 }
 
 void CVMWeb::shutdown()
 {
+    CRASH_REPORT_BEGIN;
     // This will be called when it is time for the plugin to shut down;
     // any threads or anything else that may hold a shared_ptr to this
     // object should be released here so that this object can be safely
@@ -145,6 +163,7 @@ void CVMWeb::shutdown()
     boost::shared_ptr<CVMWebAPI> rAPI = FB::ptr_cast<CVMWebAPI>(getRootJSAPI());
     if (rAPI) rAPI->shutdown();
 
+    CRASH_REPORT_END;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -160,46 +179,73 @@ void CVMWeb::shutdown()
 ///////////////////////////////////////////////////////////////////////////////
 FB::JSAPIPtr CVMWeb::createJSAPI()
 {
+    CRASH_REPORT_BEGIN;
 
     // m_host is the BrowserHost
     return boost::make_shared<CVMWebAPI>(FB::ptr_cast<CVMWeb>(shared_from_this()), m_host);
+
+    CRASH_REPORT_END;
 }
 
 bool CVMWeb::onMouseDown(FB::MouseDownEvent *evt, FB::PluginWindow *)
 {
+    CRASH_REPORT_BEGIN;
+
     //printf("Mouse down at: %d, %d\n", evt->m_x, evt->m_y);
     return false;
+
+    CRASH_REPORT_END;
 }
 
 bool CVMWeb::onMouseUp(FB::MouseUpEvent *evt, FB::PluginWindow *)
 {
+    CRASH_REPORT_BEGIN;
+
     //printf("Mouse up at: %d, %d\n", evt->m_x, evt->m_y);
     return false;
+
+    CRASH_REPORT_END;
 }
 
 bool CVMWeb::onMouseMove(FB::MouseMoveEvent *evt, FB::PluginWindow *)
 {
+    CRASH_REPORT_BEGIN;
+
     //printf("Mouse move at: %d, %d\n", evt->m_x, evt->m_y);
     return false;
+
+    CRASH_REPORT_END;
 }
 bool CVMWeb::onWindowAttached(FB::AttachedEvent *evt, FB::PluginWindow *)
 {
+    CRASH_REPORT_BEGIN;
+
     // The window is attached; act appropriately
     return false;
+
+    CRASH_REPORT_END;
 }
 
 bool CVMWeb::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
 {
+    CRASH_REPORT_BEGIN;
+
     // The window is about to be detached; act appropriately
     return false;
+
+    CRASH_REPORT_END;
 }
 
 /**
  * Return the path of the DLL
  */
 std::string CVMWeb::getPluginBin() {
+    CRASH_REPORT_BEGIN;
+
     // Return the path where the DLL is
     return m_filesystemPath;
+
+    CRASH_REPORT_END;
 }
 
 /**
@@ -207,6 +253,7 @@ std::string CVMWeb::getPluginBin() {
  * On the XPI build that's the 'plugin' folder
  */
 std::string CVMWeb::getPluginFolderPath() {
+    CRASH_REPORT_BEGIN;
 
     /* Practically dirname() */
     std::string dPath = stripComponent( m_filesystemPath );
@@ -220,6 +267,8 @@ std::string CVMWeb::getPluginFolderPath() {
     
     /* Return the folder where the .dll/.so/.plugin file resides */
     return dPath;
+
+    CRASH_REPORT_END;
 }
 
 /**
@@ -227,16 +276,19 @@ std::string CVMWeb::getPluginFolderPath() {
  * On the XPI build that's the root folder of the extracted XPI contents
  */
 std::string CVMWeb::getDataFolderPath() {
+    CRASH_REPORT_BEGIN;
     
     /* One folder parent to the DLL */
     return stripComponent( getPluginFolderPath() );
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Get the path of the daemon process
  */
 std::string CVMWeb::getDaemonBin() {
+    CRASH_REPORT_BEGIN;
     
     /* Pick a daemon name according to platform */
     #ifdef _WIN32
@@ -267,4 +319,6 @@ std::string CVMWeb::getDaemonBin() {
     
     /* Did not find anything :( */
     return "";
+    
+    CRASH_REPORT_END;
 }

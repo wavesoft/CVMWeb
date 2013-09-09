@@ -22,6 +22,7 @@
 #define CONFIG_H_4GP6DIPT
 
 #include "Utilities.h"
+#include "CrashReport.h"
 
 class LocalConfig
 {

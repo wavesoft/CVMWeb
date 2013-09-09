@@ -31,6 +31,7 @@
 #include "Utilities.h"
 #include "Hypervisor.h"
 #include "LocalConfig.h"
+#include "CrashReport.h"
 
 #include <openssl/pem.h>
 #include <openssl/sha.h>

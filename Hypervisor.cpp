@@ -69,6 +69,7 @@ std::string HVSession::getExtraInfo( int extraInfo )                { return "";
  * Return the string representation of the given error code
  */
 std::string hypervisorErrorStr( int error ) {
+    CRASH_REPORT_BEGIN;
     if (error == 0) return "No error";
     if (error == 1) return "Sheduled";
     if (error == -1) return "Creation error";
@@ -86,6 +87,7 @@ std::string hypervisorErrorStr( int error ) {
     if (error == -20) return "Password denied";
     if (error == -100) return "Not implemented";
     return "Unknown error";
+    CRASH_REPORT_END;
 };
 
 /**
@@ -93,15 +95,18 @@ std::string hypervisorErrorStr( int error ) {
  */
 
 bool HVSession::isAPIAlive( unsigned char handshake ) {
+    CRASH_REPORT_BEGIN;
     std::string ip = this->getAPIHost();;
     if (ip.empty()) return false;
     return isPortOpen( ip.c_str(), this->getAPIPort(), handshake );
+    CRASH_REPORT_END;
 }
 
 /**
  * Update the shared memory objects if we change the UUID of the VM
  */
 int HVSession::updateSharedMemoryID( std::string uuid ) {
+    CRASH_REPORT_BEGIN;
        
     try {
         // Release previous objects
@@ -138,12 +143,14 @@ int HVSession::updateSharedMemoryID( std::string uuid ) {
     }
 
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Measure the resources from the sessions
  */
 int Hypervisor::getUsage( HVINFO_RES * resCount ) { 
+    CRASH_REPORT_BEGIN;
     resCount->memory = 0;
     resCount->cpus = 0;
     resCount->disk = 0;
@@ -154,12 +161,14 @@ int Hypervisor::getUsage( HVINFO_RES * resCount ) {
         resCount->disk += sess->disk;
     }
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Use LibcontextISO to create a cd-rom for this VM
  */
 int Hypervisor::buildContextISO ( std::string userData, std::string * filename ) {
+    CRASH_REPORT_BEGIN;
     ofstream isoFile;
     string iso = getTmpFile(".iso");
     
@@ -177,12 +186,14 @@ int Hypervisor::buildContextISO ( std::string userData, std::string * filename )
     } else {
         return HVE_IO_ERROR;
     }
+    CRASH_REPORT_END;
 };
 
 /**
  * Use FloppyIO to create a configuration disk for this VM
  */
 int Hypervisor::buildFloppyIO ( std::string userData, std::string * filename ) {
+    CRASH_REPORT_BEGIN;
     ofstream isoFile;
     string floppy = getTmpFile(".img");
     
@@ -194,15 +205,18 @@ int Hypervisor::buildFloppyIO ( std::string userData, std::string * filename ) {
     /* Store the filename */
     *filename = floppy;
     return HVE_OK;
+    CRASH_REPORT_END;
 };
 
 /**
  * Get the CernVM version of the filename specified
  */
 std::string Hypervisor::cernVMVersion( std::string filename ) {
+    CRASH_REPORT_BEGIN;
     std::string base = this->dirDataCache + "/ucernvm-";
     if (filename.substr(0,base.length()).compare(base) != 0) return ""; // Invalid
     return filename.substr(base.length(), filename.length()-base.length()-4); // Strip extension
+    CRASH_REPORT_END;
 };
 
 
@@ -210,6 +224,7 @@ std::string Hypervisor::cernVMVersion( std::string filename ) {
  * Check if the given CernVM version is cached
  */
 int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
+    CRASH_REPORT_BEGIN;
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
     if (file_exists(sOutput)) {
         *filename = sOutput;
@@ -217,12 +232,14 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
         *filename = "";
     }
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Download the specified CernVM version
  */
 int Hypervisor::cernVMDownload( std::string version, std::string * filename, ProgressFeedback * fb ) {
+    CRASH_REPORT_BEGIN;
     string sURL = "http://cernvm.cern.ch/releases/ucernvm-" + version + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
     *filename = sOutput;
@@ -231,12 +248,14 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, Pro
     } else {
         return downloadProvider->downloadFile(sURL, sOutput, fb);
     }
+    CRASH_REPORT_END;
 };
 
 /**
  * Decompress phase
  */
 int __diskExtract( const std::string& sGZOutput, const std::string& checksum, const std::string& sOutput, ProgressFeedback * fb ) {
+    CRASH_REPORT_BEGIN;
     std::string sChecksum;
     int res;
     
@@ -280,12 +299,14 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
         return HVE_OK;
 
     }
+    CRASH_REPORT_END;
 }
 
 /**
  * Download the specified generic, compressed disk image
  */
 int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb ) {
+    CRASH_REPORT_BEGIN;
     string sURL = url;
     int res;
     
@@ -338,13 +359,14 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     
     // Validate & Decompress
     return __diskExtract( sGZOutput, checksum, sOutput, fb );
-
+    CRASH_REPORT_END;
 };
 
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
 int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex, int retries ) {
+    CRASH_REPORT_BEGIN;
     int execRes = 0;
     {
         /* Use only one exec per session, using inteprocess mutexes */
@@ -361,12 +383,14 @@ int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrM
             this->lastExecError = execError;
     }
     return execRes;
+    CRASH_REPORT_END;
 }
 
 /**
  * Initialize hypervisor 
  */
 Hypervisor::Hypervisor() {
+    CRASH_REPORT_BEGIN;
     this->sessionID = 1;
     
     /* Pick a system folder to store persistent information  */
@@ -381,12 +405,14 @@ Hypervisor::Hypervisor() {
     this->verMinor = 0;
     this->type = 0;
 
+    CRASH_REPORT_END;
 };
 
 /**
  * Exec version and parse version
  */
 void Hypervisor::detectVersion() {
+    CRASH_REPORT_BEGIN;
     vector<string> out;
     string err;
     if (this->type == HV_VIRTUALBOX) {
@@ -415,12 +441,14 @@ void Hypervisor::detectVersion() {
     unsigned miv = ver.find(".", mav+1);
     this->verMinor = ston<int>( ver.substr(mav+1,miv-mav) );
     
+    CRASH_REPORT_END;
 };
 
 /**
  * Allocate a new hypervisor session
  */
 HVSession * Hypervisor::allocateSession ( std::string name, std::string key ) {
+    CRASH_REPORT_BEGIN;
     HVSession * sess = new HVSession();
     sess->name = name;
     sess->key = key;
@@ -429,14 +457,17 @@ HVSession * Hypervisor::allocateSession ( std::string name, std::string key ) {
     sess->daemonMaxCap = 100;
     sess->daemonFlags = 0;
     return sess;
+    CRASH_REPORT_END;
 }
 
 /**
  * Release the memory used by a hypervisor session
  */
 int Hypervisor::freeSession ( HVSession * session ) {
+    CRASH_REPORT_BEGIN;
     delete session;
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
@@ -446,6 +477,7 @@ int Hypervisor::freeSession ( HVSession * session ) {
  *  2 - Exists and has an invalid key
  */
 int Hypervisor::sessionValidate ( std::string name, std::string key ) {
+    CRASH_REPORT_BEGIN;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
         if (sess->name.compare(name) == 0) {
@@ -457,12 +489,14 @@ int Hypervisor::sessionValidate ( std::string name, std::string key ) {
         }
     }
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Get a session using it's unique ID
  */
 HVSession * Hypervisor::sessionLocate( std::string uuid ) {
+    CRASH_REPORT_BEGIN;
     
     /* Check for running sessions with the given uuid */
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
@@ -475,12 +509,14 @@ HVSession * Hypervisor::sessionLocate( std::string uuid ) {
     /* Not found */
     return NULL;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Open or reuse a hypervisor session
  */
 HVSession * Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
+    CRASH_REPORT_BEGIN;
     
     /* Check for running sessions with the given credentials */
     CVMWA_LOG( "Info", "Checking sessions (" << this->sessions.size() << ")");
@@ -505,22 +541,26 @@ HVSession * Hypervisor::sessionOpen( const std::string & name, const std::string
     /* Return the handler */
     return sess;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Register a session to the session stack and allocate a new unique ID
  */
 int Hypervisor::registerSession( HVSession * sess ) {
+    CRASH_REPORT_BEGIN;
     sess->internalID = this->sessionID++;
     this->sessions.push_back(sess);
     CVMWA_LOG( "Info", "Updated sessions (" << this->sessions.size()  );
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Release a session using the given id
  */
 int Hypervisor::sessionFree( int id ) {
+    CRASH_REPORT_BEGIN;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
         if (sess->internalID == id) {
@@ -530,21 +570,25 @@ int Hypervisor::sessionFree( int id ) {
         }
     }
     return HVE_NOT_FOUND;
+    CRASH_REPORT_END;
 }
 
 /**
  * Return session for the given ID
  */
 HVSession * Hypervisor::sessionGet( int id ) {
+    CRASH_REPORT_BEGIN;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
         if (sess->internalID == id) return sess;
     }
     return NULL;
+    CRASH_REPORT_END;
 }
 
 /* Check if we need to start or stop the daemon */
 int Hypervisor::checkDaemonNeed() {
+    CRASH_REPORT_BEGIN;
     
     CVMWA_LOG( "Info", "Checking daemon needs" );
     
@@ -581,13 +625,16 @@ int Hypervisor::checkDaemonNeed() {
     // No change
     return HVE_OK;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Change the default download provider
  */
 void Hypervisor::setDownloadProvider( DownloadProviderPtr p ) { 
+    CRASH_REPORT_BEGIN;
     this->downloadProvider = p;
+    CRASH_REPORT_END;
 };
 
 /**
@@ -596,6 +643,7 @@ void Hypervisor::setDownloadProvider( DownloadProviderPtr p ) {
  * structure that was passed to it.
  */
 Hypervisor * detectHypervisor() {
+    CRASH_REPORT_BEGIN;
     using namespace std;
     
     Hypervisor * hv;
@@ -687,13 +735,16 @@ Hypervisor * detectHypervisor() {
     
     /* No hypervisor found */
     return NULL;
+    CRASH_REPORT_END;
 }
 
 /**
  * Free the pointer(s) allocated by the detectHypervisor()
  */
 void freeHypervisor( Hypervisor * hv ) {
+    CRASH_REPORT_BEGIN;
     delete hv;
+    CRASH_REPORT_END;
 };
 
 
@@ -704,6 +755,7 @@ void freeHypervisor( Hypervisor * hv ) {
  * in order to see what points to the fileName
  */
 bool _isLinkInDir( string fileName, const fs::path& path ) {
+    CRASH_REPORT_BEGIN;
 
     // Start iterating /proc/<id>/fd
     fs::directory_iterator end_iter;
@@ -726,12 +778,14 @@ bool _isLinkInDir( string fileName, const fs::path& path ) {
     // Not found
     return false;
 
+    CRASH_REPORT_END;
 };
 
 /**
  * Utility function to check if the file is oppened by another process
  */
 bool isFileOpen( string fileName ) {
+    CRASH_REPORT_BEGIN;
     
     // Get access to /proc
     fs::path full_path( fs::initial_path<fs::path>() );
@@ -770,12 +824,14 @@ bool isFileOpen( string fileName ) {
 
     // Link was not found in the directory
     return false;
+    CRASH_REPORT_END;
 }
 
 /**
  * Wait for a file to be oppened within a specific time range
  */
 bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
+    CRASH_REPORT_BEGIN;
 
     // Wait for waitMillis
     unsigned long sTime = getMillis() + waitMillis;
@@ -792,6 +848,7 @@ bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
     // Timeout occured
     return false;
 
+    CRASH_REPORT_END;
 }
 
 #endif
@@ -800,6 +857,7 @@ bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
  * Install hypervisor
  */
 int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider, int retries ) {
+    CRASH_REPORT_BEGIN;
     const int maxSteps = 200;
     Hypervisor * hv = NULL;
     int res;
@@ -1201,4 +1259,5 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
      */
     return HVE_OK;
     
+    CRASH_REPORT_END;
 }

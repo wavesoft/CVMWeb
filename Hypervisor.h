@@ -23,6 +23,7 @@
 
 #include "DownloadProvider.h"
 #include "Utilities.h"
+#include "CrashReport.h"
 
 #include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>

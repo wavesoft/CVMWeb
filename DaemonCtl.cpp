@@ -27,15 +27,18 @@ int currDaemonPid = 0;
  * Return the location of the daemon lockfile
  */
 std::string getDaemonLockfile() {
+    CRASH_REPORT_BEGIN;
     /* Return the system-wide daemon pidfile location  */
     std::string appDir = getAppDataPath();
     return appDir + "/run/daemon.pid";
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if the given process ID is still running
  */
 bool isAlive( int pid ) {
+    CRASH_REPORT_BEGIN;
     
     #if defined(__APPLE__) && defined(__MACH__)
         struct proc_bsdinfo bsdInfo;
@@ -62,13 +65,14 @@ bool isAlive( int pid ) {
     #endif
 
     return false;
-    
+    CRASH_REPORT_END;
 }
 
 /**
  * Return the daemon pid from the lockfile
  */
 int daemonLockFilePID () {
+    CRASH_REPORT_BEGIN;
     std::string lockfile = getDaemonLockfile();
     
     /* If thre is no lockfile return 0 */
@@ -87,12 +91,14 @@ int daemonLockFilePID () {
     
     /* Unable to read file */
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if the file exists and is locked
  */
 bool isDaemonRunning () {
+    CRASH_REPORT_BEGIN;
     
     /* Fetch daemon PID */
     int pid = daemonLockFilePID();
@@ -102,12 +108,14 @@ bool isDaemonRunning () {
     /* Check if it's running */
     return isAlive( pid );
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Try to lock or unlock the file
  */
 DLOCKINFO * daemonLock( std::string lockfile ) {
+    CRASH_REPORT_BEGIN;
     static DLOCKINFO dlInfo;
         
     /* Open file for output */
@@ -132,14 +140,17 @@ DLOCKINFO * daemonLock( std::string lockfile ) {
         return NULL;
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Unlock the daemon lockfile
  */
 void daemonUnlock( DLOCKINFO * dlInfo ) {
+    CRASH_REPORT_BEGIN;
     /* Remove lockfile */
     remove( dlInfo->fname.c_str() );
+    CRASH_REPORT_END;
 }
 
 /**
@@ -147,6 +158,7 @@ void daemonUnlock( DLOCKINFO * dlInfo ) {
  * WARNING! ThinIPCInitialize() *MUST* be called in advance!
  */
 short int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
+    CRASH_REPORT_BEGIN;
     
     /* Pick a random port */
     static int rPort = (rand() % ( 0xFFFE - DAEMON_PORT )) + DAEMON_PORT + 1;
@@ -174,6 +186,7 @@ short int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
     /* Success */
     return 0;
     
+    CRASH_REPORT_END;
 }
 
 /**
@@ -181,12 +194,14 @@ short int daemonIPC( ThinIPCMessage * send, ThinIPCMessage * recv ) {
  * (Shorthand for calling daemonIPC with ThinIPCMessage structures)
  */
 short int daemonGet( short int action ) {
+    CRASH_REPORT_BEGIN;
     static ThinIPCMessage send, recv;
     send.reset(); recv.reset();
     send.writeShort( action );
     short int res = daemonIPC( &send, &recv );
     if (res != 0) return res;
     return recv.readShort();
+    CRASH_REPORT_END;
 }
 
 /**
@@ -194,6 +209,7 @@ short int daemonGet( short int action ) {
  * (Shorthand for calling daemonIPC with ThinIPCMessage structures)
  */
 short int daemonSet( short int action, short int value ) {
+    CRASH_REPORT_BEGIN;
     static ThinIPCMessage send, recv;
     send.reset();
     recv.reset();
@@ -202,12 +218,14 @@ short int daemonSet( short int action, short int value ) {
     int res = daemonIPC( &send, &recv );
     if (res != 0) return res;
     return recv.readShort();
+    CRASH_REPORT_END;
 }
 
 /**
  * Cross-platform way to start the daemon process in the background
  */
 int daemonStart( std::string path_to_bin ) {
+    CRASH_REPORT_BEGIN;
     #ifdef _WIN32
         HINSTANCE hApp = ShellExecuteA(
             NULL,
@@ -241,12 +259,14 @@ int daemonStart( std::string path_to_bin ) {
         }
     #endif
     
+    CRASH_REPORT_END;
 };
 
 /**
  * Shut down and reap daemon
  */
 int daemonStop( ) {
+    CRASH_REPORT_BEGIN;
     
     /* (Assuming the user did his homework and checked if the daemon was running) */
     int ipcRes = daemonGet( DIPC_SHUTDOWN );
@@ -267,4 +287,5 @@ int daemonStop( ) {
     
     /* Everything is OK */
     return HVE_OK;
+    CRASH_REPORT_END;
 }

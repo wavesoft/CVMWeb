@@ -76,6 +76,7 @@ static unsigned long id_function(void) {
  * Initialize cryptographic library
  */
 int cryptoInitialize(void) {
+    CRASH_REPORT_BEGIN;
     int i;
  
     // Enable multi-threading
@@ -105,12 +106,14 @@ int cryptoInitialize(void) {
      
     // Init completed
     return 1;
+    CRASH_REPORT_END;
 }
  
 /**
  * Cleanup cryptographic library
  */
 int cryptoCleanup(void) {
+    CRASH_REPORT_BEGIN;
     int i;
  
     // Cleanup multi-threading support
@@ -126,6 +129,7 @@ int cryptoCleanup(void) {
     EVP_PKEY_free( cvmPublicKey );
     return 1;
     
+    CRASH_REPORT_END;
 }
 
 
@@ -133,6 +137,7 @@ int cryptoCleanup(void) {
  * Initialize the cryptographic subsystem
  */
 CVMWebCrypto::CVMWebCrypto () {
+    CRASH_REPORT_BEGIN;
 
     // Defaults to invalid
     valid = false;
@@ -141,6 +146,7 @@ CVMWebCrypto::CVMWebCrypto () {
     lastUpdateTimestamp = 0;
     keystoreTimestamp = 0;
         
+    CRASH_REPORT_END;
 }
 
 /**
@@ -154,6 +160,7 @@ CVMWebCrypto::~CVMWebCrypto () {
  * of the given signature file.
  */
 bool validateSignature( std::string dataFile, std::string sigFile ) {
+    CRASH_REPORT_BEGIN;
 
     std::string keys;
     std::string sigData;
@@ -195,12 +202,14 @@ bool validateSignature( std::string dataFile, std::string sigFile ) {
     
     // Looks good
     return true;
+    CRASH_REPORT_END;
 }
 
 /**
  * Download the updated version of the authorized keystore
  */
 int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider ) {
+    CRASH_REPORT_BEGIN;
     bool needsReload = true;
     time_t currTime;
     time( &currTime );
@@ -279,12 +288,14 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     valid = true;
     return 0;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Use the domain's key to decrypt the given data
  */
  int CVMWebCrypto::validateDomainData ( std::string domain, std::string signature, const unsigned char * data, const int dataLen ) {
+    CRASH_REPORT_BEGIN;
 
     // Check if domain does not exist
     if (!isDomainValid(domain)) {
@@ -319,19 +330,23 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     EVP_PKEY_free( domainKey );
     return HVE_OK;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if the domain is validated
  */
 bool CVMWebCrypto::isDomainValid ( std::string domain ) {
+    CRASH_REPORT_BEGIN;
     return (domainKeys.find(domain) != domainKeys.end());
+    CRASH_REPORT_END;
 }
 
 /**
  * Generate a unique, cryptographically strong salt
  */
 std::string CVMWebCrypto::generateSalt() {
+    CRASH_REPORT_BEGIN;
     const unsigned char SALT_SIZE = 64;
     const char saltChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
     unsigned char randValue[SALT_SIZE];
@@ -345,12 +360,14 @@ std::string CVMWebCrypto::generateSalt() {
         saltData += saltChars[ randValue[i] % 0x3F ];
     }
     return saltData;
+    CRASH_REPORT_END;
 }
 
 /**
  * Validate if the given set of data is validated by the variables
  */
 int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB::VariantMap& data ) {
+    CRASH_REPORT_BEGIN;
     
     /* Populate checksum buffer */
     stringstream checksumBuf;
@@ -385,4 +402,5 @@ int CVMWebCrypto::signatureValidate( std::string& domain, std::string& salt, FB:
     /* Validate signature */
     return validateDomainData( domain, dataSignature, (const unsigned char * ) strHash.c_str(), strHash.length() );
     
+    CRASH_REPORT_END;
 }

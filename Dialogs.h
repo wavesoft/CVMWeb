@@ -24,6 +24,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/function.hpp>
 #include "BrowserHost.h"
+#include "CrashReport.h"
  
 namespace FB { class PluginWindow; }
 

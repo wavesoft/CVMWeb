@@ -22,22 +22,27 @@
 #include <URI.h>
 
 void CVMBrowserProvider::httpDataArrived ( const void * ptr, size_t length ) {
+    CRASH_REPORT_BEGIN;
     CVMWA_LOG("Info", "Data arrived. Calling handler (len=" << length << ")" );
     if (this->targetStream == 0) {
         DownloadProvider::writeToStream( &this->fStream, NULL, 0, (const char*) ptr, length );
     } else {
         DownloadProvider::writeToStream( &this->sStream, NULL, 0, (const char*) ptr, length );
     }
+    CRASH_REPORT_END;
 }
 
 void CVMBrowserProvider::httpProgress ( size_t current, size_t total ) {
+    CRASH_REPORT_BEGIN;
     this->maxStreamSize = total;
     if (this->feedbackPtr != NULL)
         DownloadProvider::fireProgressEvent( this->feedbackPtr, current, total);
            
+    CRASH_REPORT_END;
 }
 
 void CVMBrowserProvider::httpCompleted ( bool status, const FB::HeaderMap& headers ) {
+    CRASH_REPORT_BEGIN;
     returnCode = status ? 0 : 1;
     CVMWA_LOG("Info", "Stream completed. Status : " << returnCode);
     {
@@ -45,12 +50,14 @@ void CVMBrowserProvider::httpCompleted ( bool status, const FB::HeaderMap& heade
         m_downloadCompleted = true;
     }
     m_cond.notify_all();
+    CRASH_REPORT_END;
 }
 
 /**
  * Download a string using BrowserStreams
  */
 int CVMBrowserProvider::downloadText( const std::string& url, std::string * destination, ProgressFeedback * feedback ) {
+    CRASH_REPORT_BEGIN;
     
     // Store a local pointer
     this->feedbackPtr = feedback;
@@ -111,6 +118,7 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
     CVMWA_LOG("Info", "BrowserStreams download completed" );
     return HVE_OK;
 
+    CRASH_REPORT_END;
 }
 
 
@@ -118,6 +126,7 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
  * Download a file using BrowserStreams
  */
 int CVMBrowserProvider::downloadFile( const std::string& url, const std::string& destination, ProgressFeedback * feedback ) {
+    CRASH_REPORT_BEGIN;
     
     // Store a local pointer
     this->feedbackPtr = feedback;
@@ -172,4 +181,5 @@ int CVMBrowserProvider::downloadFile( const std::string& url, const std::string&
     fStream.close();
     return HVE_OK;
     
+    CRASH_REPORT_END;
 }

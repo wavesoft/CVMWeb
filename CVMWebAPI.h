@@ -34,6 +34,7 @@
 #include "LocalConfig.h"
 #include "CVMWeb.h"
 #include "CVMBrowserProvider.h"
+#include "CrashReport.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI

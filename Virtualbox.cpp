@@ -75,6 +75,7 @@ using namespace std;
  * Extract the mac address of the VM from the NIC line definition
  */
 std::string extractMac( std::string nicInfo ) {
+    CRASH_REPORT_BEGIN;
     // A nic line is like this:
     // MAC: 08002724ECD0, Attachment: Host-only ...
     size_t iStart = nicInfo.find("MAC: ");
@@ -93,15 +94,18 @@ std::string extractMac( std::string nicInfo ) {
     } else {
         return "";
     }
+    CRASH_REPORT_END;
 };
 
 /**
  * Replace the last part of the given IP
  */
 std::string changeUpperIP( std::string baseIP, int value ) {
+    CRASH_REPORT_BEGIN;
     size_t iDot = baseIP.find_last_of(".");
     if (iDot == string::npos) return "";
     return baseIP.substr(0, iDot) + "." + ntos<int>(value);
+    CRASH_REPORT_END;
 };
 
 
@@ -114,6 +118,7 @@ std::string changeUpperIP( std::string baseIP, int value ) {
  * non-volatile files.
  */
 std::string VBoxSession::getDataFolder() {
+    CRASH_REPORT_BEGIN;
 
     // If we already have a path, return it
     if (!this->dataPath.empty())
@@ -139,12 +144,14 @@ std::string VBoxSession::getDataFolder() {
     // Return folder
     return this->dataPath;
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Execute command and log debug message
  */
 int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries ) {
+    CRASH_REPORT_BEGIN;
     ostringstream oss;
     string line;
     string stderrLocal;
@@ -183,6 +190,7 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
     
     /* Return exit code */
     return ans;
+    CRASH_REPORT_END;
 
 };
 
@@ -190,6 +198,7 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
  * Open new session
  */
 int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) { 
+    CRASH_REPORT_BEGIN;
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
@@ -669,10 +678,11 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     if (this->onOpen) (this->onOpen)();
     
     return HVE_OK;
-
+    CRASH_REPORT_END;
 }
 
 std::string macroReplace( std::map<std::string,std::string> *uData, std::string iString ) {
+    CRASH_REPORT_BEGIN;
     size_t iPos, ePos, lPos = 0, tokStart = 0, tokLen = 0;
     while ( (iPos = iString.find("${", lPos)) != string::npos ) {
 
@@ -718,13 +728,14 @@ std::string macroReplace( std::map<std::string,std::string> *uData, std::string 
     
     // Return replaced data
     return iString;
-    
+    CRASH_REPORT_END;
 };
 
 /**
  * Start VM with the given
  */
 int VBoxSession::start( std::map<std::string,std::string> *uData ) { 
+    CRASH_REPORT_BEGIN;
     string vmContextDsk, vmPatchedUserData, kk, kv;
     vmPatchedUserData = this->userData;
     ostringstream args;
@@ -944,12 +955,14 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     /* Check for daemon need */
     this->host->checkDaemonNeed();
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Close VM
  */
 int VBoxSession::close() { 
+    CRASH_REPORT_BEGIN;
     string kk, kv;
     ostringstream args;
     int ans;
@@ -1073,12 +1086,14 @@ int VBoxSession::close() {
     if (this->onProgress) (this->onProgress)(10, 10, "Completed");
     this->state = STATE_CLOSED;
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Create or fetch the UUID of the VM with the given name
  */
 int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid, int flags ) {
+    CRASH_REPORT_BEGIN;
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
@@ -1156,12 +1171,14 @@ int VBoxSession::getMachineUUID( std::string mname, std::string * ans_uuid, int 
     /* OK */
     *ans_uuid = "{" + uuid + "}";
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Resume VM
  */
 int VBoxSession::resume() {
+    CRASH_REPORT_BEGIN;
     int ans;
     
     /* Validate state */
@@ -1175,12 +1192,14 @@ int VBoxSession::resume() {
     ans = this->controlVM("resume");
     this->state = STATE_STARTED;
     return ans;
+    CRASH_REPORT_END;
 }
 
 /**
  * Pause VM
  */
 int VBoxSession::pause() {
+    CRASH_REPORT_BEGIN;
     int ans; 
     
     /* Validate state */
@@ -1190,24 +1209,28 @@ int VBoxSession::pause() {
     ans = this->controlVM("pause");
     this->state = STATE_PAUSED;
     return ans;
+    CRASH_REPORT_END;
 }
 
 /**
  * Reset VM
  */
 int VBoxSession::reset() {
+    CRASH_REPORT_BEGIN;
     
     /* Validate state */
     if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
     
     /* Reset VM */
     return this->controlVM( "reset" );
+    CRASH_REPORT_END;
 }
 
 /**
  * Stop VM
  */
 int VBoxSession::stop() {
+    CRASH_REPORT_BEGIN;
     int ans;
     
     /* Validate state */
@@ -1221,12 +1244,14 @@ int VBoxSession::stop() {
     this->host->checkDaemonNeed();
     return ans;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Stop VM
  */
 int VBoxSession::hibernate() {
+    CRASH_REPORT_BEGIN;
     int ans;
     
     /* Validate state */
@@ -1238,14 +1263,16 @@ int VBoxSession::hibernate() {
     
     /* Check for daemon need */
     this->host->checkDaemonNeed();
+
     return ans;
-    
+    CRASH_REPORT_END;
 }
 
 /**
  * Set execution cap
  */
 int VBoxSession::setExecutionCap(int cap) {
+    CRASH_REPORT_BEGIN;
     ostringstream os;
     int ans;
 
@@ -1282,12 +1309,14 @@ int VBoxSession::setExecutionCap(int cap) {
 
     }
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Ensure the existance and return the name of the host-only adapter in the system
  */
 std::string VBoxSession::getHostOnlyAdapter() {
+    CRASH_REPORT_BEGIN;
 
     vector<string> lines;
     vector< map<string, string> > ifs;
@@ -1435,12 +1464,14 @@ std::string VBoxSession::getHostOnlyAdapter() {
     
     /* Got my interface */
     return foundIface;
+    CRASH_REPORT_END;
 };
 
 /**
  * Return a property from the VirtualBox guest
  */
 std::string VBoxSession::getProperty( std::string name ) { 
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     string value;
     
@@ -1457,12 +1488,14 @@ std::string VBoxSession::getProperty( std::string name ) {
         return "";
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Set a property to the VirtualBox guest
  */
 int VBoxSession::setProperty( std::string name, std::string value ) { 
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     
     /* Perform property update */
@@ -1470,33 +1503,39 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
     if (ans != 0) return HVE_MODIFY_ERROR;
     return 0;
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Send a controlVM something
  */
 int VBoxSession::controlVM( std::string how ) {
+    CRASH_REPORT_BEGIN;
     int ans = this->wrapExec("controlvm "+this->uuid+" "+how, NULL, NULL, 4);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Start the Virtual Machine
  */
 int VBoxSession::startVM() {
+    CRASH_REPORT_BEGIN;
     int ans = this->wrapExec("startvm "+this->uuid+" --type headless", NULL, NULL, 4);
     if (ans != 0) return HVE_CONTROL_ERROR;
 
     /* Check for daemon need */
     this->host->checkDaemonNeed();
     return 0;
+    CRASH_REPORT_END;
 }
 
 /** 
  * Return virtual machine information
  */
 map<string, string> VBoxSession::getMachineInfo() {
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
     
@@ -1509,36 +1548,44 @@ map<string, string> VBoxSession::getMachineInfo() {
     
     /* Tokenize response */
     return tokenize( &lines, ':' );
+    CRASH_REPORT_END;
 };
 
 /** 
  * Return the RDP Connection host
  */
 std::string VBoxSession::getRDPHost() {
+    CRASH_REPORT_BEGIN;
     char numstr[21]; // enough to hold all numbers up to 64-bits
     sprintf(numstr, "%d", this->rdpPort);
     std::string ip = "127.0.0.1:";
     return ip + numstr;
+    CRASH_REPORT_END;
 }
 
 /**
  * Update session information
  */
 int VBoxSession::update() {
+    CRASH_REPORT_BEGIN;
     return this->host->updateSession( this, false );
+    CRASH_REPORT_END;
 }
 
 /**
  * Update session information (Fast version)
  */
 int VBoxSession::updateFast() {
+    CRASH_REPORT_BEGIN;
     return this->host->updateSession( this, true );
+    CRASH_REPORT_END;
 }
 
 /**
  * Return the IP Address of the session
  */
 std::string VBoxSession::getAPIHost() {
+    CRASH_REPORT_BEGIN;
 
     // The API host is different in various NIC modes
     if ((this->flags & HVF_DUAL_NIC) != 0) {
@@ -1562,12 +1609,14 @@ std::string VBoxSession::getAPIHost() {
         return "127.0.0.1";
 
     }
+    CRASH_REPORT_END;
 }
 
 /**
  * Return the actual API Port where to contact
  */
 int VBoxSession::getAPIPort() {
+    CRASH_REPORT_BEGIN;
 
     // The API port is different in various NIC modes
     if ((this->flags & HVF_DUAL_NIC) != 0) {
@@ -1583,12 +1632,14 @@ int VBoxSession::getAPIPort() {
 
     }
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Return miscelaneous information
  */
 std::string VBoxSession::getExtraInfo( int extraInfo ) {
+    CRASH_REPORT_BEGIN;
     if (extraInfo == EXIF_VIDEO_MODE) {
         map<string, string> info = this->getMachineInfo();
         if (info.find("Video mode") != info.end())
@@ -1596,6 +1647,7 @@ std::string VBoxSession::getExtraInfo( int extraInfo ) {
     }
 
     return "";
+    CRASH_REPORT_END;
 }
 
 /** =========================================== **\
@@ -1606,6 +1658,7 @@ std::string VBoxSession::getExtraInfo( int extraInfo ) {
  * Return virtual machine information
  */
 map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
     string err;
@@ -1619,12 +1672,14 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     
     /* Tokenize response */
     return tokenize( &lines, ':' );
+    CRASH_REPORT_END;
 };
 
 /**
  * Return all the properties of the guest
  */
 map<string, string> Virtualbox::getAllProperties( string uuid ) {
+    CRASH_REPORT_BEGIN;
     map<string, string> ans;
     vector<string> lines;
     string errOut;
@@ -1657,12 +1712,14 @@ map<string, string> Virtualbox::getAllProperties( string uuid ) {
     }
 
     return ans;
+    CRASH_REPORT_END;
 }
 
 /**
  * Load sessions if they are not yet loaded
  */
 bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbProgress, int progressMin , int progressMax, int progressTotal ) {
+    CRASH_REPORT_BEGIN;
     
     /**
      * Session loading takes time, so instead of blocking the plugin
@@ -1688,13 +1745,14 @@ bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbPr
      * All's good!
      */
     return true;
-    
+    CRASH_REPORT_END;
 }
 
 /**
  * Return a property from the VirtualBox guest
  */
 std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     string value;
     string err;
@@ -1712,12 +1770,14 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
         return "";
     }
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Return Virtualbox sessions instead of classic
  */
 HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
+    CRASH_REPORT_BEGIN;
     VBoxSession * sess = new VBoxSession();
     sess->name = name;
     sess->key = key;
@@ -1726,12 +1786,14 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->localApiPort = 0;
     sess->dataPath = "";
     return sess;
+    CRASH_REPORT_END;
 }
 
 /**
  * Load capabilities
  */
 int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
+    CRASH_REPORT_BEGIN;
     map<string, string> data;
     vector<string> lines, parts;
     string err;
@@ -1811,13 +1873,14 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     
     /* Ok! */
     return HVE_OK;
-    
+    CRASH_REPORT_END;
 };
 
 /**
  * Get a list of mediums managed by VirtualBox
  */
 std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     std::vector< std::map< std::string, std::string > > resMap;
     string err;
@@ -1830,12 +1893,14 @@ std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
     /* Tokenize lists */
     resMap = tokenizeList( &lines, ':' );
     return resMap;
+    CRASH_REPORT_END;
 }
 
 /**
  * Update session information from VirtualBox
  */
 int Virtualbox::updateSession( HVSession * session, bool fast ) {
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> vms, diskinfo;
     string secret, kk, kv;
@@ -2054,12 +2119,14 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
 
     /* Updated successfuly */
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Load session state from VirtualBox
  */
 int Virtualbox::loadSessions() {
+    CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> vms, diskinfo;
     string secret, kk, kv;
@@ -2099,12 +2166,14 @@ int Virtualbox::loadSessions() {
     }
 
     return 0;
+    CRASH_REPORT_END;
 }
 
 /**
  * Check if the hypervisor has the extension pack installed (used for the more advanced RDP)
  */
 bool Virtualbox::hasExtPack() {
+    CRASH_REPORT_BEGIN;
     
     /**
      * Check for extension pack
@@ -2120,7 +2189,7 @@ bool Virtualbox::hasExtPack() {
 
     // Not found
     return false;
-
+    CRASH_REPORT_END;
 }
 
 /**
@@ -2131,6 +2200,7 @@ bool Virtualbox::hasExtPack() {
  *
  */
 int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin, int progressMax, int progressTotal ) {
+    CRASH_REPORT_BEGIN;
 
     /* Notify extension pack installation */
     int currProgress = progressMin;
@@ -2210,4 +2280,5 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
   	remove( tmpExtpackFile.c_str() );
     return HVE_OK;
 
+    CRASH_REPORT_END;
 }

@@ -22,6 +22,7 @@
 #define VIRTUALBOX_H
 
 #include "Hypervisor.h"
+#include "CrashReport.h"
 #include <map>
 #include <boost/regex.hpp>
 

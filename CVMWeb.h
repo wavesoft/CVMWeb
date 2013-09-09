@@ -28,6 +28,7 @@
 \**********************************************************/
 #ifndef H_CVMWebPLUGIN
 #define H_CVMWebPLUGIN
+#include "CrashReport.h"
 
 #include "PluginWindow.h"
 #include "PluginEvents/MouseEvents.h"
