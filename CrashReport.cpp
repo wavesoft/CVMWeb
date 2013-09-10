@@ -38,9 +38,19 @@ string 				scrollbackBuffer[ CRASH_LOG_SCROLLBACK ];
 int 				scrollBackPosition = 0;
 map<string, string>	crashReportInfo;
 
+/* We are using custom debug symbols file on VC++ */
+#if defined(_MSC_VER)
+string              crashReportDebugSymbolsFile;
+#endif
+
 /* Initialization for the crash report subsystem */
-void crashReportInit() {
+void crashReportInit( string binaryFileName ) {
 	scrollBackPosition = 0;
+
+#if defined(_MSC_VER)
+    // In Visual C++ we have to load the PDF file in order to resolve the symbols
+    crashReportDebugSymbolsFile = binaryFileName.substr(0, binaryFileName.length() - 3) + "pdb";
+#endif
 }
 
 /* Cleanup for the crash report system */
@@ -81,7 +91,7 @@ std::string crashReportBuildStackTrace() {
 
 #if defined(_MSC_VER)
 	// Use StalkWalker on windows
-	CVMWebStackWalker mWalker;
+    CVMWebStackWalker mWalker( crashReportDebugSymbolsFile.c_str() );
 	mWalker.ShowCallstack();
 	cBuffer = mWalker.stackTrace;
 

@@ -52,7 +52,7 @@ void CVMWeb::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
-    crashReportInit();
+    crashReportInit( m_filesystemPath );
     crashReportAddInfo( "Plug-in version", FBSTRING_PLUGIN_VERSION );
     CRASH_REPORT_BEGIN;
     thinIPCInitialize();
