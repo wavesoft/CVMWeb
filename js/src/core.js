@@ -413,58 +413,118 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                 }
             );
         }
-         
+        
+        var install_plugin = function() {
+            
+            // For chrome, we must add a link on head in advance
+            if (BrowserDetect.browser == "Chrome") {
+                var linkElm = document.createElement('link');
+                linkElm.setAttribute("rel", "chrome-webstore-item");
+                linkElm.setAttribute("href", "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm");
+                document.head.appendChild(linkElm);
+            }
+            
+            // Prompt the user for plugin installation
+            // (We are using the overridable, asynchronous confirm function)
+            confirmFunction(
+                "This website is using the CernVM Web API extension, but it doesn't seem to be installed in your browser.\n\nDo you want to install it now?",
+                function(confirmed) {
+                    if (confirmed) {
+                        // Check the browser
+                        if (BrowserDetect.browser == "Firefox") {
+                            
+                            // For firefox, just point to the XPI, the user will be prompted
+                            window.location = "http://cernvm.cern.ch/releases/webapi/plugin/cvmwebapi-latest.xpi";
+                            
+                        } else if (BrowserDetect.browser == "Chrome") {
+                            
+                            try {
+                                // And then trigger the installation
+                                chrome.webstore.install("https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm", function() {
+                                    // Installed, reload
+                                    location.reload();
+                                }, function(e) {
+                                    // Automatic installation failed, try manual
+                                    window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
+                                });
+                            } catch (e) {
+                                // Automatic installation failed, try manual
+                                window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
+                            }
+                            
+                        } else {
+                            window.location = "http://cernvm.cern.ch/portal/webapi";
+                        }
+                    } else {
+                        callError( cbFail, "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
+                    }
+                }
+            );
+            
+        } 
         
         // Validate plugin status
         if (__pluginSingleton.version == undefined) {
             
             // Check if we are told to take care of setting up the environment for the user
             if (setupEnvironment) {
-                
-                // For chrome, we must add a link on head in advance
-                if (BrowserDetect.browser == "Chrome") {
-                    var linkElm = document.createElement('link');
-                    linkElm.setAttribute("rel", "chrome-webstore-item");
-                    linkElm.setAttribute("href", "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm");
-                    document.head.appendChild(linkElm);
+            
+                // Canclling timeout
+                var cTimeout = 0;
+            
+                // Make sure it's not a VS Runtime error:
+                var s = document.createElement('script');
+                s.type = 'text/javascript';
+                if (BrowserDetect.browser == "Firefox") {
+                    s.href = "resource://cvmwebapi/detector.js";
+                } else if (BrowserDetect.browser == "Chrome") {
+                    s.href = "chrome-extension://nkboedinkpfjfdlaplmgjdiohgabopkn/files/detector.js";
                 }
                 
-                // Prompt the user for plugin installation
-                // (We are using the overridable, asynchronous confirm function)
-                confirmFunction(
-                    "This website is using the CernVM Web API extension, but it doesn't seem to be installed in your browser.\n\nDo you want to install it now?",
-                    function(confirmed) {
-                        if (confirmed) {
-                            // Check the browser
-                            if (BrowserDetect.browser == "Firefox") {
-                                
-                                // For firefox, just point to the XPI, the user will be prompted
-                                window.location = "http://cernvm.cern.ch/releases/webapi/plugin/cvmwebapi-latest.xpi";
-                                
-                            } else if (BrowserDetect.browser == "Chrome") {
-                                
-                                try {
-                                    // And then trigger the installation
-                                    chrome.webstore.install("https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm", function() {
-                                        // Installed, reload
-                                        location.reload();
-                                    }, function(e) {
-                                        // Automatic installation failed, try manual
-                                        window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
-                                    });
-                                } catch (e) {
-                                    // Automatic installation failed, try manual
-                                    window.location = "https://chrome.google.com/webstore/detail/iakpghcolokcngbhjiihjcomioihjnfm";
-                                }
-                                
-                            } else {
-                                window.location = "http://cernvm.cern.ch/portal/webapi";
-                            }
-                        } else {
-                            callError( cbFail, "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
-                        }
+                // Detector exists. Which means the extension is installed, but the
+                // binary component was not able to load. If we are on windows, 
+                s.onload = function() {
+                    clearTimeout(cTimeout);
+                    if (__pluginSingleton.version != window.__CVMDetector.version)
+                        console.warn("Incompatible versions between the plug-in extension and the binary component!");
+                    
+                    if (BrowserDetect.OS == "Windows") {
+                        confirmFunction(
+                            "It seems you are missing the Microsoft Visual C++ 2010 Redistributable Package which is required in order to run the plug-in.\n" +
+                            "Do you want to go to the microsoft website to download it?"
+                            function(confirm) {
+                                if (confirm)
+                                    window.location = 'http://www.microsoft.com/en-us/download/details.aspx?id=5555';
+                            });
+                            
+                    } else if (BrowserDetect.OS == "Linux") {
+                        alertFunction(
+                            "Unfortunately, your linux distribution is not supported by this version of the plug-in.\n" +
+                            "Currently only Ubuntu 12.04 (or newer) and simmilar distributions are supported."
+                            );
+                        
+                    } else {
+                        alertFunction(
+                            "It seems that you have installed the CernVM WebAPI Extension, but the plugin was not unable to load.\n" +
+                            "Please try restarting the browser and re-installing the extension."
+                            );
                     }
-                );
+                }
+                
+                var installStarted = false;
+                s.onerror = function() {
+                    // Detector does not exist. This menans
+                    if (installStarted) return;
+                    installStarted = true;
+                    install_plugin();
+                }
+                cTimeout = setTimeout(function() {
+                    // Operation timed out. Assume that the extension is not loaded
+                    if (installStarted) return;
+                    installStarted = true;
+                    install_plugin();
+                }, 1000);
+                document.head.appendChild(s)
                 
             } else {
                 // Could not do anything, fire the error callback
