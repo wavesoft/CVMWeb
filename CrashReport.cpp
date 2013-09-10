@@ -143,12 +143,7 @@ void crashSendReport( const char * function, const char * message, std::string s
 	CURLcode res;
 
 	// Get current time in GMT
-	time_t rawtime;
-	struct tm * timeinfo;
-	char timeBuffer[80];
-	time (&rawtime);
-	timeinfo = gmtime ( &rawtime );
-	strftime(timeBuffer, 80, "%a, %d %b %Y %H:%M:%S +0000", timeinfo);
+	char * timeBuffer = getTimestamp();
 
     // Build backlog
     string backlog = "";
@@ -170,7 +165,7 @@ void crashSendReport( const char * function, const char * message, std::string s
             CRASH_REPORT_HEAD "\n\n" <<
             
             // (1) General info
-            "Date: " << timeBuffer << "\n" <<
+            "Timestamp: " << timeBuffer << "\n" <<
   		    "Function: " << function << "\n" <<
   		    "Exception message: " << message << "\n" << 
             "Scrollback size: " << CRASH_LOG_SCROLLBACK << "\n" <<

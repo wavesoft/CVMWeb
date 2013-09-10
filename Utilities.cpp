@@ -1210,6 +1210,23 @@ bool isPortOpen( const char * host, int port, unsigned char handshake ) {
 }
 
 /**
+ * Get current date/time as a string
+ */
+char * getTimestamp () {
+	static char timeBuffer[80];
+    memset( timeBuffer, 0, 80 );
+
+	// Get current time in GMT
+	time_t rawtime;
+	struct tm * timeinfo;
+	time (&rawtime);
+	timeinfo = gmtime ( &rawtime );
+	strftime(timeBuffer, 80, "%d/%m/%Y %H:%M:%S", timeinfo);
+
+    return timeBuffer;
+}
+
+/**
  * Dump a map structure
  */
 void mapDump(map<string, string> m) {

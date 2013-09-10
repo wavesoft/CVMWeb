@@ -271,6 +271,10 @@ std::string                                         urlEncode       ( const std:
  */
 void                                                explode         ( std::string const &input, char sep, std::vector<std::string> * output );
 
+/**
+ * Get current date/time as a string
+ */
+char *                                              getTimestamp    ();
 
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
@@ -370,10 +374,10 @@ inline void sleepMs(int sleepMs) {
 #if defined(CRASH_REPORTING)
     #ifdef _WIN32
         #define CVMWA_REPORT_LOG(kind, ...) \
-            do { std::ostringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
+            do { std::ostringstream ss; ss << "[" << getTimestamp() << "][" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
     #else
         #define CVMWA_REPORT_LOG(kind, ...) \
-            do { std::ostringstream ss; ss << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
+            do { std::ostringstream ss; ss << "[" << getTimestamp() << "][" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; crashReportStoreLog( ss ); } while(0);
     #endif
 #else
     #define CVMWA_REPORT_LOG(...) ;
@@ -381,11 +385,11 @@ inline void sleepMs(int sleepMs) {
 #if defined(DEBUG) || defined(LOGGING)
     #ifdef _WIN32
         #define CVMWA_LOG(kind, ...) \
-            do { std::ostringstream ss; ss << "[" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0); \
+            do { std::ostringstream ss; ss << "[" << getTimestamp() << "][" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0); \
             CVMWA_REPORT_LOG(kind, __VA_ARGS__ )
     #else
         #define CVMWA_LOG(kind, ...) \
-            do { std::cerr << "[" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0); \
+            do { std::cerr << "[" << getTimestamp() << "][" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0); \
             CVMWA_REPORT_LOG(kind, __VA_ARGS__ )
     #endif
 #else
