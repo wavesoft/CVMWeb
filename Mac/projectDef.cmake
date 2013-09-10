@@ -52,3 +52,6 @@ target_link_libraries(${PROJECT_NAME}
 
 #To create a DMG, include the following file
 #include(Mac/installer.cmake)
+
+# Produce debug information (for crash reporting)
+add_definitions(-g)

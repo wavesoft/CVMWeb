@@ -66,3 +66,6 @@ target_link_libraries(${PROJECT_NAME}
 #add_definitions(${GTK3_CFLAGS_OTHER})
 
 # Target link :  ${GTK3_LIBRARIES} ${X11_LIBRARY} ${GTHREAD_LIBRARY}
+
+# Produce debug information (for crash reporting)
+add_definitions(-g)

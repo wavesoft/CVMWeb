@@ -121,6 +121,7 @@ std::string crashReportBuildStackTrace() {
 	char** lines = backtrace_symbols(array, size);
 	for (size_t i=0; i<size; i++) {
 		cBuffer += lines[i];
+        cBuffer += "\n";
 	}
 	free(lines);
 
