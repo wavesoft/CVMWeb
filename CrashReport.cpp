@@ -43,27 +43,40 @@ map<string, string>	crashReportInfo;
 string              crashReportDebugSymbolsFile;
 #endif
 
-/* Initialization for the crash report subsystem */
-void crashReportInit( string binaryFileName ) {
+/**
+ * Initialization for the crash report subsystem 
+ */
+void crashReportInit() {
 	scrollBackPosition = 0;
+}
 
+/**
+ * Cleanup for the crash report system 
+ */
+void crashReportCleanup() {
+
+}
+
+/**
+ * Add general information for the crash report 
+ */
+void crashReportAddInfo( std::string key, std::string value ) {
+	crashReportInfo[key] = value;
+}
+
+/**
+ * Load debug symbols from the specified file
+ */
+void crashReportLoadSymbols( string binaryFileName ) {
 #if defined(_MSC_VER)
     // In Visual C++ we have to load the PDF file in order to resolve the symbols
     crashReportDebugSymbolsFile = binaryFileName.substr(0, binaryFileName.length() - 3) + "pdb";
 #endif
 }
 
-/* Cleanup for the crash report system */
-void crashReportCleanup() {
-
-}
-
-/* Add general information for the crash report */
-void crashReportAddInfo( std::string key, std::string value ) {
-	crashReportInfo[key] = value;
-}
-
-/* Register log entry to the crash report scroll-back buffer */
+/**
+ * Register log entry to the crash report scroll-back buffer 
+ */
 void crashReportStoreLog( ostringstream & oss ) {
 
 	// Until we reach the buffer size, stack entries
@@ -91,7 +104,9 @@ std::string crashReportBuildStackTrace() {
 
 #if defined(_MSC_VER)
 	// Use StalkWalker on windows
-    CVMWebStackWalker mWalker( crashReportDebugSymbolsFile.c_str() );
+    LPCSTR symbolsFile = NULL;
+    if (!crashReportDebugSymbolsFile.empty()) symbolsFile = crashReportDebugSymbolsFile.c_str();
+    CVMWebStackWalker mWalker( symbolsFile );
 	mWalker.ShowCallstack();
 	cBuffer = mWalker.stackTrace;
 

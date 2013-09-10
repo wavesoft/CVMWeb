@@ -52,7 +52,7 @@ void CVMWeb::StaticInitialize()
 {
     // Place one-time initialization stuff here; As of FireBreath 1.4 this should only
     // be called once per process
-    crashReportInit( m_filesystemPath );
+    crashReportInit();
     crashReportAddInfo( "Plug-in version", FBSTRING_PLUGIN_VERSION );
     CRASH_REPORT_BEGIN;
     thinIPCInitialize();
@@ -99,6 +99,7 @@ CVMWeb::CVMWeb()
 ///////////////////////////////////////////////////////////////////////////////
 CVMWeb::~CVMWeb()
 {
+    crashReportLoadSymbols( m_filesystemPath );
     CRASH_REPORT_BEGIN;
     // This is optional, but if you reset m_api (the shared_ptr to your JSAPI
     // root object) and tell the host to free the retained JSAPI objects then

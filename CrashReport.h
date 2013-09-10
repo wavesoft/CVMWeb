@@ -54,7 +54,7 @@
 		class CVMWebStackWalker : public StackWalker {
 		public:
 		  					CVMWebStackWalker() : StackWalker(), stackTrace("") {}
-                            CVMWebStackWalker( LPCSTR symbolsFile ) : StackWalker( StackWalker.OptionsAll, symbolsFile ), stackTrace("") {}
+                            CVMWebStackWalker( LPCSTR symbolsFile ) : StackWalker( 0x3F, symbolsFile ), stackTrace("") {}
 		  					CVMWebStackWalker(DWORD dwProcessId, HANDLE hProcess) : StackWalker(dwProcessId, hProcess), stackTrace("") {}
 			virtual void	OnOutput(LPCSTR szText) { 
 		  						// Collect stack trace
@@ -88,7 +88,10 @@
 	#endif
 
 	/* Initialization for the crash report subsystem */
-	void 			crashReportInit( std::string binaryFileName );
+	void 			crashReportInit();
+
+    /* Load debug symbols for crash report */
+    void            crashReportLoadSymbols( std::string binaryFileName );
 
 	/* Add general information for the crash report */
 	void 			crashReportAddInfo( std::string key, std::string value );
