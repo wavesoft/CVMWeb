@@ -59,6 +59,12 @@ CVMWebPtr CVMWebAPISession::getPlugin()
     CRASH_REPORT_END;
 }
 
+void CVMWebAPISession::crash() {
+    CRASH_REPORT_BEGIN;
+    throw "User-triggered system exception";
+    CRASH_REPORT_END;
+}
+
 // Functions
 int CVMWebAPISession::pause() {
     CRASH_REPORT_BEGIN;

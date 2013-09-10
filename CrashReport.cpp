@@ -107,7 +107,7 @@ std::string crashReportBuildStackTrace() {
 }
  
 /**
- * Build the payload for the mail
+ * Build the payload for the PUT request
  */
 static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) {
 	struct upload_context *upload_ctx = (struct upload_context *)userp;
@@ -141,7 +141,6 @@ void crashSendReport( const char * function, const char * message, std::string s
  
 	CURL *curl;
 	CURLcode res;
-	struct curl_slist *recipients = NULL;
 
 	// Get current time in GMT
 	time_t rawtime;
@@ -149,14 +148,7 @@ void crashSendReport( const char * function, const char * message, std::string s
 	char timeBuffer[80];
 	time (&rawtime);
 	timeinfo = gmtime ( &rawtime );
-	strftime(timeBuffer, 80, "%a, %d %b %Y %H:%M:%S %z", timeinfo);
-
-	// Build random ID
-	char idBuffer[46];
-    for (int i = 0; i < 45; ++i) {
-        idBuffer[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
-    }
-    idBuffer[45] = 0;
+	strftime(timeBuffer, 80, "%a, %d %b %Y %H:%M:%S +0000", timeinfo);
 
     // Build backlog
     string backlog = "";
@@ -174,34 +166,21 @@ void crashSendReport( const char * function, const char * message, std::string s
 
 	// Build mail
 	ostringstream oss;
-	oss << "Date: " << timeBuffer << "\n" <<
-  		   "To: " CRASH_REPORT_TO "\n" <<
-  		   "From: " CRASH_REPORT_FROM "\n" <<
-  		   "Message-ID: <" << idBuffer << "@" CRASH_REPORT_RFCID ">\n" <<
-  		   "Subject: " CRASH_REPORT_SUBJECT "\n" <<
-  		   "\n" << /* empty line to divide headers from body, see RFC5322 */ 
+	oss <<  // (0) Head message
+            CRASH_REPORT_HEAD "\n\n" <<
+            
+            // (1) General info
+            "Date: " << timeBuffer << "\n" <<
+  		    "Function: " << function << "\n" <<
+  		    "Exception message: " << message << "\n" << 
+            "Scrollback size: " << CRASH_LOG_SCROLLBACK << "\n" <<
+            generalInfo << "\n" <<
 
-  		   CRASH_REPORT_HEAD "\n\n" <<
+            // (2) Backlog
+  		    backlog << "\n\n" <<
 
-  		   "-----------------------\n" <<
-  		   " General information\n" <<
-  		   "-----------------------\n" <<
-  		   "Date: " << timeBuffer << "\n" <<
-  		   "Function: " << function << "\n" <<
-  		   "Exception message: " << message << "\n" <<
-  		   generalInfo <<
-
-  		   "\n" <<
-  		   "-----------------------\n" <<
-  		   " Latest error log entries\n" <<
-  		   "-----------------------\n" <<
-  		   backlog <<
-
-  		   "\n" <<
-  		   "-----------------------\n" <<
-  		   " Stack trace\n" <<
-  		   "-----------------------\n" <<
-  		   stackTrace;
+            // (3) Stack trace
+  		    stackTrace;
 
 
   	// Store the data to be sent on the upload context
@@ -214,72 +193,33 @@ void crashSendReport( const char * function, const char * message, std::string s
 	// Setup CURL and send mail
 	curl = curl_easy_init();
 	if (curl) {
-		/* This is the URL for your mailserver. Note the use of port 587 here,
-		 * instead of the normal SMTP port (25). Port 587 is commonly used for
-		 * secure mail submission (see RFC4403), but you should use whatever
-		 * matches your server configuration. */ 
-		curl_easy_setopt(curl, CURLOPT_URL, CRASH_REPORT_SMTP );
 
-		/* In this example, we'll start with a plain text connection, and upgrade
-		 * to Transport Layer Security (TLS) using the STARTTLS command. Be careful
-		 * of using CURLUSESSL_TRY here, because if TLS upgrade fails, the transfer
-		 * will continue anyway - see the security discussion in the libcurl
-		 * tutorial for more details. */ 
-		curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
-
-		/* If your server doesn't have a valid certificate, then you can disable
-		 * part of the Transport Layer Security protection by setting the
-		 * CURLOPT_SSL_VERIFYPEER and CURLOPT_SSL_VERIFYHOST options to 0 (false).
-		 *   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-		 *   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-		 * That is, in general, a bad idea. It is still better than sending your
-		 * authentication details in plain text though.
-		 * Instead, you should get the issuer certificate (or the host certificate
-		 * if the certificate is self-signed) and add it to the set of certificates
-		 * that are known to libcurl using CURLOPT_CAINFO and/or CURLOPT_CAPATH. See
-		 * docs/SSLCERTS for more information.
-		 */ 
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-
-		/* A common reason for requiring transport security is to protect
-		 * authentication details (user names and passwords) from being "snooped"
-		 * on the network. Here is how the user name and password are provided: */ 
-		#if defined(CRASH_REPORT_SMTP_PASSWORD) && defined(CRASH_REPORT_SMTP_LOGIN)
-		curl_easy_setopt(curl, CURLOPT_USERNAME, CRASH_REPORT_SMTP_LOGIN);
-		curl_easy_setopt(curl, CURLOPT_PASSWORD, CRASH_REPORT_SMTP_PASSWORD);
-		#endif
-
-		/* value for envelope reverse-path */ 
-		curl_easy_setopt(curl, CURLOPT_MAIL_FROM, CRASH_REPORT_FROM);
-		/* Add two recipients, in this particular case they correspond to the
-		 * To: and Cc: addressees in the header, but they could be any kind of
-		 * recipient. */ 
-		recipients = curl_slist_append(recipients, CRASH_REPORT_TO);
-		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
-
-		/* In this case, we're using a callback function to specify the data. You
-		 * could just use the CURLOPT_READDATA option to specify a FILE pointer to
-		 * read from.
-		 */ 
+        // Setup the read data callback
 		curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);
 		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
 
-		/* Since the traffic will be encrypted, it is very useful to turn on debug
-		 * information within libcurl to see what is happening during the transfer.
-		 */ 
-		//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        // Enable uploading
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
-		/* send the message (including headers) */ 
+        // Use HTTP PUT 
+        curl_easy_setopt(curl, CURLOPT_PUT, 1L);
+
+        // Target URL
+        curl_easy_setopt(curl, CURLOPT_URL, CRASH_REPORT_URL);
+
+        // Set file size
+        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.length());
+
+		// send the message
 		res = curl_easy_perform(curl);
-		/* Check for errors */ 
-		if(res != CURLE_OK)
-		  fprintf(stderr, "curl_easy_perform() failed: %s\n",
-		          curl_easy_strerror(res));
 
-		/* free the list of recipients and clean up */ 
-		curl_slist_free_all(recipients);
+		// Check for errors
+		if(res != CURLE_OK)
+		    CVMWA_LOG("Error", "curl_easy_perform() failed:" << curl_easy_strerror(res));
+
+		// Cleanup CURL
 		curl_easy_cleanup(curl);
+
 	}
 
 }

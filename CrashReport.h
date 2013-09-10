@@ -35,15 +35,9 @@
 	#include <curl/curl.h>
 	#include "Utilities.h"
 
-	#define CRASH_REPORT_FROM 			"<cvmwebapi.error-report@cern.ch>"
-	#define CRASH_REPORT_TO 			"<cvmwebapi.error-report@cern.ch>"
- 	#define CRASH_REPORT_RFCID			"cvmwebapi.cern.ch"
+    #define CRASH_REPORT_URL            "http://labs.wavesoft.gr/report/crash-report.php"
 	#define CRASH_REPORT_HEAD			"An exception occured in a user's CVMWebAPI plugin. The following report is produced for troubleshooting:"
-	#define CRASH_REPORT_SUBJECT		"[crash-report] CernVM WebAPI Crash Report"
 	#define CRASH_LOG_SCROLLBACK		128
- 	#define CRASH_REPORT_SMTP			"smtp://smtp.cern.ch:587"
- 	#define CRASH_REPORT_SMTP_LOGIN		"cvmwarpt"
- 	#define CRASH_REPORT_SMTP_PASSWORD	"sP6psUR7wumuPdtJ7SLKjrX7"
 
 	#if defined(_MSC_VER)
 

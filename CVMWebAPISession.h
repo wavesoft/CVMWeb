@@ -57,7 +57,9 @@ public:
         registerMethod("setProperty",           make_method(this, &CVMWebAPISession::setProperty));
         registerMethod("getProperty",           make_method(this, &CVMWebAPISession::getProperty));
         registerMethod("setExecutionCap",       make_method(this, &CVMWebAPISession::setExecutionCap));
-        
+
+        registerMethod("crash",                 make_method(this, &CVMWebAPISession::crash));
+
         registerProperty("ip",                  make_property(this, &CVMWebAPISession::get_ip));
         registerProperty("cpus",                make_property(this, &CVMWebAPISession::get_cpus));
         registerProperty("state",               make_property(this, &CVMWebAPISession::get_state));
@@ -160,6 +162,7 @@ public:
     int setExecutionCap(int cap);
     int setProperty( const std::string& name, const std::string& value );
     std::string getProperty( const std::string& name );
+    void crash();
     
     // Property getters
     int get_executionCap();
