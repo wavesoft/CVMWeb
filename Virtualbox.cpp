@@ -1077,10 +1077,7 @@ int VBoxSession::close() {
     if (this->onProgress) (this->onProgress)(9, 10, "Deleting VM");
     ans = this->wrapExec("unregistervm " + this->uuid + " --delete", NULL);
     CVMWA_LOG( "Info", "Unregister VM=" << ans  );
-    if (ans != 0) {
-        this->state = STATE_ERROR;
-        return HVE_CONTROL_ERROR;
-    }
+    /* We don't care for errors here */
     
     /* OK */
     if (this->onProgress) (this->onProgress)(10, 10, "Completed");

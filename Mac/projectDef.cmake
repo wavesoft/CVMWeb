@@ -54,4 +54,4 @@ target_link_libraries(${PROJECT_NAME}
 #include(Mac/installer.cmake)
 
 # Produce debug information (for crash reporting)
-add_definitions(-g)
+add_definitions(-g -rdynamic)
