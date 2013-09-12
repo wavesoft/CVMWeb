@@ -140,16 +140,16 @@ void CVMWeb::onPluginReady()
             std::string strBrowser = "";
             FB::variant f;
             if (jsNav->HasProperty("appName")) {
-                f = jsNav->getProperty("appName");
-                strBrowser += f->convert_cast<std::string>();
+                f = jsNav->GetProperty("appName");
+                strBrowser += f.convert_cast<std::string>();
             }
             if (jsNav->HasProperty("appCodeName")) {
-                f = jsNav->getProperty("appCodeName");
-                strBrowser += "/" + f->convert_cast<std::string>();
+                f = jsNav->GetProperty("appCodeName");
+                strBrowser += "/" + f.convert_cast<std::string>();
             }
             if (jsNav->HasProperty("appVersion")) {
-                f = jsNav->getProperty("appVersion");
-                strBrowser += " " + f->convert_cast<std::string>();
+                f = jsNav->GetProperty("appVersion");
+                strBrowser += " " + f.convert_cast<std::string>();
             }
 
             // Update browser info
