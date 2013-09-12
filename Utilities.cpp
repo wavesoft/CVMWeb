@@ -817,6 +817,8 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	CloseHandle( g_hChildStdErr_Wr );
 	    
 	/* Read to buffers */
+    int ret = 0;
+    long startTime = getMillis();
     for (;;) {
 
         /* Check for STDERR data (Never break on errors here) */
@@ -829,7 +831,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             }
         }
 
-        /* Check for STDOUT data */
+        /* Check for STDOUT data (And *DO* break on errors here) */
         if (!PeekNamedPipe( g_hChildStdOut_Rd, NULL, NULL, NULL, &dwAvailable, NULL)) break;
         if (dwAvailable > 0) {
     		bSuccess = ReadFile( g_hChildStdOut_Rd, chBuf, 4096, &dwRead, NULL);
@@ -837,31 +839,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         	if ( stdoutList != NULL )
     	    	rawStdout.append( chBuf, dwRead );
         }
-
-        /* Sleep a teensy bit not to stress the CPU on the
-            * infinite loop we are currently in */
-        Sleep( 10 );
-
-    }
-
-    /* Debug STDERR */
-    if (!rawStderr->empty())
-        CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
-
-	/* Split lines into stdout */
-    splitLines( rawStdout, stdoutList );
-        
-	CloseHandle( g_hChildStdOut_Rd );
-	CloseHandle( g_hChildStdErr_Rd );
-
-    /* Wait for completion */
-    DWORD ans;
-    int ret = 0;
-    long ms = getMillis();
-    while (true) {
-        
-        /* Wait for process to complete */
-        ans = WaitForSingleObject( piProcInfo.hProcess, 250 );
         
         /* Check for timeout */
         if ((getMillis() - ms) > SYSEXEC_TIMEOUT) {
@@ -879,13 +856,57 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             break;
         }
         
-        /* Get exit code on success */
-        if (ans == WAIT_OBJECT_0) {
-        	GetExitCodeProcess( piProcInfo.hProcess, &ret );
-            CVMWA_LOG("Debug", "Signaled. Exit code = " << ret);
-            break;
-        }
+        /* Sleep a teensy bit not to eat-up the CPU on the
+            * infinite loop we are currently in */
+        Sleep( 100 );
+
+    }
+    
+    /* Close pipes */
+	CloseHandle( g_hChildStdOut_Rd );
+	CloseHandle( g_hChildStdErr_Rd );
+
+    /* If we were not cought by a signal, process output */
+    if (ret == 0) {
+
+        /* Debug STDERR */
+        if (!rawStderr->empty())
+            CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
+            
+    	/* Split lines into stdout */
+        splitLines( rawStdout, stdoutList );
         
+        /* Wait for completion */
+        DWORD ans;
+        while (true) {
+        
+            /* Wait for process to complete */
+            ans = WaitForSingleObject( piProcInfo.hProcess, 100 );
+        
+            /* Check for timeout */
+            if ((getMillis() - ms) > SYSEXEC_TIMEOUT) {
+                CVMWA_LOG("Debug", "Timed out");
+                *rawStderr = "ERROR: Timed out";
+                ret = 254;
+                break;
+            }
+        
+            /* Check for abort */
+            if (sysExecAborted) {
+                CVMWA_LOG("Debug", "Aborting execution");
+                *rawStderr = "ERROR: Aborted";
+                ret = 255;
+                break;
+            }
+        
+            /* Get exit code on success */
+            if (ans == WAIT_OBJECT_0) {
+            	GetExitCodeProcess( piProcInfo.hProcess, &ret );
+                CVMWA_LOG("Debug", "Signaled. Exit code = " << ret);
+                break;
+            }
+        
+        }
     }
     
     /* Close hanles */
