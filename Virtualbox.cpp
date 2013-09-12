@@ -961,11 +961,17 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
 /**
  * Close VM
  */
-int VBoxSession::close() { 
+int VBoxSession::close( bool unmonitored ) { 
     CRASH_REPORT_BEGIN;
     string kk, kv;
     ostringstream args;
     int ans;
+
+    /* If we are running unmonitored, all the wrapExec()
+       calls have negative value, which means that they
+       will run in the background. */
+    int retries = 4;
+    if (unmonitored) retries = -1;
 
     /* Validate state */
     if ((this->state != STATE_OPEN) && 
@@ -985,7 +991,7 @@ int VBoxSession::close() {
         if (machineInfo["State"].find("saved") != string::npos) {
             
             if (this->onProgress) (this->onProgress)(2, 10, "Discarding saved VM state");
-            ans = this->wrapExec("discardstate " + this->uuid, NULL, NULL, 4);
+            ans = this->wrapExec("discardstate " + this->uuid, NULL, NULL, retries);
             CVMWA_LOG( "Info", "Discarded VM state=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
@@ -1014,7 +1020,7 @@ int VBoxSession::close() {
             << " --medium "     << "none";
 
         if (this->onProgress) (this->onProgress)(3, 10, "Detaching contextualization CD-ROM");
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -1024,7 +1030,7 @@ int VBoxSession::close() {
             << "\"" << kk << "\"";
 
         if (this->onProgress) (this->onProgress)(4, 10, "Closing contextualization CD-ROM");
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Closemedium (context)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -1053,7 +1059,7 @@ int VBoxSession::close() {
             << " --medium "     << "none";
 
         if (this->onProgress) (this->onProgress)(6, 10, "Detaching data disk");
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -1063,7 +1069,7 @@ int VBoxSession::close() {
             << "\"" << kk << "\"";
 
         if (this->onProgress) (this->onProgress)(7, 10, "Closing data disk medium");
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Closemedium (disk)=" << ans  );
         if (ans != 0) return HVE_MODIFY_ERROR;
         
@@ -1075,7 +1081,7 @@ int VBoxSession::close() {
     
     /* Unregister and delete VM */
     if (this->onProgress) (this->onProgress)(9, 10, "Deleting VM");
-    ans = this->wrapExec("unregistervm " + this->uuid + " --delete", NULL);
+    ans = this->wrapExec("unregistervm " + this->uuid + " --delete", NULL, NULL, retries);
     CVMWA_LOG( "Info", "Unregister VM=" << ans  );
     /* We don't care for errors here */
     

@@ -345,7 +345,7 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     } else {
         
         // Close session in case of a problem
-        this->session->close();
+        this->session->close( true );
         
         // Then fire errors
         WHEN_SAFE this->fire_openError(hypervisorErrorStr(ans), ans);

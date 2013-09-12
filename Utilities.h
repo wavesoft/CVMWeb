@@ -181,6 +181,12 @@ int                                                 sha256_bin   ( std::string p
 int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1 );
 
 /**
+ * Platform-independant function to execute the given command-line without
+ * waiting for it to complete.
+ */
+int                                                 sysExecAsync    ( std::string app, std::string cmdline );
+
+/**
  * Initialize sysExec() environment
  */
 void                                                initSysExec     ( );

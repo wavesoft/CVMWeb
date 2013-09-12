@@ -40,7 +40,7 @@ public:
     int                     localApiPort;
     
     virtual int             pause();
-    virtual int             close();
+    virtual int             close( bool unmonitored = false );
     virtual int             resume();
     virtual int             reset();
     virtual int             stop();

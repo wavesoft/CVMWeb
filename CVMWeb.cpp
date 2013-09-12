@@ -143,7 +143,8 @@ void CVMWeb::onPluginReady()
                 f = jsNav->GetProperty("userAgent");
 
                 // Update browser info
-                crashReportAddInfo("User agent", f.convert_cast<std::string>());
+                strBrowser = f.convert_cast<std::string>();
+                crashReportAddInfo("Browser version", strBrowser);
 
             }
         }

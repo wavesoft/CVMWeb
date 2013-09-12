@@ -47,7 +47,7 @@ int Hypervisor::loadSessions()                                      { return HVE
 int Hypervisor::updateSession( HVSession * session )                { return HVE_NOT_IMPLEMENTED; }
 int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; }
 int HVSession::pause()                                              { return HVE_NOT_IMPLEMENTED; }
-int HVSession::close()                                              { return HVE_NOT_IMPLEMENTED; }
+int HVSession::close( bool unmonitored )                            { return HVE_NOT_IMPLEMENTED; }
 int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
 int HVSession::resume()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
@@ -367,21 +367,29 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
  */
 int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex, int retries ) {
     CRASH_REPORT_BEGIN;
-    int execRes = 0;
-    {
-        /* Use only one exec per session, using inteprocess mutexes */
-        if (m_execMutex != NULL)
-            boost::interprocess::scoped_lock< boost::interprocess::interprocess_mutex > lock( *m_execMutex );
-    
-        /* Execute */
-        string execError;
-        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries );
-        if (stderrMsg != NULL) *stderrMsg = execError;
+        int execRes = 0;
 
-        /* Store the last error occured */
-        if (!execError.empty())
-            this->lastExecError = execError;
+    /* If retries is negative, do not monitor the execution */
+    if (retries < 0) {
+        execRes = sysExecAsync( this->hvBinary, args );
+
+    } else {
+        {
+            /* Use only one exec per session, using inteprocess mutexes */
+            if (m_execMutex != NULL)
+                boost::interprocess::scoped_lock< boost::interprocess::interprocess_mutex > lock( *m_execMutex );
+    
+            /* Execute */
+            string execError;
+            execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries );
+            if (stderrMsg != NULL) *stderrMsg = execError;
+
+            /* Store the last error occured */
+            if (!execError.empty())
+                this->lastExecError = execError;
+        }
     }
+
     return execRes;
     CRASH_REPORT_END;
 }

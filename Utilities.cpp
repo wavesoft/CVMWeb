@@ -919,6 +919,45 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 }
 
 /**
+ * Cross-platform asynchronous exec function that does not care at all about the launched command
+ */
+int sysExecAsync( string app, string cmdline ) {
+    CRASH_REPORT_BEGIN;
+#ifdef _WIN32
+
+    /* Use ShellExecute to launch the process in the background */
+    HINSTANCE res = ShellExecuteA(NULL, NULL, app.c_str(), cmdline.c_str(), NULL, SW_HIDE );
+    if ((int)res > 32) {
+        return HVE_OK;
+    } else {
+        return HVE_IO_ERROR;
+    }
+
+#else
+
+    /* Run process in a different thread */
+    int pid = fork();
+    if (pid == -1) {
+        /* Could not fork */
+        return HVE_IO_ERROR;
+
+    } else if (!pid) {
+        /* Split cmdline into string components */
+        char *parts[512];
+        parts[0] = (char *)app.c_str();
+        splitArguments( cmdline, parts, 512, 1 );
+        
+        /* Launch given process */
+        execv(app.c_str(), parts);
+    }
+
+    return HVE_OK;
+
+#endif
+    CRASH_REPORT_END;
+}
+
+/**
  * Cross-platform exec function with retry functionality
  */
 int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries ) {
