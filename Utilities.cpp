@@ -575,11 +575,7 @@ std::string getTmpFile( string suffix, string folder ) {
 /**
  * Global variables shared with abortSysExec() and sysExec()
  */
-#ifndef _WIN32
 bool    sysExecAborted = false;
-#else
-HANDLE  sysExecAbortMutex = NULL;
-#endif
 
 /**
  * Global initialization to sysExec
@@ -587,11 +583,7 @@ HANDLE  sysExecAbortMutex = NULL;
 void initSysExec() {
     CRASH_REPORT_BEGIN;
     CVMWA_LOG("Debug", "Initializing sysExec()");
-#ifndef _WIN32
     sysExecAborted = false;
-#else
-    sysExecAbortMutex = CreateMutex(NULL,FALSE,NULL);
-#endif
     CRASH_REPORT_END;
 }
 
@@ -601,12 +593,7 @@ void initSysExec() {
 void abortSysExec() {
     CRASH_REPORT_BEGIN;
     CVMWA_LOG("Debug", "Aborting sysExec()");
-#ifndef _WIN32
     sysExecAborted = true;
-#else
-    if (sysExecAbortMutex != NULL)
-        ReleaseMutex( sysExecAbortMutex );
-#endif
     CRASH_REPORT_END;
 }
 
@@ -868,26 +855,39 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	CloseHandle( g_hChildStdErr_Rd );
 
     /* Wait for completion */
-    const HANDLE handles[] = { sysExecAbortMutex, piProcInfo.hProcess }; 
-	DWORD ans = WaitForMultipleObjects( 2, handles, FALSE, SYSEXEC_TIMEOUT );
-
-    /* Check for timeout */
-    if (ans == WAIT_TIMEOUT) {
-        CVMWA_LOG("Debug", "Timed out");
-        *rawStderr = "ERROR: Timed out";
-        return 2554;
+    DWORD ans;
+    int ret = 0;
+    long ms = getMillis();
+    while (true) {
+        
+        /* Wait for process to complete */
+        ans = WaitForSingleObject( piProcInfo.hProcess, 250 );
+        
+        /* Check for timeout */
+        if ((getMillis() - ms) > SYSEXEC_TIMEOUT) {
+            CVMWA_LOG("Debug", "Timed out");
+            *rawStderr = "ERROR: Timed out";
+            ret = 254;
+            break;
+        }
+        
+        /* Check for abort */
+        if (sysExecAborted) {
+            CVMWA_LOG("Debug", "Aborting execution");
+            *rawStderr = "ERROR: Aborted";
+            ret = 255;
+            break;
+        }
+        
+        /* Get exit code on success */
+        if (ans == WAIT_OBJECT_0) {
+        	GetExitCodeProcess( piProcInfo.hProcess, &ret );
+            CVMWA_LOG("Debug", "Signaled. Exit code = " << ret);
+            break;
+        }
+        
     }
-
-    /* Check for aborted */
-    if ((ans - WAIT_OBJECT_0) == 1) {
-        CVMWA_LOG("Debug", "Aborting execution");
-        *rawStderr = "ERROR: Aborted";
-        return 255;
-    }
-
-    /* Process exited successfully */
-	GetExitCodeProcess( piProcInfo.hProcess, &ret );
-
+    
     /* Close hanles */
 	CloseHandle( piProcInfo.hProcess );
 	CloseHandle( piProcInfo.hThread );
