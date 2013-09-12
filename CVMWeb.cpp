@@ -130,6 +130,33 @@ void CVMWeb::onPluginReady()
 
     // Get details about our current domain
     crashReportAddInfo( "URL", m_host->getDOMWindow()->getLocation() );
+    try {
+        FB::DOM::WindowPtr window = m_host->getDOMWindow();
+        if (window && window->getJSObject()->HasProperty("navigator")) {
+            // Get navigator
+            FB::JSObjectPtr jsNav = window->getProperty<FB::JSObjectPtr>("navigator");
+            
+            // Pile up info
+            std::string strBrowser = "";
+            FB::variant f;
+            if (jsNav->HasProperty("appName")) {
+                f = jsNav->getProperty("appName");
+                strBrowser += f->convert_cast<std::string>();
+            }
+            if (jsNav->HasProperty("appCodeName")) {
+                f = jsNav->getProperty("appCodeName");
+                strBrowser += "/" + f->convert_cast<std::string>();
+            }
+            if (jsNav->HasProperty("appVersion")) {
+                f = jsNav->getProperty("appVersion");
+                strBrowser += " " + f->convert_cast<std::string>();
+            }
+
+            // Update browser info
+            crashReportAddInfo("Browser", strBrowser);
+        }
+    } catch (...) {
+    }
     
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {
