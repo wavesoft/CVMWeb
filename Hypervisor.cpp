@@ -367,10 +367,12 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
  */
 int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex, int retries ) {
     CRASH_REPORT_BEGIN;
-        int execRes = 0;
+    int execRes = 0;
 
     /* If retries is negative, do not monitor the execution */
     if (retries < 0) {
+
+        /* Execute asynchronously */
         execRes = sysExecAsync( this->hvBinary, args );
 
     } else {

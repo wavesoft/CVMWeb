@@ -923,6 +923,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
  */
 int sysExecAsync( string app, string cmdline ) {
     CRASH_REPORT_BEGIN;
+    CVMWA_LOG("Debug", "Unmonitored exec of: " << app << " " << cmdline);
 #ifdef _WIN32
 
     /* Use ShellExecute to launch the process in the background */
