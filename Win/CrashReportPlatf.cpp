@@ -50,7 +50,7 @@ string crashReportPlatformString() {
    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
    bOsVersionInfoEx = GetVersionEx((OSVERSIONINFO*) &osvi);
 
-   if(bOsVersionInfoEx != NULL ) return "Unknown Windows OS";
+   if(bOsVersionInfoEx == NULL ) return "Unknown Windows OS";
 
    // Call GetNativeSystemInfo if supported or GetSystemInfo otherwise.
 

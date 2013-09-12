@@ -36,6 +36,10 @@ string drainFP( FILE * fp ) {
 		ans += outDat;
 	}
 
+	/* Trim \n from the end */
+	ans = ans.substr(0, ans.length()-1);
+
+	/* Return FILE* contents */
 	return ans;
 }
 

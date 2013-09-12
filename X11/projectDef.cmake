@@ -68,4 +68,4 @@ target_link_libraries(${PROJECT_NAME}
 # Target link :  ${GTK3_LIBRARIES} ${X11_LIBRARY} ${GTHREAD_LIBRARY}
 
 # Produce debug information (for crash reporting)
-add_definitions(-g -rdynamic)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")

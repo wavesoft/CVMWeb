@@ -132,8 +132,13 @@ void CVMWebAPISession::thread_close(){
     }
     
     /* The needs of having a daemon might have changed */
-    CVMWebPtr p = this->getPlugin();
-    if (p->hv != NULL) p->hv->checkDaemonNeed();
+    try {
+        CVMWebPtr p = this->getPlugin();
+        if (p->hv != NULL) p->hv->checkDaemonNeed();
+    } catch (...) {
+        // InvalidPlugin might occur if the user unloads
+        // the page while downloading the VM.
+    }
     
     CRASH_REPORT_END;
 }
@@ -348,8 +353,13 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
     }
     
     // The requirements of having a daemon might have changed
-    CVMWebPtr p = this->getPlugin();
-    if (p->hv != NULL) p->hv->checkDaemonNeed();
+    try {
+        CVMWebPtr p = this->getPlugin();
+        if (p->hv != NULL) p->hv->checkDaemonNeed();
+    } catch (...) {
+        // InvalidPlugin might occur if the user unloads
+        // the page while downloading the VM.
+    }
     
     CRASH_REPORT_END;
 }

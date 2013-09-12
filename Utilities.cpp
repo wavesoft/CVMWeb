@@ -926,6 +926,12 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
     string stdError;
     int res = 252;
 
+    // If we have already aborted, return
+    if (sysExecAborted) {
+        CVMWA_LOG("Debug", "Aborted request to run: " << app << " " << cmdline);
+        return 255;
+    }
+
     // Start the retry loop
     for (int tries = 0; tries < retries; tries++ ) {
         
