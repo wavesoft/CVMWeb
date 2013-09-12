@@ -675,7 +675,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         for (;;) {
 
             /* Poll descriptors */
-            ret = poll(fds, 2, 100);
+            ret = poll(fds, 2, SYSEXEC_SLEEP_DELAY);
             if (ret > 0) {
 
                 /* An event on one of the fds has occurred. */
@@ -858,7 +858,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         
         /* Sleep a teensy bit not to eat-up the CPU on the
             * infinite loop we are currently in */
-        Sleep( 100 );
+        Sleep( SYSEXEC_SLEEP_DELAY );
 
     }
     
@@ -881,7 +881,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         while (true) {
         
             /* Wait for process to complete */
-            ans = WaitForSingleObject( piProcInfo.hProcess, 100 );
+            ans = WaitForSingleObject( piProcInfo.hProcess, SYSEXEC_SLEEP_DELAY );
         
             /* Check for timeout */
             if ((getMillis() - ms) > SYSEXEC_TIMEOUT) {
@@ -925,7 +925,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries ) {
     CRASH_REPORT_BEGIN;
     string stdError;
-    int res = 253;
+    int res = 252;
 
     // Start the retry loop
     for (int tries = 0; tries < retries; tries++ ) {
@@ -938,8 +938,9 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
         // Check for "Error" in the stderr
         // (Caused by a weird bug on VirtualBox)
         if ((res != 255) && ((stdError.find("error") != string::npos) || (stdError.find("ERROR") != string::npos) || (stdError.find("Error") != string::npos)) ) {
+            CVMWA_LOG("Debug", "Found error keyword. Set exit_code = 253");
             if (rawStderrAns != NULL) *rawStderrAns = stdError;
-            res = 254;
+            res = 253;
         }
 
         // If it was successful, or we were aborted, return now. No retries.
@@ -947,8 +948,8 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
             break;
         } else {
             // Wait and retry
-            CVMWA_LOG( "Info", "Going to retry in 1s. Try " << (tries+1) << "/" << retries  );
-            sleepMs( 1000 );
+            CVMWA_LOG( "Info", "Going to retry in " << SYSEXEC_RETRY_DELAY << "ms. Try " << (tries+1) << "/" << retries  );
+            sleepMs( SYSEXEC_RETRY_DELAY );
         }
     }
 

@@ -90,7 +90,9 @@
 #endif
 
 // How much time (in ms) to wait for a command to return from sysExec( )
-#define SYSEXEC_TIMEOUT 30000
+#define SYSEXEC_TIMEOUT     30000
+#define SYSEXEC_SLEEP_DELAY 100
+#define SYSEXEC_RETRY_DELAY 1000
 
 // GZip decompression block size (64k)
 #define GZ_BLOCK_SIZE 0x10000
