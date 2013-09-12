@@ -903,6 +903,8 @@ BOOL StackWalker::ShowCallstack(HANDLE hThread, const CONTEXT *context, PReadPro
   if (m_modulesLoaded == FALSE)
     this->LoadModules();  // ignore the result...
 
+  OnOutput("----\n");
+
   if (this->m_sw->m_hDbhHelp == NULL)
   {
     SetLastError(ERROR_DLL_INIT_FAILED);
@@ -1180,7 +1182,7 @@ void StackWalker::OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr)
 {
   CHAR buffer[STACKWALK_MAX_NAMELEN];
   _snprintf_s(buffer, STACKWALK_MAX_NAMELEN, "ERROR: %s, GetLastError: %d (Address: %p)\n", szFuncName, gle, (LPVOID) addr);
-  OnOutput(buffer);
+  //OnOutput(buffer);
 }
 
 void StackWalker::OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUserName)

@@ -75,6 +75,25 @@ void crashReportLoadSymbols( string binaryFileName ) {
 }
 
 /**
+ * Get the build string
+ */
+string crashReportBuildString() {
+    #ifdef _WIN32
+    return "Win32";
+    #endif
+    #if defined(__APPLE__) && defined(__MACH__)
+    return "OSX";
+    #endif
+    #ifdef __linux__
+        #if defined(__LP64__) || defined(_LP64)
+        return "Linux64";
+        #else
+        return "Linux32";
+        #endif
+    #endif
+}
+
+/**
  * Register log entry to the crash report scroll-back buffer 
  */
 void crashReportStoreLog( ostringstream & oss ) {
@@ -194,6 +213,8 @@ void crashSendReport( const char * function, const char * message, std::string s
             "Timestamp: " << timeBuffer << "\n" <<
   		    "Function: " << function << "\n" <<
   		    "Exception message: " << message << "\n" << 
+            "Build Configuration: " << crashReportBuildString() << "\n" <<
+            "Platform: " << crashReportPlatformString() << "\n" <<
             "Scrollback size: " << CRASH_LOG_SCROLLBACK << "\n" <<
             generalInfo << "\n" <<
 

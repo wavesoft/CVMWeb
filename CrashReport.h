@@ -54,7 +54,7 @@
 		class CVMWebStackWalker : public StackWalker {
 		public:
 		  					CVMWebStackWalker() : StackWalker(), stackTrace("") {}
-                            CVMWebStackWalker( LPCSTR symbolsFile ) : StackWalker( 0x3F, symbolsFile ), stackTrace("") {}
+                            CVMWebStackWalker( LPCSTR symbolsFile ) : StackWalker( 0x3D, symbolsFile ), stackTrace("") {}
 		  					CVMWebStackWalker(DWORD dwProcessId, HANDLE hProcess) : StackWalker(dwProcessId, hProcess), stackTrace("") {}
 			virtual void	OnOutput(LPCSTR szText) { 
 		  						// Collect stack trace
@@ -96,7 +96,10 @@
 	/* Add general information for the crash report */
 	void 			crashReportAddInfo( std::string key, std::string value );
 
-	/* Cleanup for the crash report system */
+    /* Get platform version and description string */
+    std::string     crashReportPlatformString();
+
+    /* Cleanup for the crash report system */
 	void 			crashReportCleanup();
 
 	/* Register log entry to the crash report scroll-back buffer */

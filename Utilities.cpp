@@ -604,7 +604,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     CRASH_REPORT_BEGIN;
 #ifndef _WIN32
     
-    int ret = 253;
+    int ret = 0;
     pid_t pidChild;
     string item;
     string rawStdout = "";
@@ -760,7 +760,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	HANDLE g_hChildStdOut_Wr = NULL;
 	HANDLE g_hChildStdErr_Rd = NULL;
 	HANDLE g_hChildStdErr_Wr = NULL;
-	DWORD ret = 253, dwRead, dwAvailable;
+	DWORD ret = 0, dwRead, dwAvailable;
 	CHAR chBuf[4096];
 	PROCESS_INFORMATION piProcInfo;
 	STARTUPINFOA siStartInfo;
@@ -817,7 +817,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 	CloseHandle( g_hChildStdErr_Wr );
 	    
 	/* Read to buffers */
-    int ret = 0;
     long startTime = getMillis();
     for (;;) {
 
@@ -841,7 +840,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         }
         
         /* Check for timeout */
-        if ((getMillis() - ms) > SYSEXEC_TIMEOUT) {
+        if ((getMillis() - startTime) > SYSEXEC_TIMEOUT) {
             CVMWA_LOG("Debug", "Timed out");
             *rawStderr = "ERROR: Timed out";
             ret = 254;
@@ -884,7 +883,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             ans = WaitForSingleObject( piProcInfo.hProcess, SYSEXEC_SLEEP_DELAY );
         
             /* Check for timeout */
-            if ((getMillis() - ms) > SYSEXEC_TIMEOUT) {
+            if ((getMillis() - startTime) > SYSEXEC_TIMEOUT) {
                 CVMWA_LOG("Debug", "Timed out");
                 *rawStderr = "ERROR: Timed out";
                 ret = 254;
