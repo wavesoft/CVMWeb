@@ -113,7 +113,6 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Utilities.cpp
 	${PROJECT_SOURCE_DIR}/../LocalConfig.cpp
-	${PROJECT_SOURCE_DIR}/../gzstream.cpp
 	${PROJECT_SOURCE_DIR}/../floppyIO.cpp
 	${PROJECT_SOURCE_DIR}/../DownloadProvider.cpp
 	)
