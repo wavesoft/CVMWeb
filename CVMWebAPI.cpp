@@ -116,6 +116,9 @@ std::string CVMWebAPI::calculateHostID( std::string& domain ) {
         machineID = p->crypto->generateSalt();
         this->config.set("local-id", machineID);
     }
+
+    /* When we use the local-id, update the crash-reporting utility config */
+    crashReportAddInfo("Machine UUID", machineID);
     
     /* Create a checksum of the user ID + domain and use this as HostID */
     string checksum = "";
