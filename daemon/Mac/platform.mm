@@ -28,14 +28,14 @@
  * Initialize platform-dependent code stack
  */
 int platformInit ( ) {
-
+    return 0;
 }
 
 /**
  * Cleanup platform-dependent code stack
  */
 int platformCleanup ( ) {
-
+    return 0;
 }
 
 /**
@@ -77,14 +77,28 @@ int platformIdleTime() {
  * Start monitoring a particular PID
  */
 int platformStartMonitorPID ( int pid ) {
-
+    return 0;
 }
 
 /**
  * Stop monitoring a particular PID
  */
 int platformStopMonitorPID  ( int pid ) {
+    return 0;
+}
 
+/**
+ * Begin resource sampling routines
+ */
+int platformBeginMeasurement( ) {
+    return 0;
+}
+
+/**
+ * End resource sampling routines
+ */
+int  platformEndMeasurement  ( ) {
+    return 0;
 }
 
 /**
@@ -92,12 +106,12 @@ int platformStopMonitorPID  ( int pid ) {
  * CPU usage of the machine. The value should be normalized to 100 (percent)
  */
 int platformCPUProcessUsage ( int pid ) {
-
+    return 0;
 }
 
 /**
  * Get the overall system CPU usage, normalized to 100 (percent)
  */
 int platformCPUGlobalUsage ( ) {
-
+    return 0;
 }
