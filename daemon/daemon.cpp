@@ -444,7 +444,7 @@ int main( int argc, char ** argv ) {
         }
         
         /* Check for idle state switch */
-        isSystemIdle();
+        //isSystemIdle();
         if (isIdle) {
             if ( platformIdleTime() < idleTime ) {
                 isIdle = false;
