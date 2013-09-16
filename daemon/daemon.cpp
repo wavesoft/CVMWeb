@@ -60,12 +60,15 @@ bool                  reloadTriggered = false;
  * Switch the idle states of the VMs
  */
 void switchIdleStates( bool idle ) {
+    if (!isAlive) return;
     map<string,string> emptyMap;
+
+    /* Acquire mutex between switchIdleStates & reloadSessions */
+    sessionsMutex.lock();
 
     /* Pause all the VMs if we are not idle */
     if (!idle) {
         
-        sessionsMutex.lock();
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
@@ -99,11 +102,9 @@ void switchIdleStates( bool idle ) {
                 }
             }
         }
-        sessionsMutex.unlock();
         
     } else {
         
-        sessionsMutex.lock();
         for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
             HVSession* sess = *i;
             if (sess->daemonControlled) {
@@ -146,16 +147,20 @@ void switchIdleStates( bool idle ) {
                 }
             }
         }
-        sessionsMutex.unlock();
         
     }
     
+    /* Release mutex between switchIdleStates & reloadSessions */
+    sessionsMutex.unlock();
 }
 
 /**
  * Reload thread
  */
 void reloadSessions_thread() {
+    if (!isAlive) return;
+
+    /* Acquire mutex between switchIdleStates & reloadSessions */
     sessionsMutex.lock();
 
     cout << "INFO: Reloading sessions" << endl;
@@ -171,12 +176,14 @@ void reloadSessions_thread() {
         }
     }
 
-    // Release mutex
+    /* Release mutex between switchIdleStates & reloadSessions */
     sessionsMutex.unlock();
 
     // If we don't need the daemon, Initiate graceful shutdown
-    if (!needsDaemon)
+    if (!needsDaemon) {
+        cout << "INFO: I am not needed. Bye bye!" << endl;
         isAlive = false;
+    }
 
     // Release reload lock
     reloadTriggered = false;
@@ -186,6 +193,7 @@ void reloadSessions_thread() {
  * Trigger a session reload on another thread
  */
 void reloadSessions() {
+    if (!isAlive) return;
     if (reloadTriggered) return;
     reloadTriggered = true;
     reloadThread = boost::thread( &reloadSessions_thread );
@@ -195,6 +203,7 @@ void reloadSessions() {
  * Reap dead sessions if they have the DF_AUTODESTROY flag
  */
 void reapDead() {
+    if (!isAlive) return;
     bool needsUpdate = false;
     cout << "[INFO] reapDead";
     sessionsMutex.lock();
@@ -321,6 +330,7 @@ int main( int argc, char ** argv ) {
     config = new LocalConfig();
     idleTime = config->getNumDef<int>( "idle-time", 30 );
     config->setNum("idle-time", idleTime);
+    cout << "[INFO] Using idle-time: " << idleTime << endl;
     
     /* Reset state */
     reloadTimer = time( NULL );
@@ -367,6 +377,7 @@ int main( int argc, char ** argv ) {
                 isIdle = true;
                 cout << "INFO: Reloading sessions" << endl;
                 reloadSessions();
+                if (!isAlive) break;
 
                 cout << "INFO: Switching to IDLE state" << endl;
                 switchIdleStates( true );
@@ -374,11 +385,7 @@ int main( int argc, char ** argv ) {
         }
         
         /* Do not create CPU load on the loop */
-        #ifdef _WIN32
-        Sleep(1);
-        #else
-        sleep(1);
-        #endif
+        sleepMs(250);
         
     }
     

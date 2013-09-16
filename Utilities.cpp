@@ -936,22 +936,11 @@ int sysExecAsync( string app, string cmdline ) {
 
 #else
 
-    /* Run process in a different thread */
-    int pid = fork();
-    if (pid == -1) {
-        /* Could not fork */
-        return HVE_IO_ERROR;
+    /* Use the system '& hack */
+    string sysCmd = "\"" + app + "\" " + cmdline + "&";
+    system( sysCmd.c_str() );
 
-    } else if (!pid) {
-        /* Split cmdline into string components */
-        char *parts[512];
-        parts[0] = (char *)app.c_str();
-        splitArguments( cmdline, parts, 512, 1 );
-        
-        /* Launch given process */
-        execv(app.c_str(), parts);
-    }
-
+    /* Always return OK */
     return HVE_OK;
 
 #endif

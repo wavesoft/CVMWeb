@@ -104,6 +104,7 @@ public:
         this->flags = 0;
         this->userData = "";
         this->diskChecksum = "";
+        this->pid = 0;
         
         this->m_ipcMutex = NULL;
         this->m_shmem = NULL;
@@ -134,6 +135,7 @@ public:
     std::string             diskChecksum;
     
     int                     flags;
+    int                     pid;
     
     bool                    daemonControlled;
     int                     daemonMinCap;

@@ -1705,7 +1705,7 @@ map<string, string> Virtualbox::getAllProperties( string uuid ) {
             string vKey = line.substr( kBegin, kEnd - kBegin );
 
             /* Get value */
-            size_t vBegin = kEnd + 8;
+            size_t vBegin = kEnd + 9;
             string vValue = line.substr( vBegin, vEnd - vBegin );
 
             /* Store values */
@@ -1900,6 +1900,46 @@ std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
 }
 
 /**
+ * Parse VirtualBox Log file in order to get the launched process PID
+ */
+int __getPIDFromFile( std::string logPath ) {
+    int pid = 0;
+
+    /* Locate Logfile */
+    string logFile = logPath + "/VBox.log";
+    CVMWA_LOG("Debug", "Looking for PID in " << logPath );
+    if (!file_exists(logPath)) return 0;
+
+    /* Open input stream */
+    ifstream fIn(logPath, ifstream::in);
+    
+    /* Read as few bytes as possible */
+    string inBufferLine;
+    size_t iStart, iEnd;
+    char inBuffer[1024];
+    while (!fIn.eof()) {
+
+        // Read line
+        fIn.getline( inBuffer, 1024 );
+
+        // Handle it via higher-level API
+        inBufferLine.assign( inBuffer );
+        if ((iStart = inBufferLine.find("Process ID:")) != string::npos) {
+            iEnd = min(inBufferLine.find("\r"), inBufferLine.find("\n"), inBufferLine.length());
+            pid = ston<int>( inBufferLine.substr( iStart+1, iEnd-iStart ) );
+            break;
+        }
+    }
+
+    CVMWA_LOG("Debug", "PID extracted from file: " << pid );
+
+    // Close and return PID
+    fIn.close();
+    return pid;
+
+}
+
+/**
  * Update session information from VirtualBox
  */
 int Virtualbox::updateSession( HVSession * session, bool fast ) {
@@ -2078,8 +2118,10 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         
     }
     
-    /* Parse all properties concurrently */
+    /* If we want to be fast, skip time-consuming operations */
     if (!fast) {
+
+        /* Parse all properties concurrently */
         map<string, string> allProps = this->getAllProperties( uuid );
 
         if (allProps.find("/CVMWeb/daemon/controlled") == allProps.end()) {
@@ -2117,6 +2159,10 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         } else {
             ((VBoxSession *)session)->localApiPort = ston<int>(allProps["/CVMWeb/localApiPort"]);
         }
+
+        /* Get hypervisor pid from file */
+        if (info.find("Log folder") != info.end())
+            session->pid = __getPIDFromFile( info["Log folder"] );
 
     }
 
