@@ -24,10 +24,24 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 
-int platformMeasureResources( PLAF_USAGE * usage ) {
-    return HVE_NOT_IMPLEMENTED;
+/**
+ * Initialize platform-dependent code stack
+ */
+int platformInit ( ) {
+
 }
 
+/**
+ * Cleanup platform-dependent code stack
+ */
+int platformCleanup ( ) {
+
+}
+
+/**
+ * Get the number of seconds since the last time the user
+ * sent an input to the system.
+ */
 int platformIdleTime() {
     mach_port_t port;
     io_iterator_t iter;
@@ -57,4 +71,33 @@ int platformIdleTime() {
 
     double fTime = idle / 1000000000.0;
     return (int)fTime;
+}
+
+/**
+ * Start monitoring a particular PID
+ */
+int platformStartMonitorPID ( int pid ) {
+
+}
+
+/**
+ * Stop monitoring a particular PID
+ */
+int platformStopMonitorPID  ( int pid ) {
+
+}
+
+/**
+ * Get the CPU Usage of the given application, divided to the total
+ * CPU usage of the machine. The value should be normalized to 100 (percent)
+ */
+int platformCPUProcessUsage ( int pid ) {
+
+}
+
+/**
+ * Get the overall system CPU usage, normalized to 100 (percent)
+ */
+int platformCPUGlobalUsage ( ) {
+
 }

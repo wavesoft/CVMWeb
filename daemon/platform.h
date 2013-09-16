@@ -23,22 +23,65 @@
 #ifndef PLATFORM_H_X4S3J8HJ
 #define PLATFORM_H_X4S3J8HJ
 
-#define USAGE_IDLE      0   // The resource is completely free for our use
-#define USAGE_LOW       1   // The resource is used only in a fraction, we can still use it
-#define USAGE_REGULAR   2   // The resource is in regular use, we might be able to use a fraction of it
-#define USAGE_HIGH      3   // The resource is completely in use, we are forbidden to touch it
+/**
+ * You should call these functions in the following way:
+ *
+ * - platformInit()                        : To your startup script
+ *  - platformStartMonitorPID( pid )       : To start resource monitoring of the give PID
+ *  - platformBeginMeasurement( )          : Before calling the resource-measuring functions
+ *   - platformCPUProcessUsage( pid )      : To get CPU usage of the give PID
+ *   - platformCPUGlobalUsage( )           : To get the global CPU usage
+ *  - platformEndMeasurement( )            : To complete resource measurements
+ *
+ *  - platformStopMonitorPID( pid )        : When you don't care any more for the given PID
+ * - platformCleanup()                    : Before your application exists
+ */
 
-/* Structure that holds the platform resource status */
-typedef struct {
-    
-    unsigned char       cpu;
-    unsigned char       ram;
-    unsigned char       network;
-    
-} PLAF_USAGE;
+/**
+ * Initialize platform-dependent code stack
+ */
+int 					platformInit			( );
 
-/* Resource fetching */
-int                     platformMeasureResources( PLAF_USAGE * usage );
-int                     platformIdleTime( );
+/**
+ * Cleanup platform-dependent code stack
+ */
+int 					platformCleanup			( );
+
+/**
+ * Get the number of seconds since the last time the user
+ * sent an input to the system.
+ */
+int                     platformIdleTime		( );
+
+/**
+ * Start monitoring a particular PID
+ */
+int						platformStartMonitorPID	( int pid );
+
+/**
+ * Stop monitoring a particular PID
+ */
+int						platformStopMonitorPID	( int pid );
+
+/**
+ * Begin resource sampling routines
+ */
+int                     platformBeginMeasurement( );
+
+/**
+ * End resource sampling routines
+ */
+int                     platformEndMeasurement  ( );
+
+/**
+ * Get the CPU Usage of the given application, divided to the total
+ * CPU usage of the machine. The value should be normalized to 100 (percent)
+ */
+int						platformCPUProcessUsage	( int pid );
+
+/**
+ * Get the overall system CPU usage, normalized to 100 (percent)
+ */
+int						platformCPUGlobalUsage	( );
 
 #endif /* end of include guard: PLATFORM_H_X4S3J8HJ */

@@ -1911,7 +1911,7 @@ int __getPIDFromFile( std::string logPath ) {
     if (!file_exists(logFile)) return 0;
 
     /* Open input stream */
-    ifstream fIn(logFile, ifstream::in);
+    ifstream fIn(logFile.c_str(), ifstream::in);
     
     /* Read as few bytes as possible */
     string inBufferLine;

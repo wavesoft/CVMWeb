@@ -356,10 +356,10 @@ inline long getMillis() {
  * Cross-platform function to wait for some milliseconds
  */
 inline void sleepMs(int sleepMs) {
-    #ifdef LINUX
+    #ifdef __linux__
     nanosleep(sleepMs * 1000000 );   // usleep takes sleep time in us
     #endif
-    #ifdef WINDOWS
+    #ifdef _WIN32
     Sleep(sleepMs);
     #endif
 }

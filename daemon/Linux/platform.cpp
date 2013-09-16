@@ -25,12 +25,23 @@
 #include <X11/Xutil.h>
 #include <X11/extensions/scrnsaver.h>
 
-int platformMeasureResources( PLAF_USAGE * usage ) {
-     return HVE_NOT_IMPLEMENTED;
+/**
+ * Initialize platform-dependent code stack
+ */
+int platformInit ( ) {
+
 }
 
 /**
- * Return the system idle time (in seconds)
+ * Cleanup platform-dependent code stack
+ */
+int platformCleanup ( ) {
+
+}
+
+/**
+ * Get the number of seconds since the last time the user
+ * sent an input to the system.
  */
 int platformIdleTime( ) {
     time_t idle_time;
@@ -62,4 +73,33 @@ int platformIdleTime( ) {
     XCloseDisplay(display); 
     
     return idle_time;
+}
+
+/**
+ * Start monitoring a particular PID
+ */
+int platformStartMonitorPID ( int pid ) {
+
+}
+
+/**
+ * Stop monitoring a particular PID
+ */
+int platformStopMonitorPID  ( int pid ) {
+
+}
+
+/**
+ * Get the CPU Usage of the given application, divided to the total
+ * CPU usage of the machine. The value should be normalized to 100 (percent)
+ */
+int platformCPUProcessUsage ( int pid ) {
+
+}
+
+/**
+ * Get the overall system CPU usage, normalized to 100 (percent)
+ */
+int platformCPUGlobalUsage ( ) {
+    
 }

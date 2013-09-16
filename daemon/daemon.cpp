@@ -23,6 +23,8 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <vector>
+#include <map>
 #include <time.h>
 
 #include <boost/thread.hpp>
@@ -55,6 +57,8 @@ LocalConfig         * config;
 boost::mutex          sessionsMutex;
 boost::thread         reloadThread;
 bool                  reloadTriggered = false;
+
+vector<int>           monitoredPids;
 
 /**
  * Switch the idle states of the VMs
@@ -292,9 +296,80 @@ void serverThread() {
 }
 
 /**
+ * Check if system is idle
+ */
+bool isSystemIdle() {
+    /* Acquire mutex between switchIdleStates & reloadSessions */
+    sessionsMutex.lock();
+
+    /* Use resource detection when available */
+    bool enableResourceDetection = true;
+
+    /* Check what PIDs were found in the sessions */
+    vector<int> usedPids;
+
+    /* Calculate the CPU usage of each PID */
+    platformBeginMeasurement();
+    for (vector<HVSession*>::iterator i = hv->sessions.begin(); i != hv->sessions.end(); i++) {
+        HVSession * sess = *i;
+        if (sess->daemonControlled) {
+
+            /* If we don't have a PID it means that at least one hypervisor
+             * process won't be calculated on the resources calculation mechanism
+             * which also means that we cannot trust the CPU usage of the system
+             * (again: because there might be a hypervisor running that WE instantiated,
+             *  but the system does not grant as access).
+             *
+             * This means we should disable the more advanced Resource-based idle
+             * detection, and keep only the last input time. */
+            if (sess->pid == 0) {
+                enableResourceDetection = false;
+                break;
+            }
+
+            /* If this PID is not monitored, start monitoring */
+            if (std::find( monitoredPids.begin(), monitoredPids.end(), sess->pid) == monitoredPids.end() ) {
+                monitoredPids.push_back( sess->pid );
+                platformStartMonitorPID( sess->pid );
+            }
+
+            /* Mark this PID as used */
+            usedPids.push_back( sess->pid );
+
+            /* Get CPU Usage */
+            cout << "[INFO] Checking session " << sess->uuid << " (Pid " << sess->pid << ")" << endl;
+            platformCPUProcessUsage( sess->pid );
+        }
+    }
+    platformEndMeasurement();
+
+    /* Check which PIDs were not used any more and stop monitoring them */
+    vector<int>::iterator it = monitoredPids.begin();
+    for ( ; it != monitoredPids.end(); ) {
+        int pid = *it;
+        if (std::find( usedPids.begin(), usedPids.end(), pid) == usedPids.end() ) {
+
+            /* PID Not used any more */
+            platformStopMonitorPID( pid );
+
+            /* Delete PID from monitoredPids */
+            monitoredPids.erase( it );
+
+        } else {
+            ++it;
+        }
+    }
+
+    /* Release mutex */
+    sessionsMutex.unlock();
+    return false;
+}
+
+/**
  * Entry point
  */
 int main( int argc, char ** argv ) {
+    bool newIdleState;
     
     /* Get a hypervisor control instance */
     hv = detectHypervisor();
@@ -325,7 +400,10 @@ int main( int argc, char ** argv ) {
     
     /* Initialize ThinIPC */
     thinIPCInitialize();
-    
+
+    /* Initialize platform metrics */
+    platformInit();
+
     /* Initialize arguments */
     config = new LocalConfig();
     idleTime = config->getNumDef<int>( "idle-time", 30 );
@@ -366,6 +444,7 @@ int main( int argc, char ** argv ) {
         }
         
         /* Check for idle state switch */
+        isSystemIdle();
         if (isIdle) {
             if ( platformIdleTime() < idleTime ) {
                 isIdle = false;
@@ -385,14 +464,15 @@ int main( int argc, char ** argv ) {
         }
         
         /* Do not create CPU load on the loop */
-        sleepMs(250);
+        sleepMs(1000);
         
     }
     
     /* Cleanup */
     daemonUnlock( lockInfo );
     delete(config);
-    
+    platformCleanup();
+
     /* Graceful cleanup */
     return 0;
     
