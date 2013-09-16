@@ -1907,15 +1907,15 @@ int __getPIDFromFile( std::string logPath ) {
 
     /* Locate Logfile */
     string logFile = logPath + "/VBox.log";
-    CVMWA_LOG("Debug", "Looking for PID in " << logPath );
-    if (!file_exists(logPath)) return 0;
+    CVMWA_LOG("Debug", "Looking for PID in " << logFile );
+    if (!file_exists(logFile)) return 0;
 
     /* Open input stream */
-    ifstream fIn(logPath, ifstream::in);
+    ifstream fIn(logFile, ifstream::in);
     
     /* Read as few bytes as possible */
     string inBufferLine;
-    size_t iStart, iEnd;
+    size_t iStart, iEnd, i1, i2;
     char inBuffer[1024];
     while (!fIn.eof()) {
 
@@ -1925,8 +1925,19 @@ int __getPIDFromFile( std::string logPath ) {
         // Handle it via higher-level API
         inBufferLine.assign( inBuffer );
         if ((iStart = inBufferLine.find("Process ID:")) != string::npos) {
-            iEnd = min(inBufferLine.find("\r"), inBufferLine.find("\n"), inBufferLine.length());
-            pid = ston<int>( inBufferLine.substr( iStart+1, iEnd-iStart ) );
+
+            // Pick the appropriate ending
+            iEnd = inBufferLine.length();
+            i1 = inBufferLine.find("\r");
+            i2 = inBufferLine.find("\n");
+            if (i1 < iEnd) iEnd=i1;
+            if (i2 < iEnd) iEnd=i2;
+
+            // Extract string
+            inBufferLine = inBufferLine.substr( iStart+12, iEnd-iStart );
+
+            // Convert to integer
+            pid = ston<int>( inBufferLine );
             break;
         }
     }
