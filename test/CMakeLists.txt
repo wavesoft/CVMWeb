@@ -83,6 +83,9 @@ IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 ENDIF()
 
+# Add custom definitions
+ADD_DEFINITIONS(-DLOGGING)   
+
 # Build zlib statically from the resources
 add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
 include_directories( ${CMAKE_BINARY_DIR}/extern/zlib )
@@ -99,7 +102,6 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Utilities.cpp
 	${PROJECT_SOURCE_DIR}/../LocalConfig.cpp
-	${PROJECT_SOURCE_DIR}/../gzstream.cpp
 	${PROJECT_SOURCE_DIR}/../floppyIO.cpp
 	${PROJECT_SOURCE_DIR}/../DownloadProvider.cpp
 	)
