@@ -25,12 +25,6 @@
 #include "Utilities.h"
 #include "CrashReport.h"
 
-#include <boost/function.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
-
 /* Hypervisor types */
 #define HV_NONE                 0
 #define HV_VIRTUALBOX           1
@@ -106,10 +100,6 @@ public:
         this->diskChecksum = "";
         this->pid = 0;
         
-        this->m_ipcMutex = NULL;
-        this->m_shmem = NULL;
-        this->m_shregion = NULL;
-
         this->daemonControlled = false;
         this->daemonMinCap = 0;
         this->daemonMaxCap = 100;
@@ -164,7 +154,6 @@ public:
 
     virtual int             update();
     virtual int             updateFast();
-    int                     updateSharedMemoryID( std::string uuid );
 
     callbackDebug           onDebug;
     callbackVoid            onOpen;
@@ -173,11 +162,6 @@ public:
     callbackVoid            onClose;
     callbackError           onError;
     callbackProgress        onProgress;
-
-protected:
-    boost::interprocess::interprocess_mutex *   m_ipcMutex;
-    boost::interprocess::shared_memory_object * m_shmem;
-    boost::interprocess::mapped_region *        m_shregion;
 
 };
 
@@ -263,7 +247,7 @@ public:
     virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
     
     /* Tool functions (used internally or from session objects) */
-    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, boost::interprocess::interprocess_mutex * mutex = NULL, int retries = 2 );
+    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2 );
     void                    detectVersion       ( );
     int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback );
     int                     cernVMCached        ( std::string version, std::string * filename );

@@ -161,7 +161,9 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
     if (this->onDebug) (this->onDebug)("Executing '"+cmd+"'");
     
     /* Run command */
-    ans = this->host->exec( cmd, stdoutList, &stderrLocal, this->m_ipcMutex, retries );
+    NAMED_MUTEX_LOCK( this->uuid );
+    ans = this->host->exec( cmd, stdoutList, &stderrLocal, retries );
+    NAMED_MUTEX_UNLOCK;
     
     /* Debug log response */
     if (this->onDebug) {
@@ -223,7 +225,6 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         return ans;
     } else {
         this->uuid = uuid;
-        this->updateSharedMemoryID( uuid );
     }
     
     /* Find a random free port for VRDE */
@@ -1667,7 +1668,10 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     string err;
     
     /* Perform property update */
-    int ans = this->exec("showvminfo "+uuid, &lines, &err, NULL, 4 );
+    int ans;
+    NAMED_MUTEX_LOCK( uuid );
+    ans = this->exec("showvminfo "+uuid, &lines, &err, 4 );
+    NAMED_MUTEX_UNLOCK;
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
         return dat;
@@ -1688,7 +1692,8 @@ map<string, string> Virtualbox::getAllProperties( string uuid ) {
     string errOut;
 
     /* Get guest properties */
-    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, NULL, 4 ) == 0) {
+    NAMED_MUTEX_LOCK( uuid );
+    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, 4 ) == 0) {
         for (vector<string>::iterator it = lines.begin(); it < lines.end(); it++) {
             string line = *it;
 
@@ -1713,6 +1718,7 @@ map<string, string> Virtualbox::getAllProperties( string uuid ) {
 
         }
     }
+    NAMED_MUTEX_UNLOCK;
 
     return ans;
     CRASH_REPORT_END;
@@ -1761,7 +1767,10 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
     string err;
     
     /* Invoke property query */
-    int ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, NULL, 2);
+    int ans;
+    NAMED_MUTEX_LOCK( uuid );
+    ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     if (ans != 0) return "";
     if (lines.empty()) return "";
     
@@ -1803,7 +1812,10 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
     int v;
     
     /* List the CPUID information */
-    int ans = this->exec("list hostcpuids", &lines, &err, NULL, 2);
+    int ans;
+    NAMED_MUTEX_LOCK("generic");
+    ans = this->exec("list hostcpuids", &lines, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
     if (lines.empty()) return HVE_EXTERNAL_ERROR;
     
@@ -1856,7 +1868,9 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
         ( (caps->cpu.featuresC & 0x20000000) != 0 ); // Long mode 'lm'
         
     /* List the system properties */
-    ans = this->exec("list systemproperties", &lines, &err, NULL, 2);
+    NAMED_MUTEX_LOCK("generic");
+    ans = this->exec("list systemproperties", &lines, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
     if (lines.empty()) return HVE_EXTERNAL_ERROR;
 
@@ -1889,7 +1903,10 @@ std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
     string err;
 
     /* List the running VMs in the system */
-    int ans = this->exec("list hdds", &lines, &err, NULL, 2);
+    int ans;
+    NAMED_MUTEX_LOCK("generic");
+    ans = this->exec("list hdds", &lines, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     if (ans != 0) return resMap;
     if (lines.empty()) return resMap;
 
@@ -2102,7 +2119,10 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         kk = kk.substr(0, kk.length()-1);
         
         /* Collect disk info */
-        int ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err, NULL, 2);
+        int ans;
+        NAMED_MUTEX_LOCK(kk);
+        ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err, 2);
+        NAMED_MUTEX_UNLOCK;
         if (ans == 0) {
         
             /* Tokenize data */
@@ -2193,7 +2213,10 @@ int Virtualbox::loadSessions() {
     string err;
     
     /* List the running VMs in the system */
-    int ans = this->exec("list vms", &lines, &err, NULL, 2);
+    int ans;
+    NAMED_MUTEX_LOCK("generic");
+    ans = this->exec("list vms", &lines, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
 
     /* Tokenize */
@@ -2213,7 +2236,6 @@ int Virtualbox::loadSessions() {
             HVSession * session = this->allocateSession( name, secret );
             session->uuid = "{" + uuid + "}";
             session->key = secret;
-            session->updateSharedMemoryID( session->uuid );
 
             /* Update session info */
             updateSession( session, false );
@@ -2240,7 +2262,9 @@ bool Virtualbox::hasExtPack() {
      */
     vector<string> lines;
     string err;
-    this->exec("list extpacks", &lines, &err, NULL, 2);
+    NAMED_MUTEX_LOCK("generic");
+    this->exec("list extpacks", &lines, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     for (std::vector<std::string>::iterator l = lines.begin(); l != lines.end(); l++) {
         if (l->find("Oracle VM VirtualBox Extension Pack") != string::npos) {
             return true;
@@ -2332,7 +2356,9 @@ int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadPr
     /* Install extpack on virtualbox */
     currProgress += progressStep;
     if (cbProgress) (cbProgress)(currProgress, progressTotal, "Installing extension pack");
-    res = this->exec("extpack install \"" + tmpExtpackFile + "\"", NULL, &err, NULL, 2);
+    NAMED_MUTEX_LOCK("generic");
+    res = this->exec("extpack install \"" + tmpExtpackFile + "\"", NULL, &err, 2);
+    NAMED_MUTEX_UNLOCK;
     if (res != HVE_OK) return HVE_EXTERNAL_ERROR;
 
     /* Cleanup */

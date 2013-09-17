@@ -103,50 +103,6 @@ bool HVSession::isAPIAlive( unsigned char handshake ) {
 }
 
 /**
- * Update the shared memory objects if we change the UUID of the VM
- */
-int HVSession::updateSharedMemoryID( std::string uuid ) {
-    CRASH_REPORT_BEGIN;
-       
-    try {
-        // Release previous objects
-        if (m_ipcMutex != NULL) delete m_ipcMutex;
-        if (m_shmem != NULL) delete m_shmem;
-        if (m_shregion != NULL) delete m_shregion;
-
-        // Calculate a shared memory name
-        string shmemName = "cvmwebExecShmem" + uuid;
-
-        // Create a shared memory object
-        m_shmem = new boost::interprocess::shared_memory_object(
-            boost::interprocess::open_or_create,
-            shmemName.c_str(),
-            boost::interprocess::read_write);
-        if (m_shmem == NULL) {
-            CVMWA_LOG( "Error", "Unable to allocate shared memory object with UUID " << uuid );
-            return HVE_EXTERNAL_ERROR;
-        }
-
-        // Allocate memory
-        m_shmem->truncate( sizeof( m_ipcMutex ) );
-        m_shregion = new boost::interprocess::mapped_region( 
-            *m_shmem, 
-            boost::interprocess::read_write);
-        m_ipcMutex = new(m_shregion->get_address())boost::interprocess::interprocess_mutex;
-        if (m_ipcMutex == NULL) {
-            CVMWA_LOG( "Error", "Unable to allocate shared memory mutex" );
-            return HVE_EXTERNAL_ERROR;
-        }
-    } catch (boost::interprocess::interprocess_exception &e) {
-        CVMWA_LOG( "Exception", "Interprocess operation exception: " << e.what() );
-        return HVE_EXTERNAL_ERROR;
-    }
-
-    return HVE_OK;
-    CRASH_REPORT_END;
-}
-
-/**
  * Measure the resources from the sessions
  */
 int Hypervisor::getUsage( HVINFO_RES * resCount ) { 
@@ -365,7 +321,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
-int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, boost::interprocess::interprocess_mutex * m_execMutex, int retries ) {
+int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, int retries ) {
     CRASH_REPORT_BEGIN;
     int execRes = 0;
 
@@ -376,20 +332,16 @@ int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrM
         execRes = sysExecAsync( this->hvBinary, args );
 
     } else {
-        {
-            /* Use only one exec per session, using inteprocess mutexes */
-            if (m_execMutex != NULL)
-                boost::interprocess::scoped_lock< boost::interprocess::interprocess_mutex > lock( *m_execMutex );
     
-            /* Execute */
-            string execError;
-            execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries );
-            if (stderrMsg != NULL) *stderrMsg = execError;
+        /* Execute */
+        string execError;
+        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries );
+        if (stderrMsg != NULL) *stderrMsg = execError;
 
-            /* Store the last error occured */
-            if (!execError.empty())
-                this->lastExecError = execError;
-        }
+        /* Store the last error occured */
+        if (!execError.empty())
+            this->lastExecError = execError;
+
     }
 
     return execRes;

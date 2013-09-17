@@ -40,9 +40,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+// Constants for boost interprocess
+#ifdef _WIN32
+#define BOOST_INTERPROCESS_WINDOWS
+#endif
+
 #include <boost/function.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
 
 #include "CrashReport.h"
 
@@ -168,7 +176,12 @@ int                                                 sha256_buffer   ( std::strin
 /**
  * Get the sha256 signature of the given buffer and store it on the checksum char pointer
  */
-int                                                 sha256_bin   ( std::string path, unsigned char * checksum );
+int                                                 sha256_bin      ( std::string path, unsigned char * checksum );
+
+/**
+ * Get the md5 signature of the given buffer and store it on the checksum char pointer
+ */
+int                                                 md5_bin         ( std::string path, unsigned char * checksum );
 
 /**
  * Platform-independant function to execute the given command-line and return the
@@ -284,6 +297,15 @@ void                                                explode         ( std::strin
  */
 char *                                              getTimestamp    ();
 
+/**
+ * Generate Compact ID (30 characters) of the given id
+ *
+ * This function is used to get the names of the shared mutexes, since
+ * the maximum character length is 30 and the session IDs can be much
+ * longer.
+ */
+std::string                                         compactID       ( std::string id );
+
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
 /* ======================================================== */
@@ -327,7 +349,7 @@ void                                                splitLines      ( std::strin
 int                                                 getKV           ( std::string line, std::string * key, std::string * value, unsigned char delim, int offset );
 
 /* ======================================================== */
-/*                    INLINE FUNCTIONS                      */
+/*                INLINE FUNCTIONS & MACROS                 */
 /* ======================================================== */
 
 /**
@@ -363,6 +385,16 @@ inline void sleepMs(int sleepMs) {
     #endif
 }
 
+/**
+ * Named mutex context lock
+ */
+#define NAMED_MUTEX_LOCK(x)     { std::string __nMutexName=compactID(x);  \
+                                boost::interprocess::named_mutex __mutex ( \
+                                       boost::interprocess::open_or_create, \
+                                       __nMutexName.c_str() \
+                                    ); { \
+                                        boost::interprocess::scoped_lock< boost::interprocess::named_mutex > __mLock( __mutex );
+#define NAMED_MUTEX_UNLOCK      } };
 
 /**
  * Convert to lowercase the given string
