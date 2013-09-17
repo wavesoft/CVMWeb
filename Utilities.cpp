@@ -33,6 +33,7 @@
 #include <sstream>
 
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 #include "zlib.h"
 
 #include "Utilities.h"
@@ -1084,20 +1085,71 @@ int sha256_bin( string buffer, unsigned char * hash ) {
     return 0;
     CRASH_REPORT_END;
 }
+
 /**
- * Base64-encoding borrowed from:
+ * OpenSSL MD5 on a string buffer
+ */
+int md5_bin( string buffer, unsigned char * hash ) {
+    CRASH_REPORT_BEGIN;
+    MD5_CTX md5;
+    MD5_Init(&md5);
+    MD5_Update(&md5, buffer.c_str(), buffer.length());
+    MD5_Final(hash, &md5);
+    return 0;
+    CRASH_REPORT_END;
+}
+
+/**
+ * Base64-encoding adapted from the original here:
  * http://stackoverflow.com/questions/5288076/doing-base64-encoding-and-decoding-in-openssl-c
  */
-::std::string base64_encode( const ::std::string &bindata ) {
+string base64_encode_ptr( const unsigned char * ptr, size_t binlen ) {
     CRASH_REPORT_BEGIN;
     using ::std::string;
     using ::std::numeric_limits;
 
-    /*
+    if (binlen > (std::numeric_limits<string::size_type>::max() / 4u) * 3u) {
+       throw ::std::length_error("Converting too large a string to base64.");
+    }
+
+    // Use = signs so the end is properly padded.
+    string retval((((binlen + 2) / 3) * 4), '=');
+    ::std::size_t outpos = 0;
+    int bits_collected = 0;
+    unsigned int accumulator = 0;
+    const unsigned char * ptrEnd = ptr + binlen;
+
+    for (const unsigned char * i = ptr; i < ptrEnd; ++i) {
+       accumulator = (accumulator << 8) | (*i & 0xffu);
+       bits_collected += 8;
+       while (bits_collected >= 6) {
+          bits_collected -= 6;
+          retval[outpos++] = b64_table[(accumulator >> bits_collected) & 0x3fu];
+       }
+    }
+    if (bits_collected > 0) { // Any trailing bits that are missing.
+       assert(bits_collected < 6);
+       accumulator <<= 6 - bits_collected;
+       retval[outpos++] = b64_table[accumulator & 0x3fu];
+    }
+    assert(outpos >= (retval.size() - 2));
+    assert(outpos <= retval.size());
+    return retval;
+    CRASH_REPORT_END;
+}
+
+/**
+ * Base64-encoding borrowed from:
+ * http://stackoverflow.com/questions/5288076/doing-base64-encoding-and-decoding-in-openssl-c
+ */
+string base64_encode( const ::std::string &bindata ) {
+    CRASH_REPORT_BEGIN;
+    using ::std::string;
+    using ::std::numeric_limits;
+
     if (bindata.size() > (numeric_limits<string::size_type>::max() / 4u) * 3u) {
        throw ::std::length_error("Converting too large a string to base64.");
     }
-    */
 
     const ::std::size_t binlen = bindata.size();
     // Use = signs so the end is properly padded.
@@ -1130,32 +1182,57 @@ int sha256_bin( string buffer, unsigned char * hash ) {
  * Base64-encoding borrowed from:
  * http://stackoverflow.com/questions/5288076/doing-base64-encoding-and-decoding-in-openssl-c
  */
-::std::string base64_decode(const ::std::string &ascdata) {
+string base64_decode(const ::std::string &ascdata) {
     CRASH_REPORT_BEGIN;
-   using ::std::string;
-   string retval;
-   const string::const_iterator last = ascdata.end();
-   int bits_collected = 0;
-   unsigned int accumulator = 0;
+    using ::std::string;
+    string retval;
+    const string::const_iterator last = ascdata.end();
+    int bits_collected = 0;
+    unsigned int accumulator = 0;
 
-   for (string::const_iterator i = ascdata.begin(); i != last; ++i) {
-      const int c = *i;
-      if (::std::isspace(c) || c == '=') {
-         // Skip whitespace and padding. Be liberal in what you accept.
-         continue;
-      }
-      if ((c > 127) || (c < 0) || (reverse_table[c] > 63)) {
-         throw ::std::invalid_argument("This contains characters not legal in a base64 encoded string.");
-      }
-      accumulator = (accumulator << 6) | reverse_table[c];
-      bits_collected += 6;
-      if (bits_collected >= 8) {
-         bits_collected -= 8;
-         retval += (char)((accumulator >> bits_collected) & 0xffu);
-      }
-   }
-   return retval;
+    for (string::const_iterator i = ascdata.begin(); i != last; ++i) {
+       const int c = *i;
+       if (::std::isspace(c) || c == '=') {
+          // Skip whitespace and padding. Be liberal in what you accept.
+          continue;
+       }
+       if ((c > 127) || (c < 0) || (reverse_table[c] > 63)) {
+          throw ::std::invalid_argument("This contains characters not legal in a base64 encoded string.");
+       }
+       accumulator = (accumulator << 6) | reverse_table[c];
+       bits_collected += 6;
+       if (bits_collected >= 8) {
+          bits_collected -= 8;
+          retval += (char)((accumulator >> bits_collected) & 0xffu);
+       }
+    }
+    return retval;
     CRASH_REPORT_END;
+}
+
+/**
+ * Compact ID (30 characters) of the given id
+ *
+ * This function is used to get the names of the shared mutexes, since
+ * the maximum character length is 30 and the session IDs can be much
+ * longer.
+ *
+ * It uses base64-encoded MD5 checksums which sums up to 25 characters
+ *
+ */
+string compactID( string id ) {
+
+    // Calculate the MD5 digest of the ID
+    unsigned char md5_digest[16];
+    md5_bin( id, md5_digest );
+
+    // Convert it to base64
+    string b64_digest = base64_encode_ptr( md5_digest, 16 );
+
+    // Prefix with "cvmw"
+    b64_digest = "cvmw" + b64_digest;
+    return b64_digest;
+
 }
 
 /**
