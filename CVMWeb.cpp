@@ -334,8 +334,8 @@ std::string CVMWeb::getDaemonBin() {
     
     /* Check the default data location */
     dPath = this->getDataFolderPath();
-    if (file_exists(dPath + "/daemon" + dBin)) {
-        return dPath + "/daemon" + dBin;
+    if (file_exists(dPath + "/daemon/" + dBin)) {
+        return dPath + "/daemon/" + dBin;
     }
     
     /* Did not find anything :( */
