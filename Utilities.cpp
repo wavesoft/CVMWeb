@@ -57,6 +57,9 @@ static const char reverse_table[128] = {
 /* Singleton optimization for AppData folder */
 std::string appDataDir = "";
 
+/* A list of named mutexes in this process (static) */
+std::map< std::string, sharedMutex >    namedMutexStack;
+
 /**
  * Convert an std::string to a number
  */
@@ -86,6 +89,36 @@ template size_t ston<size_t>( const std::string &Text );
 template std::string ntos<int>( int &value );
 template std::string ntos<long>( long &value );
 template std::string ntos<size_t>( size_t &value );
+
+
+/**
+ * Alloc/get a boost::mutex with the given name
+ */
+sharedMutex __nmutex_get( std::string name ) {
+    
+    // If we don't have a mutex under this name, allocate it now
+    if (namedMutexStack.find(name) == namedMutexStack.end()) {
+        sharedMutex m = boost::make_shared<boost::mutex>();
+        namedMutexStack[name] = m;
+        return m;
+    } 
+    
+    // Otherwise return the existing pointer
+    else {
+        return namedMutexStack[name];
+    }
+
+}
+
+/**
+ * Release memory from the named mutexes already acquired
+ */
+void flushNamedMutexes() {
+
+    // Clear map (objects are shared_ptrs, so they are disposed now)
+    namedMutexStack.clear();
+
+};
 
 /**
  * Get the location of the platform-dependant application data folder

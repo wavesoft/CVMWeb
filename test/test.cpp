@@ -12,86 +12,38 @@
 
 #include "DownloadProvider.h"
 
-#include <boost/thread/mutex.hpp>
-#include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-
 #include <openssl/rand.h>
 
 using namespace std;
 
-boost::interprocess::interprocess_mutex *   m_ipcMutex = NULL;
-boost::interprocess::shared_memory_object * m_shmem = NULL;
-boost::interprocess::mapped_region *        m_shregion = NULL;
-
-int updateSharedMemoryID( std::string uuid ) {
-    try {
-        // Release previous objects
-        if (m_ipcMutex != NULL) delete m_ipcMutex;
-        if (m_shmem != NULL) delete m_shmem;
-        if (m_shregion != NULL) delete m_shregion;
-
-        // Calculate a shared memory name
-        string shmemName = "cvmwebExecShmem" + uuid;
-
-        // Create a shared memory object
-        m_shmem = new boost::interprocess::shared_memory_object(
-            boost::interprocess::open_or_create,
-            shmemName.c_str(),
-            boost::interprocess::read_write);
-        if (m_shmem == NULL) {
-            CVMWA_LOG( "Error", "Unable to allocate shared memory object with UUID " << uuid );
-            return HVE_EXTERNAL_ERROR;
-        }
-
-        // Allocate memory
-        m_shmem->truncate( sizeof( m_ipcMutex ) );
-        m_shregion = new boost::interprocess::mapped_region( 
-            *m_shmem, 
-            boost::interprocess::read_write);
-        
-        void * ptr  = m_shregion->get_address();
-        cout.write((const char *)ptr,8);
-        
-        m_ipcMutex = new(ptr)boost::interprocess::interprocess_mutex;
-        if (m_ipcMutex == NULL) {
-            CVMWA_LOG( "Error", "Unable to allocate shared memory mutex" );
-            return HVE_EXTERNAL_ERROR;
-        }
-    } catch (boost::interprocess::interprocess_exception &e) {
-        CVMWA_LOG( "Exception", "Interprocess operation exception: " << e.what() );
-        return HVE_EXTERNAL_ERROR;
-    }
-
-    return HVE_OK;
-}
-
 void exec_thread( std::string uuid ) {
-
-    // Calculate named mutex name
-    string shMutexName = uuid;
+    cout << "[" << uuid << "] Started" << endl;
     
-    // Create a shared named mutex
-    boost::interprocess::named_mutex::remove( shMutexName.c_str() );
-    boost::interprocess::named_mutex mutex(
-        boost::interprocess::open_or_create, 
-        shMutexName.c_str());
+    NAMED_MUTEX_LOCK(uuid);
         
-    {
-        /* Use only one exec per session, using inteprocess mutexes */
-        boost::interprocess::scoped_lock< boost::interprocess::named_mutex > lock( mutex );
-        
-        /* Emulate exec */
-        cout << "** Running***" << endl;
-        sleepMs(5000);
-        
-    }
+    /* Emulate exec */
+    cout << "[" << uuid << "] *** Running ***" << endl;
+    sleepMs(5000);
+
+    NAMED_MUTEX_UNLOCK;
+
+    cout << "[" << uuid << "] Completed" << endl;
 }
 
 int main( int argc, char ** argv ) {
     //cout << "Updating SHMEM=" << updateSharedMemoryID("9d9a7f71-9cdc-4b54-a804-cd1e8688922d") << endl;
-    exec_thread("123456789012345678901234567890");
+    boost::thread t1(boost::bind(&exec_thread, "first"));
+    boost::thread t2(boost::bind(&exec_thread, "second"));
+    boost::thread t3(boost::bind(&exec_thread, "third"));
+    boost::thread t4(boost::bind(&exec_thread, "first"));
+    boost::thread t5(boost::bind(&exec_thread, "first"));
+    boost::thread t6(boost::bind(&exec_thread, "second"));
+    
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+    t6.join();
     return 0;
 }

@@ -126,6 +126,10 @@ public:
             this->lastThread.join();
 
         }
+        
+        // Flush named mutexes stack
+        // (We are free to do so at any time)
+        flushNamedMutexes( );
 
     }
 

@@ -47,10 +47,11 @@
 
 #include <boost/function.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
 
 #include "CrashReport.h"
 
@@ -306,6 +307,12 @@ char *                                              getTimestamp    ();
  */
 std::string                                         compactID       ( std::string id );
 
+/**
+ * Release memory from the named mutexes already acquired by the named mutex locks
+ */
+void                                                flushNamedMutexes ();
+
+
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
 /* ======================================================== */
@@ -386,15 +393,12 @@ inline void sleepMs(int sleepMs) {
 }
 
 /**
- * Named mutex context lock
+ * Named mutex context lock mechanisms
  */
-#define NAMED_MUTEX_LOCK(x)     { std::string __nMutexName=compactID(x);  \
-                                boost::interprocess::named_mutex __mutex ( \
-                                       boost::interprocess::open_or_create, \
-                                       __nMutexName.c_str() \
-                                    ); { \
-                                        boost::interprocess::scoped_lock< boost::interprocess::named_mutex > __mLock( __mutex );
-#define NAMED_MUTEX_UNLOCK      } };
+typedef boost::shared_ptr< boost::mutex >   sharedMutex;
+sharedMutex                                 __nmutex_get( std::string name );
+#define NAMED_MUTEX_LOCK(x)                 { sharedMutex __mutex = __nmutex_get(x); boost::unique_lock<boost::mutex> __mLock( *__mutex.get() );
+#define NAMED_MUTEX_UNLOCK                  };
 
 /**
  * Convert to lowercase the given string
