@@ -844,6 +844,9 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
                 continue;
             }
             return res;
+        } else {
+            /* Reached this point, we are good to continue */
+            break;            
         }
     }
     
@@ -969,6 +972,10 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 			::remove( tmpHypervisorInstall.c_str() );
             return HVE_NOT_VALIDATED;
         }
+
+        /* Reached this point, we are good to continue */
+        break;
+
     }
     
     /**
@@ -1015,7 +1022,6 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		CVMWA_LOG( "Info", "Detaching" );
     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
     		res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
-    		::remove( tmpHypervisorInstall.c_str() );
 
     	#elif defined(_WIN32)
 
@@ -1067,7 +1073,6 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
     		/* Cleanup */
     		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-    		::remove( tmpHypervisorInstall.c_str() );
 
     	#elif defined(__linux__)
 
@@ -1134,7 +1139,6 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
                 // Done
          		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-            	::remove( tmpHypervisorInstall.c_str() );
         
             /* (2) If we have GKSudo, do directly dpkg/yum install */
             } else if (linuxInfo.hasGKSudo) {
@@ -1162,7 +1166,6 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
                 /* Cleanup */
         		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
-            	::remove( tmpHypervisorInstall.c_str() );
     	
             /* (3) Otherwise create a bash script and prompt the user */
             } else {
@@ -1174,6 +1177,11 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         
         #endif
     
+        /**
+         * Give 5 seconds as a cool-down delay
+         */
+        sleepMs(5000);
+
         /**
          * Check if it was successful
          */
@@ -1190,6 +1198,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         } else {
 
             /* Everything worked like a charm */
+            ::remove( tmpHypervisorInstall.c_str() );
             break;
 
         }

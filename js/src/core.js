@@ -491,7 +491,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
                     if (BrowserDetect.OS == "Windows") {
                         confirmFunction(
                             "It seems you are missing the Microsoft Visual C++ 2010 Redistributable Package which is required in order to run the plug-in.\n" +
-                            "Do you want to go to the microsoft website to download it?"
+                            "Do you want to go to the microsoft website to download it?",
                             function(confirm) {
                                 if (confirm)
                                     window.location = 'http://www.microsoft.com/en-us/download/details.aspx?id=5555';

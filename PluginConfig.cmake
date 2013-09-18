@@ -39,7 +39,7 @@ set(MOZILLA_PLUGINID "cernvm.cern.ch/CVMWeb")
 # strings
 set(FBSTRING_CompanyName "CernVM Group - CERN")
 set(FBSTRING_PluginDescription "CernVM Web Access Plugin")
-set(FBSTRING_PLUGIN_VERSION "1.3.2")
+set(FBSTRING_PLUGIN_VERSION "1.3.3")
 set(FBSTRING_LegalCopyright "Copyright 2013 CernVM Group - CERN")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "CernVM Web API")
@@ -77,4 +77,4 @@ add_boost_library(regex)
 add_boost_library(filesystem)
 
 # Enable crash reporting
-add_definitions(-DCRASH_REPORTING -DNOMINMAX)
+add_definitions(-DCRASH_REPORTING -DLOGGING -DNOMINMAX)

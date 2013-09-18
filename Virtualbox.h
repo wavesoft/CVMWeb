@@ -49,7 +49,7 @@ public:
     virtual int             start( std::map<std::string,std::string> *userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
-    virtual std::string     getProperty( std::string name );
+    virtual std::string     getProperty( std::string name, bool forceUpdate = false );
     virtual std::string     getRDPHost();
     virtual std::string     getExtraInfo( int extraInfo );
     virtual std::string     getAPIHost();

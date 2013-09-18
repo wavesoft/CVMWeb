@@ -16,7 +16,7 @@ if (window['jQuery'] == undefined) {
 	    }
 	});
 } else {
-	$(function(){
+	jQuery(function(){
 		if (__pageLoaded) return;
 		__pageLoaded = true;
 	    for (var i=0; i<__loadHooks.length; i++) {

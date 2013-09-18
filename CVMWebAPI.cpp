@@ -443,9 +443,9 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         if (jsonHash.find("apiPort") != jsonHash.end())          session->apiPort = jsonHash["apiPort"].convert_cast<int>();
         if (jsonHash.find("userData") != jsonHash.end())         session->userData = jsonHash["userData"].convert_cast<string>();
         if (jsonHash.find("executionCap") != jsonHash.end())     session->executionCap = jsonHash["executionCap"].convert_cast<int>();
-        if (jsonHash.find("daemonControlled") != jsonHash.end()) session->daemonControlled = jsonHash["daemonControlled"].convert_cast<bool>();
+        if (jsonHash.find("daemonControlled") != jsonHash.end()) session->daemonControlled = (jsonHash["daemonControlled"].convert_cast<int>() == 1);
         if (jsonHash.find("daemonMinCap") != jsonHash.end())     session->daemonMinCap = jsonHash["daemonMinCap"].convert_cast<int>();
-        if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonControlled = jsonHash["daemonMaxCap"].convert_cast<int>();
+        if (jsonHash.find("daemonMaxCap") != jsonHash.end())     session->daemonMaxCap = jsonHash["daemonMaxCap"].convert_cast<int>();
         if (jsonHash.find("daemonFlags") != jsonHash.end())      session->daemonFlags = jsonHash["daemonFlags"].convert_cast<int>();
         if (jsonHash.find("diskURL") != jsonHash.end()) {
         

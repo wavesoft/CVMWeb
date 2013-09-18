@@ -1474,13 +1474,13 @@ std::string VBoxSession::getHostOnlyAdapter() {
 /**
  * Return a property from the VirtualBox guest
  */
-std::string VBoxSession::getProperty( std::string name ) { 
+std::string VBoxSession::getProperty( std::string name, bool forceUpdate ) { 
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     string value;
     
     /* If we have properties map populated, pick the entry from there */
-    if (!this->properties.empty()) {
+    if (!this->properties.empty() && !forceUpdate) {
         
         /* Check for property in properties map */
         if (this->properties.find(name) == this->properties.end()) {
@@ -1622,7 +1622,7 @@ std::string VBoxSession::getAPIHost() {
 
         // (1) The API Host is on the second interface
         if (this->ip.empty()) {
-            std::string guestIP = this->getProperty("/VirtualBox/GuestInfo/Net/1/V4/IP");
+            std::string guestIP = this->getProperty("/VirtualBox/GuestInfo/Net/1/V4/IP", true);
             if (!guestIP.empty()) {
                 this->ip = guestIP;
                 return guestIP;
@@ -1670,6 +1670,7 @@ int VBoxSession::getAPIPort() {
  */
 std::string VBoxSession::getExtraInfo( int extraInfo ) {
     CRASH_REPORT_BEGIN;
+
     if (extraInfo == EXIF_VIDEO_MODE) {
         map<string, string> info = this->getMachineInfo();
         if (info.find("Video mode") != info.end())
@@ -1823,6 +1824,8 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->rdpPort = 0;
     sess->localApiPort = 0;
     sess->dataPath = "";
+    sess->properties.clear();
+    sess->unsyncedProperties.clear();
     return sess;
     CRASH_REPORT_END;
 }
