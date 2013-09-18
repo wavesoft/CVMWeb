@@ -709,7 +709,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         for (;;) {
 
             /* Poll descriptors */
-            ret = poll(fds, 2, SYSEXEC_SLEEP_DELAY);
+            ret = poll(fds, 2, 50);
             if (ret > 0) {
 
                 /* An event on one of the fds has occurred. */
@@ -771,6 +771,9 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             /* Exit on error */
             if (ret < 0) 
                 break;
+                
+            /* CPU Idle delay */
+            sleepMs( SYSEXEC_SLEEP_DELAY - 50 );
 
         }
 
@@ -891,7 +894,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         
         /* Sleep a teensy bit not to eat-up the CPU on the
             * infinite loop we are currently in */
-        Sleep( SYSEXEC_SLEEP_DELAY );
+        sleepMs( SYSEXEC_SLEEP_DELAY );
 
     }
     
