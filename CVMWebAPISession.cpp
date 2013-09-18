@@ -424,8 +424,14 @@ int CVMWebAPISession::setExecutionCap(int cap) {
 int CVMWebAPISession::setProperty( const std::string& name, const std::string& value ) {
     CRASH_REPORT_BEGIN;
     if (name.compare("/CVMWeb/secret") == 0) return HVE_NOT_ALLOWED;
-    return this->session->setProperty( name, value );
+    
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_setProperty, this, name, value ));
+    return HVE_SCHEDULED;
     CRASH_REPORT_END;
+}
+
+void CVMWebAPISession::thread_setProperty( const std::string& name, const std::string& value ) {
+    this->session->setProperty( name, value );
 }
 
 std::string CVMWebAPISession::getProperty( const std::string& name ) {

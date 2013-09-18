@@ -99,6 +99,7 @@ public:
         this->userData = "";
         this->diskChecksum = "";
         this->pid = 0;
+        this->editable = false;
         
         this->daemonControlled = false;
         this->daemonMinCap = 0;
@@ -126,6 +127,7 @@ public:
     
     int                     flags;
     int                     pid;
+    bool                    editable;
     
     bool                    daemonControlled;
     int                     daemonMinCap;

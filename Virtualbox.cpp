@@ -1479,6 +1479,24 @@ std::string VBoxSession::getProperty( std::string name ) {
     vector<string> lines;
     string value;
     
+    /* If we have properties map populated, pick the entry from there */
+    if (!this->properties.empty()) {
+        
+        /* Check for property in properties map */
+        if (this->properties.find(name) == this->properties.end()) {
+            
+            /* Check in unsyncedProperties too */
+            if (this->unsyncedProperties.find(name) == this->unsyncedProperties.end()) {
+                return "";
+            } else {
+                return this->unsyncedProperties[name];
+            }
+            
+        } else {
+            return this->properties[name];
+        }
+    }
+    
     /* Invoke property query */
     int ans = this->wrapExec("guestproperty get "+this->uuid+" \""+name+"\"", &lines);
     if (ans != 0) return "";
@@ -1501,6 +1519,14 @@ std::string VBoxSession::getProperty( std::string name ) {
 int VBoxSession::setProperty( std::string name, std::string value ) { 
     CRASH_REPORT_BEGIN;
     vector<string> lines;
+    
+    /* This is valid only in mutable state */
+    if (!this->editable) {
+        
+        /* Store to unsyncedProperties and hope it gets picked */
+        this->unsyncedProperties[name] = value;
+        return HVE_INVALID_STATE;
+    }
     
     /* Perform property update */
     int ans = this->wrapExec("guestproperty set "+this->uuid+" \""+name+"\" \""+value+"\"", &lines);
@@ -1976,6 +2002,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     map<string, string> vms, diskinfo;
     string secret, kk, kv;
     string err;
+    bool prevEditable;
     
     /* Get session's uuid */
     string uuid = session->uuid;
@@ -1989,7 +2016,9 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         return HVE_IO_ERROR;
     
     /* Reset flags */
+    prevEditable = session->editable;
     session->flags = 0;
+    session->editable = true;
     
     /* Check state */
     session->state = STATE_OPEN;
@@ -1999,12 +2028,29 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
             session->state = STATE_STARTED;
         } else if (state.find("paused") != string::npos) {
             session->state = STATE_PAUSED;
+            session->editable = false;
         } else if (state.find("saved") != string::npos) {
             session->state = STATE_OPEN;
+            session->editable = false;
         } else if (state.find("aborted") != string::npos) {
             session->state = STATE_OPEN;
         }
     }
+    
+    /* If session switched to editable state, commit pending property changes */
+    if (session->editable && !prevEditable && !session->unsyncedProperties.empty()) {
+        for (std::map<string, string>::iterator it=session->unsyncedProperties.begin(); it!=session->unsyncedProperties.end(); ++it) {
+            string name = (*it).first;
+            string value = (*it).second;
+            
+            // Session is now editable
+            session->setProperty(name, value);
+        }
+    }
+    
+    /* Reset property maps */
+    session->unsyncedProperties.clear();
+    session->properties.clear();
     
     /* Get CPU */
     if (info.find("Number of CPUs") != info.end()) {
@@ -2194,7 +2240,10 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         /* Get hypervisor pid from file */
         if (info.find("Log folder") != info.end())
             session->pid = __getPIDFromFile( info["Log folder"] );
-
+        
+        /* Store allProps to properties */
+        session->properties = allProps;
+        
     }
 
     /* Updated successfuly */

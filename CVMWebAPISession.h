@@ -148,6 +148,7 @@ public:
     void thread_update( );
     void thread_open( const FB::variant &o );
     void thread_start( const FB::variant& cfg );
+    void thread_setProperty( const std::string& name, const std::string& value );
     
     // Functions
     int pause();
