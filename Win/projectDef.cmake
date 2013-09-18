@@ -25,6 +25,9 @@ ELSE (${CMAKE_BUILD_TYPE} MATCHES "Debug")
   ADD_DEFINITIONS(/D "NDEBUG")
 ENDIF (${CMAKE_BUILD_TYPE} MATCHES "Debug")
 
+# Do not use windows min() max() macros
+#define NOMINMAX
+
 SOURCE_GROUP(Win FILES ${PLATFORM})
 
 set (SOURCES

@@ -2038,8 +2038,9 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     }
     
     /* If session switched to editable state, commit pending property changes */
-    if (session->editable && !prevEditable && !session->unsyncedProperties.empty()) {
-        for (std::map<string, string>::iterator it=session->unsyncedProperties.begin(); it!=session->unsyncedProperties.end(); ++it) {
+    if (session->editable && !prevEditable && !((VBoxSession*)session)->unsyncedProperties.empty()) {
+        for (std::map<string, string>::iterator it=((VBoxSession*)session)->unsyncedProperties.begin(); 
+                it!=((VBoxSession*)session)->unsyncedProperties.end(); ++it) {
             string name = (*it).first;
             string value = (*it).second;
             
@@ -2049,8 +2050,8 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     }
     
     /* Reset property maps */
-    session->unsyncedProperties.clear();
-    session->properties.clear();
+    ((VBoxSession*)session)->unsyncedProperties.clear();
+    ((VBoxSession*)session)->properties.clear();
     
     /* Get CPU */
     if (info.find("Number of CPUs") != info.end()) {
@@ -2242,7 +2243,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
             session->pid = __getPIDFromFile( info["Log folder"] );
         
         /* Store allProps to properties */
-        session->properties = allProps;
+        ((VBoxSession*)session)->properties = allProps;
         
     }
 

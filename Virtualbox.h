@@ -70,8 +70,6 @@ public:
 
     std::string             dataPath;
     
-protected:
-    
     /* Offline properties map (for optimizing performance) */
     std::map<
         std::string,
