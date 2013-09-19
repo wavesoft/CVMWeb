@@ -536,10 +536,17 @@ std::string CVMWebAPISession::get_resolution() {
 std::string CVMWebAPISession::get_apiEntryPoint() {
     CRASH_REPORT_BEGIN;
     std::string apiURL = this->session->getAPIHost();
-    if (apiURL.empty()) return "";
+    if (apiURL.empty()) {
+        CVMWA_LOG("Debug", "getAPIHost() returned blank");
+        return "";
+    }
     int apiPort = this->session->getAPIPort();
-    if (apiPort == 0) return "";
+    if (apiPort == 0) {
+        CVMWA_LOG("Debug", "getAPIPort() returned zero");
+        return "";
+    }
     apiURL += ":" + ntos<int>( apiPort );
+    CVMWA_LOG("Debug", "APIURL is '" << apiURL << "'");
     return apiURL;
     CRASH_REPORT_END;
 }

@@ -1271,7 +1271,7 @@ int VBoxSession::hibernate() {
     if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
     
     /* Stop VM */
-    ans = this->controlVM( "savestate", 60000 ); // (Might take long time on slower machines)
+    ans = this->controlVM( "savestate" );
     this->state = STATE_OPEN;
     
     /* Check for daemon need */
@@ -1681,7 +1681,15 @@ std::string VBoxSession::getExtraInfo( int extraInfo ) {
     CRASH_REPORT_BEGIN;
 
     if (extraInfo == EXIF_VIDEO_MODE) {
+        CVMWA_LOG("Debug", "Getting video mode")
         map<string, string> info = this->getMachineInfo();
+        
+        for (std::map<string, string>::iterator it=info.begin(); it!=info.end(); ++it) {
+            string pname = (*it).first;
+            string pvalue = (*it).second;
+            CVMWA_LOG("Debug", "getMachineInfo(): '" << pname << "' = '" << pvalue << "'");
+        }
+        
         if (info.find("Video mode") != info.end())
             return info["Video mode"];
     }
@@ -1729,7 +1737,7 @@ map<string, string> Virtualbox::getAllProperties( string uuid ) {
 
     /* Get guest properties */
     NAMED_MUTEX_LOCK( uuid );
-    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, 4 ) == 0) {
+    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, 4, 2000 ) == 0) {
         for (vector<string>::iterator it = lines.begin(); it < lines.end(); it++) {
             string line = *it;
 
@@ -1805,7 +1813,7 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
     /* Invoke property query */
     int ans;
     NAMED_MUTEX_LOCK( uuid );
-    ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, 2);
+    ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, 2, 2000);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return "";
     if (lines.empty()) return "";
@@ -1943,7 +1951,7 @@ std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
     /* List the running VMs in the system */
     int ans;
     NAMED_MUTEX_LOCK("generic");
-    ans = this->exec("list hdds", &lines, &err, 2);
+    ans = this->exec("list hdds", &lines, &err, 2, 2000);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return resMap;
     if (lines.empty()) return resMap;
@@ -2130,6 +2138,8 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
             ((VBoxSession *)session)->rdpPort = 0;
             CVMWA_LOG("Debug", "VRDE not enabled");
         }
+    } else {
+        CVMWA_LOG("Debug", "VRDE config not found");
     }
     
     /* Parse memory */
@@ -2189,7 +2199,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         /* Collect disk info */
         int ans;
         NAMED_MUTEX_LOCK(kk);
-        ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err, 2);
+        ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err, 2, 2000);
         NAMED_MUTEX_UNLOCK;
         if (ans == 0) {
         
@@ -2258,6 +2268,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         } else {
             ((VBoxSession *)session)->localApiPort = ston<int>(allProps["/CVMWeb/localApiPort"]);
         }
+        CVMWA_LOG("Debug", "LocalAPI Port = " << ((VBoxSession *)session)->localApiPort);
 
         /* Get hypervisor pid from file */
         if (info.find("Log folder") != info.end())
@@ -2293,7 +2304,7 @@ int Virtualbox::loadSessions() {
     /* List the running VMs in the system */
     int ans;
     NAMED_MUTEX_LOCK("generic");
-    ans = this->exec("list vms", &lines, &err, 2);
+    ans = this->exec("list vms", &lines, &err, 2, 2000);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
 
@@ -2341,7 +2352,7 @@ bool Virtualbox::hasExtPack() {
     vector<string> lines;
     string err;
     NAMED_MUTEX_LOCK("generic");
-    this->exec("list extpacks", &lines, &err, 2);
+    this->exec("list extpacks", &lines, &err, 2, 2000);
     NAMED_MUTEX_UNLOCK;
     for (std::vector<std::string>::iterator l = lines.begin(); l != lines.end(); l++) {
         if (l->find("Oracle VM VirtualBox Extension Pack") != string::npos) {

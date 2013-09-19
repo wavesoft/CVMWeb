@@ -398,7 +398,7 @@ inline void sleepMs(int sleepMs) {
 typedef boost::shared_ptr< boost::mutex >   sharedMutex;
 sharedMutex                                 __nmutex_get( std::string name );
 #define NAMED_MUTEX_LOCK(x)                 { sharedMutex __mutex = __nmutex_get(x); boost::unique_lock<boost::mutex> __mLock( *__mutex.get() );
-#define NAMED_MUTEX_UNLOCK                  sleepMs(100); }; 
+#define NAMED_MUTEX_UNLOCK                  sleepMs(500); }; 
 
 /**
  * Convert to lowercase the given string
