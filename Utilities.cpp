@@ -711,7 +711,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             /* Poll descriptors */
             ret = poll(fds, 2, 50);
             if (ret > 0) {
-
                 /* An event on one of the fds has occurred. */
                 for (int i=0; i<2; i++) {
                     if (fds[i].revents & POLLIN) {
@@ -774,6 +773,8 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                 
             /* CPU Idle delay */
             sleepMs( SYSEXEC_SLEEP_DELAY - 50 );
+
+            CVMWA_LOG("Idle loop");
 
         }
 

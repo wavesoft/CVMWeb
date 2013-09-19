@@ -53,7 +53,7 @@ _NS_.WebAPISession = function( plugin_ref, daemon_ref, session_ref ) {
         // Update daemon status
         this.__checkDaemonUpdates();
         
-    }).bind(this), 5000);
+    }).bind(this), 10000);
     
     // Connect plugin properties with this object properties using getters/setters
     var u = undefined;
