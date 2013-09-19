@@ -605,7 +605,7 @@ std::string CVMWebAPISession::toString() {
     CRASH_REPORT_END;
 }
 
-void CVMWebAPISession::cb_timer() {
+void CVMWebAPISession::thread_cb_timer() {
     CRASH_REPORT_BEGIN;
     if (!isAlive) {
         if (this->session->state == STATE_STARTED) {
@@ -620,6 +620,11 @@ void CVMWebAPISession::cb_timer() {
             fire_apiUnavailable();
         }
     }
+    CRASH_REPORT_END;
+}
+
+void CVMWebAPISession::cb_timer() {
+    boost::thread t(boost::bind(&CVMWebAPISession::cb_timer_thread, this ));
     CRASH_REPORT_END;
 }
 

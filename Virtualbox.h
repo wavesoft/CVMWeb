@@ -39,28 +39,28 @@ public:
     int                     rdpPort;
     int                     localApiPort;
     
-    virtual int             pause();
-    virtual int             close( bool unmonitored = false );
-    virtual int             resume();
-    virtual int             reset();
-    virtual int             stop();
-    virtual int             hibernate();
-    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
-    virtual int             start( std::map<std::string,std::string> *userData );
-    virtual int             setExecutionCap(int cap);
-    virtual int             setProperty( std::string name, std::string key );
-    virtual std::string     getProperty( std::string name, bool forceUpdate = false );
-    virtual std::string     getRDPHost();
-    virtual std::string     getExtraInfo( int extraInfo );
-    virtual std::string     getAPIHost();
-    virtual int             getAPIPort();
+    virtual int             pause               ();
+    virtual int             close               ( bool unmonitored = false );
+    virtual int             resume              ();
+    virtual int             reset               ();
+    virtual int             stop                ();
+    virtual int             hibernate           ();
+    virtual int             open                ( int cpus, int memory, int disk, std::string cvmVersion, int flags );
+    virtual int             start               ( std::map<std::string,std::string> *userData );
+    virtual int             setExecutionCap     ( int cap);
+    virtual int             setProperty         ( std::string name, std::string key );
+    virtual std::string     getProperty         ( std::string name, bool forceUpdate = false );
+    virtual std::string     getRDPHost          ();
+    virtual std::string     getExtraInfo        ( int extraInfo );
+    virtual std::string     getAPIHost          ();
+    virtual int             getAPIPort          ();
 
-    virtual int             update();
-    virtual int             updateFast();
+    virtual int             update              ();
+    virtual int             updateFast          ();
     
     /* VirtualBox-specific functions */
-    int                     wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg = NULL, int retries = 4, int timeout = SYSEXEC_TIMEOUT );
-    int                     getMachineUUID( std::string mname, std::string * ans_uuid,  int flags );
+    int                     wrapExec            ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg = NULL, int retries = 4, int timeout = SYSEXEC_TIMEOUT );
+    int                     getMachineUUID      ( std::string mname, std::string * ans_uuid,  int flags );
     std::string             getDataFolder       ();
     std::string             getHostOnlyAdapter  ();
     std::map<std::string, 
