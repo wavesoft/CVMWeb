@@ -636,6 +636,7 @@ void abortSysExec() {
  */
 int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, int timeout ) {
     CRASH_REPORT_BEGIN;
+    try {
 #ifndef _WIN32
     
     int ret = 0;
@@ -959,6 +960,13 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     /* Return exit code */
 	return ret;
 #endif
+    } catch (std::bad_alloc &e) {
+
+        /* Sorry son. You were killed by unload */
+        CVMWA_LOG("Exception", "BadAlloc: " << e.what());
+        return HVE_IO_ERROR;
+
+    }
     CRASH_REPORT_END;
 }
 

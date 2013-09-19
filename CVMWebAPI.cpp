@@ -646,6 +646,7 @@ void CVMWebAPI::thread_install() {
         if (p->hv != NULL) {
             p->hv->daemonBinPath = p->getDaemonBin();
             p->hv->setDownloadProvider( p->browserDownloadProvider );
+            p->hv->loadSessions();
         }
 
         this->fire_install();
