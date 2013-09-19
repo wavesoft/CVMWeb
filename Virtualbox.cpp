@@ -2006,6 +2006,10 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     string secret, kk, kv;
     string err;
     bool prevEditable;
+
+    /* Don't update session if we are in middle of something */
+    if ((session->state == STATE_STARTING) || (session->state == STATE_OPPENING))
+        return HVE_INVALID_STATE;
     
     /* Get session's uuid */
     string uuid = session->uuid;
