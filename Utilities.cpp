@@ -774,7 +774,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             /* CPU Idle delay */
             sleepMs( SYSEXEC_SLEEP_DELAY - 50 );
 
-            CVMWA_LOG("Idle loop");
+            CVMWA_LOG("Debug", "Idle loop");
 
         }
 
