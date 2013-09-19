@@ -2108,12 +2108,15 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     /* Parse RDP info */
     if (info.find("VRDE") != info.end()) {
         string rdpInfo = info["VRDE"];
+        CVMWA_LOG("Debug", "Detected VRDE Config '" << rdpInfo << "'");
 
         // Example line: 'enabled (Address 127.0.0.1, Ports 39211, MultiConn: off, ReuseSingleConn: off, Authentication type: null)'
         if (rdpInfo.find("enabled") != string::npos) {
             size_t pStart = rdpInfo.find("Ports ");
             if (pStart == string::npos) {
                 ((VBoxSession *)session)->rdpPort = 0;
+                CVMWA_LOG("Debug", "VRDE 'Ports' anchor not found");
+
             } else {
                 pStart += 6;
                 size_t pEnd = rdpInfo.find(",", pStart);
@@ -2121,9 +2124,11 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
 
                 // Apply the rdp port
                 ((VBoxSession *)session)->rdpPort = ston<int>(rdpPort);
+                CVMWA_LOG("Debug", "VRDE Port is " << rdpPort);
             }
         } else {
             ((VBoxSession *)session)->rdpPort = 0;
+            CVMWA_LOG("Debug", "VRDE not enabled");
         }
     }
     
@@ -2261,6 +2266,13 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         /* Store allProps to properties */
         ((VBoxSession*)session)->properties = allProps;
         
+        /* Debug log */
+        for (std::map<string, string>::iterator it=((VBoxSession*)session)->properties.begin(); it!=((VBoxSession*)session)->properties.end(); ++it) {
+            string pname = (*it).first;
+            string pvalue = (*it).second;
+            CVMWA_LOG("Debug", "Guest Property '" << pname << "' = '" << pvalue << "'");
+        }
+
     }
 
     /* Updated successfuly */
