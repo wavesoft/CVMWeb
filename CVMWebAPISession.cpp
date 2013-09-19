@@ -71,6 +71,17 @@ int CVMWebAPISession::pause() {
     
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
+    
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
+    return HVE_SCHEDULED;
+    CRASH_REPORT_END;
+}
+
+void CVMWebAPISession::thread_pause() {
+    CRASH_REPORT_BEGIN;
+
+    /* Now pause session */
+    int ans = this->session->pause();
 
     /* Stop probing timer */
     this->probeTimer->stop();
@@ -80,15 +91,8 @@ int CVMWebAPISession::pause() {
         this->isAlive = false;
         WHEN_SAFE this->fire_apiUnavailable();
     }
-    
-    boost::thread t(boost::bind(&CVMWebAPISession::thread_pause, this ));
-    return HVE_SCHEDULED;
-    CRASH_REPORT_END;
-}
 
-void CVMWebAPISession::thread_pause() {
-    CRASH_REPORT_BEGIN;
-    int ans = this->session->pause();
+    /* Check for status */
     if (ans == 0) {
         WHEN_SAFE this->fire_pause();
     } else {
@@ -107,6 +111,17 @@ int CVMWebAPISession::close(){
         (this->session->state != STATE_PAUSED) &&
         (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
 
+    boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
+    return HVE_SCHEDULED;
+    CRASH_REPORT_END;
+}
+
+void CVMWebAPISession::thread_close(){
+    CRASH_REPORT_BEGIN;
+
+    /* Invoke close */
+    int ans = this->session->close();
+
     /* Stop probing timer */
     this->probeTimer->stop();
 
@@ -116,14 +131,7 @@ int CVMWebAPISession::close(){
         WHEN_SAFE this->fire_apiUnavailable();
     }
 
-    boost::thread t(boost::bind(&CVMWebAPISession::thread_close, this ));
-    return HVE_SCHEDULED;
-    CRASH_REPORT_END;
-}
-
-void CVMWebAPISession::thread_close(){
-    CRASH_REPORT_BEGIN;
-    int ans = this->session->close();
+    /* Check for status */
     if (ans == 0) {
         WHEN_SAFE this->fire_close();
     } else {
@@ -149,9 +157,6 @@ int CVMWebAPISession::resume(){
     /* Validate state */
     if (this->session->state != STATE_PAUSED) return HVE_INVALID_STATE;
 
-    /* Resume probing timer */
-    this->probeTimer->start();
-    
     boost::thread t(boost::bind(&CVMWebAPISession::thread_resume, this ));
     return HVE_SCHEDULED;
     CRASH_REPORT_END;
@@ -166,6 +171,10 @@ void CVMWebAPISession::thread_resume(){
         WHEN_SAFE this->fire_resumeError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "resume");
     }
+
+    /* Resume probing timer */
+    this->probeTimer->start();
+    
     CRASH_REPORT_END;
 }
 
@@ -175,12 +184,6 @@ int CVMWebAPISession::reset(){
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
     
-    /* Make API unavailable but don't stop the timer */
-    if (this->isAlive) {
-        this->isAlive = false;
-        WHEN_SAFE this->fire_apiUnavailable();
-    }
-    
     // Start the reset thread
     boost::thread t(boost::bind(&CVMWebAPISession::thread_reset, this ));
     return HVE_SCHEDULED;
@@ -189,7 +192,17 @@ int CVMWebAPISession::reset(){
 
 void CVMWebAPISession::thread_reset(){
     CRASH_REPORT_BEGIN;
+
+    /* Reset session */
     int ans = this->session->reset();
+    
+    /* Make API unavailable but don't stop the timer */
+    if (this->isAlive) {
+        this->isAlive = false;
+        WHEN_SAFE this->fire_apiUnavailable();
+    }
+
+    /* Handle response */
     if (ans == 0) {
         WHEN_SAFE this->fire_reset();
     } else {
@@ -205,12 +218,6 @@ int CVMWebAPISession::stop(){
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
 
-    /* Make it unavailable */
-    if (this->isAlive) {
-        this->isAlive = false;
-        WHEN_SAFE this->fire_apiUnavailable();
-    }
-
     boost::thread t(boost::bind(&CVMWebAPISession::thread_stop, this ));
     return HVE_SCHEDULED;
     CRASH_REPORT_END;
@@ -218,7 +225,17 @@ int CVMWebAPISession::stop(){
 
 void CVMWebAPISession::thread_stop(){
     CRASH_REPORT_BEGIN;
+
+    /* Stop session */
     int ans = this->session->stop();
+
+    /* Make it unavailable */
+    if (this->isAlive) {
+        this->isAlive = false;
+        WHEN_SAFE this->fire_apiUnavailable();
+    }
+
+    /* Check response */
     if (ans == 0) {
         WHEN_SAFE this->fire_stop();
     } else {
@@ -234,12 +251,6 @@ int CVMWebAPISession::hibernate(){
     /* Validate state */
     if (this->session->state != STATE_STARTED) return HVE_INVALID_STATE;
 
-    /* Make it unavailable */
-    if (this->isAlive) {
-        this->isAlive = false;
-        WHEN_SAFE this->fire_apiUnavailable();
-    }
-
     boost::thread t(boost::bind(&CVMWebAPISession::thread_hibernate, this ));
     return HVE_SCHEDULED;
     CRASH_REPORT_END;
@@ -247,7 +258,17 @@ int CVMWebAPISession::hibernate(){
 
 void CVMWebAPISession::thread_hibernate(){
     CRASH_REPORT_BEGIN;
+
+    /* Hibernate session */
     int ans = this->session->hibernate();
+
+    /* Make it unavailable */
+    if (this->isAlive) {
+        this->isAlive = false;
+        WHEN_SAFE this->fire_apiUnavailable();
+    }
+
+    /* Check update */
     if (ans == 0) {
         WHEN_SAFE this->fire_hibernate();
     } else {
@@ -263,9 +284,6 @@ int CVMWebAPISession::open( const FB::variant& o ){
     /* Validate state */
     if ((this->session->state != STATE_CLOSED) && 
         (this->session->state != STATE_ERROR)) return HVE_INVALID_STATE;
-
-    /* Start probing timer */
-    this->probeTimer->start();
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_open, this, o ));
     return HVE_SCHEDULED;
@@ -361,6 +379,9 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
         // the page while downloading the VM.
     }
     
+    /* Start probing timer */
+    this->probeTimer->start();
+
     CRASH_REPORT_END;
 }
 
@@ -369,9 +390,6 @@ int CVMWebAPISession::start( const FB::variant& cfg ) {
     
     /* Validate state */
     if (this->session->state != STATE_OPEN) return HVE_INVALID_STATE;
-    
-    /* Start probing timer */
-    this->probeTimer->start();
 
     boost::thread t(boost::bind(&CVMWebAPISession::thread_start, this, cfg ));
     return HVE_SCHEDULED;
@@ -412,6 +430,10 @@ void CVMWebAPISession::thread_start( const FB::variant& cfg ) {
         WHEN_SAFE this->fire_startError(hypervisorErrorStr(ans), ans);
         WHEN_SAFE this->fire_error(hypervisorErrorStr(ans), ans, "start");
     }
+    
+    /* Start probing timer */
+    this->probeTimer->start();
+
     CRASH_REPORT_END;
 }
 
