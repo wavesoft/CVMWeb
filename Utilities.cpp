@@ -721,6 +721,11 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                                 rawStdout.append(data, dataLen);
                             } else {
                                 rawStderr->append(data, dataLen);
+
+#if defined(DEBUG) || defined(LOGGING) || defined(CRASH_REPORTING)
+                                /* Debug log stderror */
+                                CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
+#endif
                             }
                         } else {
                             // Error while reading
@@ -759,13 +764,6 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                 }
 
             }
-
-            /* Debug log stderror */
-#if defined(DEBUG) || defined(LOGGING)
-            if (!rawStderr->empty()) {
-                CVMWA_LOG("Debug", "STDERR:" << *rawStderr);
-            }
-#endif
 
             /* Exit on error */
             if (ret < 0) 
@@ -907,9 +905,11 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     if (ret == 0) {
 
         /* Debug STDERR */
+#if defined(DEBUG) || defined(LOGGING) || defined(CRASH_REPORTING)
         if (!rawStderr->empty())
             CVMWA_LOG("Debug", "Exec STDERR: " << *rawStderr);
-            
+#endif
+
     	/* Split lines into stdout */
         splitLines( rawStdout, stdoutList );
         
