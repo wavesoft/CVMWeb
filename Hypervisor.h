@@ -249,7 +249,7 @@ public:
     virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
     
     /* Tool functions (used internally or from session objects) */
-    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, timeout = SYSEXEC_TIMEOUT );
+    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT );
     void                    detectVersion       ( );
     int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback );
     int                     cernVMCached        ( std::string version, std::string * filename );
