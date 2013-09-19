@@ -150,7 +150,7 @@ std::string VBoxSession::getDataFolder() {
 /**
  * Execute command and log debug message
  */
-int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries ) {
+int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries, int timeout ) {
     CRASH_REPORT_BEGIN;
     ostringstream oss;
     string line;
@@ -162,7 +162,7 @@ int VBoxSession::wrapExec( std::string cmd, std::vector<std::string> * stdoutLis
     
     /* Run command */
     NAMED_MUTEX_LOCK( this->uuid );
-    ans = this->host->exec( cmd, stdoutList, &stderrLocal, retries );
+    ans = this->host->exec( cmd, stdoutList, &stderrLocal, retries, timeout );
     NAMED_MUTEX_UNLOCK;
     
     /* Debug log response */
@@ -670,6 +670,15 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     this->setProperty("/CVMWeb/daemon/cap/max", ntos<int>(this->daemonMaxCap));
     this->setProperty("/CVMWeb/daemon/flags", ntos<int>(this->daemonFlags));
     this->setProperty("/CVMWeb/userData", base64_encode(this->userData));
+
+    /* Also update the property cache */
+    this->properties["/CVMWeb/secret"] = this->key;
+    this->properties["/CVMWeb/localApiPort"] = ntos<int>(this->localApiPort);
+    this->properties["/CVMWeb/daemon/controlled"] = (this->daemonControlled ? "1" : "0");
+    this->properties["/CVMWeb/daemon/cap/min"] = ntos<int>(this->daemonMinCap);
+    this->properties["/CVMWeb/daemon/cap/max"] = ntos<int>(this->daemonMaxCap);
+    this->properties["/CVMWeb/daemon/flags"] = ntos<int>(this->daemonFlags);
+    this->properties["/CVMWeb/userData"] = base64_encode(this->userData);
 
     /* Last callbacks */
     if (this->onProgress) (this->onProgress)(110, 110, "Completed");
@@ -1262,7 +1271,7 @@ int VBoxSession::hibernate() {
     if (this->state != STATE_STARTED) return HVE_INVALID_STATE;
     
     /* Stop VM */
-    ans = this->controlVM( "savestate" );
+    ans = this->controlVM( "savestate", 60000 ); // (Might take long time on slower machines)
     this->state = STATE_OPEN;
     
     /* Check for daemon need */
@@ -1539,9 +1548,9 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
 /**
  * Send a controlVM something
  */
-int VBoxSession::controlVM( std::string how ) {
+int VBoxSession::controlVM( std::string how, int timeout ) {
     CRASH_REPORT_BEGIN;
-    int ans = this->wrapExec("controlvm "+this->uuid+" "+how, NULL, NULL, 4);
+    int ans = this->wrapExec("controlvm "+this->uuid+" "+how, NULL, NULL, 4, timeout);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
     CRASH_REPORT_END;
@@ -1564,13 +1573,13 @@ int VBoxSession::startVM() {
 /** 
  * Return virtual machine information
  */
-map<string, string> VBoxSession::getMachineInfo() {
+map<string, string> VBoxSession::getMachineInfo(int timeout) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
     
     /* Perform property update */
-    int ans = this->wrapExec("showvminfo "+this->uuid, &lines);
+    int ans = this->wrapExec("showvminfo "+this->uuid, &lines, NULL, 4, timeout);
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
         return dat;
@@ -1688,7 +1697,7 @@ std::string VBoxSession::getExtraInfo( int extraInfo ) {
 /** 
  * Return virtual machine information
  */
-map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
+map<string, string> Virtualbox::getMachineInfo( std::string uuid, int timeout ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
@@ -1697,7 +1706,7 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid ) {
     /* Perform property update */
     int ans;
     NAMED_MUTEX_LOCK( uuid );
-    ans = this->exec("showvminfo "+uuid, &lines, &err, 4 );
+    ans = this->exec("showvminfo "+uuid, &lines, &err, 4, timeout );
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
@@ -2016,7 +2025,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     if (uuid.empty()) return HVE_USAGE_ERROR;
     
     /* Collect details */
-    map<string, string> info = this->getMachineInfo( uuid );
+    map<string, string> info = this->getMachineInfo( uuid, 2000 );
     if (info.empty()) 
         return HVE_NOT_FOUND;
     if (info.find(":ERROR:") != info.end())

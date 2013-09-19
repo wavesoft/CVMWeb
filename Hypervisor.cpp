@@ -321,7 +321,7 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
-int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, int retries ) {
+int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrMsg, int retries, int timeout ) {
     CRASH_REPORT_BEGIN;
     int execRes = 0;
 
@@ -335,7 +335,7 @@ int Hypervisor::exec( string args, vector<string> * stdoutList, string * stderrM
     
         /* Execute */
         string execError;
-        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries );
+        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries, timeout );
         if (stderrMsg != NULL) *stderrMsg = execError;
 
         /* Store the last error occured */

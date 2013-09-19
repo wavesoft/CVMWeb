@@ -634,7 +634,7 @@ void abortSysExec() {
 /**
  * Cross-platform exec and return function (called by sysExec())
  */
-int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr ) {
+int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, int timeout ) {
     CRASH_REPORT_BEGIN;
 #ifndef _WIN32
     
@@ -741,7 +741,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             }
 
             /* Abort if it takes way too long */
-            if ( sysExecAborted || ((getMillis() - startTime) > SYSEXEC_TIMEOUT) ) {
+            if ( sysExecAborted || ((getMillis() - startTime) > timeout) ) {
 
                 // Close pipes
                 close(outfd[0]); close(errfd[0]);
@@ -876,7 +876,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         }
         
         /* Check for timeout */
-        if ((getMillis() - startTime) > SYSEXEC_TIMEOUT) {
+        if ((getMillis() - startTime) > timeout) {
             CVMWA_LOG("Debug", "Timed out");
             *rawStderr = "ERROR: Timed out";
             ret = 254;
@@ -921,7 +921,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             ans = WaitForSingleObject( piProcInfo.hProcess, SYSEXEC_SLEEP_DELAY );
         
             /* Check for timeout */
-            if ((getMillis() - startTime) > SYSEXEC_TIMEOUT) {
+            if ((getMillis() - startTime) > timeout) {
                 CVMWA_LOG("Debug", "Timed out");
                 *rawStderr = "ERROR: Timed out";
                 ret = 254;
@@ -988,7 +988,7 @@ int sysExecAsync( string app, string cmdline ) {
 /**
  * Cross-platform exec function with retry functionality
  */
-int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries ) {
+int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries, int timeout ) {
     CRASH_REPORT_BEGIN;
     string stdError;
     int res = 252;
@@ -1004,7 +1004,7 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
         
         // Call the wrapper function
         CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
-        res = __sysExec( app, cmdline, stdoutList, &stdError );
+        res = __sysExec( app, cmdline, stdoutList, &stdError, timeout );
         CVMWA_LOG("Debug", "Exec EXIT_CODE: " << res);
 
         // Check for "Error" in the stderr

@@ -192,7 +192,7 @@ int                                                 md5_bin         ( std::strin
  * 
  * This function will wait for the command to finish and it will return it's exit code
  */
-int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1 );
+int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1, int timeout = SYSEXEC_TIMEOUT );
 
 /**
  * Platform-independant function to execute the given command-line without
@@ -398,7 +398,7 @@ inline void sleepMs(int sleepMs) {
 typedef boost::shared_ptr< boost::mutex >   sharedMutex;
 sharedMutex                                 __nmutex_get( std::string name );
 #define NAMED_MUTEX_LOCK(x)                 { sharedMutex __mutex = __nmutex_get(x); boost::unique_lock<boost::mutex> __mLock( *__mutex.get() );
-#define NAMED_MUTEX_UNLOCK                  };
+#define NAMED_MUTEX_UNLOCK                  sleepMs(100); }; 
 
 /**
  * Convert to lowercase the given string
