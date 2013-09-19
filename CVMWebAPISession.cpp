@@ -624,6 +624,7 @@ void CVMWebAPISession::thread_cb_timer() {
 }
 
 void CVMWebAPISession::cb_timer() {
+    CRASH_REPORT_BEGIN;
     boost::thread t(boost::bind(&CVMWebAPISession::thread_cb_timer, this ));
     CRASH_REPORT_END;
 }
