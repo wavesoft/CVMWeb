@@ -640,6 +640,14 @@ void CVMWebAPI::thread_install() {
     CVMWebPtr p = this->getPlugin();
     int ans = installHypervisor( FBSTRING_PLUGIN_VERSION, boost::bind(&CVMWebAPI::onInstallProgress, this, _1, _2, _3), p->browserDownloadProvider );
     if (ans == HVE_OK) {
+
+        /* Update our hypervisor pointer */
+        p->hv = detectHypervisor();
+        if (p->hv != NULL) {
+            p->hv->daemonBinPath = p->getDaemonBin();
+            p->hv->setDownloadProvider( p->browserDownloadProvider );
+        }
+
         this->fire_install();
     } else {
         this->fire_installError(hypervisorErrorStr(ans), ans);
