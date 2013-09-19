@@ -643,6 +643,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     string item;
     string rawStdout = "";
     *rawStderr = "";
+    bool pipeHUP[2];
 
     /* Prepare the two pipes */
     int outfd[2]; if (pipe(outfd) < 0) return HVE_IO_ERROR;
@@ -693,7 +694,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 
     } else {
 
-        char data[1035];
+        char data[1024];
         ssize_t dataLen;
 
         /* Close unused write end */
@@ -713,6 +714,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             if (ret > 0) {
                 /* An event on one of the fds has occurred. */
                 for (int i=0; i<2; i++) {
+                    pipeHUP[i] = false;
                     if (fds[i].revents & POLLIN) {
                         // Data is available on fds[i]
                         dataLen = read(fds[i].fd, data, sizeof(data)-1);
@@ -729,15 +731,19 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
                             }
                         } else {
                             // Error while reading
-                            ret = -1;
+                            pipeHUP[i] = true;
                         }
-                    }
-                    if (fds[i].revents & POLLHUP) {
+                    } else if (fds[i].revents & POLLHUP) {
                         // pipe hung-up.
                         // Set ret to -1 to flag termination
-                        ret = -1;
+                        pipeHUP[i] = true;
                     }
                 }
+                
+                // Wait all FDs to hung-up
+                if (pipeHUP[0] && pipeHUP[1])
+                    ret = -1;
+                
             }
 
             /* Abort if it takes way too long */

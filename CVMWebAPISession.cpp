@@ -704,6 +704,8 @@ void CVMWebAPISession::set_daemonFlags( int flags ) {
 int CVMWebAPISession::update() {
     CRASH_REPORT_BEGIN;
     if (this->updating) return HVE_STILL_WORKING;
+    if (this->session->state == STATE_CLOSED) return HVE_INVALID_STATE;
+    
     this->updating = true;
     boost::thread t(boost::bind(&CVMWebAPISession::thread_update, this ));
     return HVE_SCHEDULED;

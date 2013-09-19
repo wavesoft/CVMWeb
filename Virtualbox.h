@@ -69,6 +69,7 @@ public:
     int                     controlVM           ( std::string how, int timeout = SYSEXEC_TIMEOUT );
 
     std::string             dataPath;
+    bool                    updateLock;
     
     /* Offline properties map (for optimizing performance) */
     std::map<

@@ -125,7 +125,7 @@ std::string VBoxSession::getDataFolder() {
         return this->dataPath;
 
     // Get machine info
-    map<string, string> info = this->getMachineInfo();
+    map<string, string> info = this->getMachineInfo( 2000 );
     if (info.empty()) 
         return "";
 
@@ -207,11 +207,14 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     string stdoutList, uuid, vmIso, kk, kv;
     int ans;
     bool needsUpdate;
-
+    
     /* Validate state */
     if ((this->state != STATE_CLOSED) && (this->state != STATE_ERROR)) return HVE_INVALID_STATE;
     this->state = STATE_OPPENING;
     
+    /* Acquire update lock */
+    this->updateLock = true;
+
     /* Update session */
     this->cpus = cpus;
     this->memory = memory;
@@ -222,6 +225,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     ans = this->getMachineUUID( this->name, &uuid, flags );
     if (ans != 0) {
         this->state = STATE_ERROR;
+        /* Release update lock */
+        this->updateLock = false;
         return ans;
     } else {
         this->uuid = uuid;
@@ -280,6 +285,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         string ifHO = this->getHostOnlyAdapter();
         if (ifHO.empty()) {
             this->state = STATE_ERROR;
+            /* Release update lock */
+            this->updateLock = false;
             return HVE_CREATE_ERROR;
         }
 
@@ -312,12 +319,14 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     CVMWA_LOG( "Info", "Modify VM=" << ans  );
     if (ans != 0) {
         this->state = STATE_ERROR;
+        /* Release update lock */
+        this->updateLock = false;
         return HVE_MODIFY_ERROR;
     }
 
     /* Fetch information to validate disks */
     if (this->onProgress) (this->onProgress)(20, 110, "Fetching machine info");
-    map<string, string> machineInfo = this->getMachineInfo();
+    map<string, string> machineInfo = this->getMachineInfo( 2000 );
 
     /* ============================================================================= */
     /*   MODE 1 : Regular Mode                                                       */
@@ -347,6 +356,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
         ans = this->host->diskImageDownload( cvmVersion, this->diskChecksum, &masterDisk, &feedback );
         if (ans < HVE_OK) {
             this->state = STATE_ERROR;
+            /* Release update lock */
+            this->updateLock = false;
             return ans;
         }
         
@@ -383,6 +394,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 CVMWA_LOG( "Info", "Detaching Disk=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
                 
@@ -439,6 +452,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 /* If we have no UUID available, we can't try the 5b */
                 if (masterDiskUUID.empty()) {
                     this->state = STATE_ERROR;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
             }
@@ -460,6 +475,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 CVMWA_LOG( "Info", "Storage Attach=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
             }
@@ -494,6 +511,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             CVMWA_LOG( "Info", "Create HD=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_MODIFY_ERROR;
             }
 
@@ -513,6 +532,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             CVMWA_LOG( "Info", "Storage Attach=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_MODIFY_ERROR;
             }
 
@@ -550,6 +571,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 CVMWA_LOG( "Info", "Detaching ISO=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
             }
@@ -573,6 +596,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             if (this->onProgress) (this->onProgress)(40, 110, "Downloading CernVM");
             if (this->host->cernVMDownload( cvmVersion, &vmIso, &feedback ) != 0) {
                 this->state = STATE_ERROR;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_IO_ERROR;
             }
 
@@ -591,6 +616,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             CVMWA_LOG( "Info", "Storage Attach (CernVM)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_MODIFY_ERROR;
             }        
         }
@@ -631,6 +658,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
                 CVMWA_LOG( "Info", "Detaching ISO=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_ERROR;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
             }
@@ -655,6 +684,8 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
             CVMWA_LOG( "Info", "Storage Attach (GuestAdditions)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_MODIFY_ERROR;
             }
         }
@@ -687,6 +718,9 @@ int VBoxSession::open( int cpus, int memory, int disk, std::string cvmVersion, i
     this->state = STATE_OPEN;
     if (this->onOpen) (this->onOpen)();
     
+    /* Release update lock */
+    this->updateLock = false;
+
     return HVE_OK;
     CRASH_REPORT_END;
 }
@@ -751,6 +785,9 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     ostringstream args;
     int ans;
     
+    /* Acquire update lock */
+    this->updateLock = true;
+
     CVMWA_LOG("Debug", "userData: '" << vmPatchedUserData << "'");
     CVMWA_LOG("Debug", "uData==NULL : " << ((uData == NULL) ? "true" : "false") );
     if (uData != NULL) {
@@ -769,11 +806,15 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
 
     /* Validate state */
     CVMWA_LOG( "Info", "0 (" << this->state << ")" );
-    if (this->state != STATE_OPEN) return HVE_INVALID_STATE;
+    if (this->state != STATE_OPEN) {
+        /* Release update lock */
+        this->updateLock = false;
+        return HVE_INVALID_STATE;
+    }
     this->state = STATE_STARTING;
 
     /* Fetch information to validate disks */
-    map<string, string> machineInfo = this->getMachineInfo();
+    map<string, string> machineInfo = this->getMachineInfo( 2000 );
     
     /* Check if vm is in saved state */
     bool inSavedState = false;
@@ -819,6 +860,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
                 CVMWA_LOG( "Info", "Storage Attach (floppyIO)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
         
@@ -832,6 +875,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
                 CVMWA_LOG( "Info", "Closemedium (floppyIO)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
         
@@ -843,8 +888,11 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     
             /* Create Context floppy */
             if (this->onProgress) (this->onProgress)(4, 7, "Building configuration floppy");
-            if (this->host->buildFloppyIO( vmPatchedUserData, &vmContextDsk ) != 0) 
+            if (this->host->buildFloppyIO( vmPatchedUserData, &vmContextDsk ) != 0) {
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_CREATE_ERROR;
+            }
 
             /* Attach context Floppy to the floppy controller */
             args.str("");
@@ -861,6 +909,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
             CVMWA_LOG( "Info", "StorageAttach (floppyIO)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_OPEN;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_MODIFY_ERROR;
             }
             
@@ -893,6 +943,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
                 CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
         
@@ -906,6 +958,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
                 CVMWA_LOG( "Info", "Closemedium (context)=" << ans  );
                 if (ans != 0) {
                     this->state = STATE_OPEN;
+                    /* Release update lock */
+                    this->updateLock = false;
                     return HVE_MODIFY_ERROR;
                 }
         
@@ -917,8 +971,11 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     
             /* Create Context ISO */
             if (this->onProgress) (this->onProgress)(4, 7, "Building contextualization CD-ROM");
-            if (this->host->buildContextISO( vmPatchedUserData, &vmContextDsk ) != 0) 
+            if (this->host->buildContextISO( vmPatchedUserData, &vmContextDsk ) != 0)  {
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_CREATE_ERROR;
+            }
 
             /* Attach context CD-ROM to the IDE controller */
             args.str("");
@@ -935,6 +992,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
             CVMWA_LOG( "Info", "StorageAttach (context)=" << ans  );
             if (ans != 0) {
                 this->state = STATE_OPEN;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_MODIFY_ERROR;
             }
             
@@ -951,6 +1010,8 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     CVMWA_LOG( "Info", "Start VM=" << ans  );
     if (ans != 0) {
         this->state = STATE_OPEN;
+        /* Release update lock */
+        this->updateLock = false;
         return HVE_MODIFY_ERROR;
     }
     
@@ -964,6 +1025,10 @@ int VBoxSession::start( std::map<std::string,std::string> *uData ) {
     
     /* Check for daemon need */
     this->host->checkDaemonNeed();
+    
+    /* Release update lock */
+    this->updateLock = false;
+    
     return 0;
     CRASH_REPORT_END;
 }
@@ -989,12 +1054,15 @@ int VBoxSession::close( bool unmonitored ) {
         (this->state != STATE_PAUSED) &&
         (this->state != STATE_ERROR)) return HVE_INVALID_STATE;
 
+    /* Acquire update lock */
+    this->updateLock = true;
+
     /* Stop the VM if it's running (we don't care about the warnings) */
     if (this->onProgress) (this->onProgress)(1, 10, "Shutting down the VM");
     this->controlVM( "poweroff");
     
     /* Unmount, release and delete media */
-    map<string, string> machineInfo = this->getMachineInfo();
+    map<string, string> machineInfo = this->getMachineInfo( 2000 );
     
     /* Check if vm is in saved state */
     if (machineInfo.find( "State" ) != machineInfo.end()) {
@@ -1005,6 +1073,8 @@ int VBoxSession::close( bool unmonitored ) {
             CVMWA_LOG( "Info", "Discarded VM state=" << ans  );
             if (ans != 0) {
                 this->state = STATE_ERROR;
+                /* Release update lock */
+                this->updateLock = false;
                 return HVE_CONTROL_ERROR;
             }
             
@@ -1032,7 +1102,11 @@ int VBoxSession::close( bool unmonitored ) {
         if (this->onProgress) (this->onProgress)(3, 10, "Detaching contextualization CD-ROM");
         ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
-        if (ans != 0) return HVE_MODIFY_ERROR;
+        if (ans != 0) {
+            /* Release update lock */
+            this->updateLock = false;
+            return HVE_MODIFY_ERROR;
+        }
         
         /* Unregister/delete iso */
         args.str("");
@@ -1042,7 +1116,11 @@ int VBoxSession::close( bool unmonitored ) {
         if (this->onProgress) (this->onProgress)(4, 10, "Closing contextualization CD-ROM");
         ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Closemedium (context)=" << ans  );
-        if (ans != 0) return HVE_MODIFY_ERROR;
+        if (ans != 0) {
+            /* Release update lock */
+            this->updateLock = false;
+            return HVE_MODIFY_ERROR;
+        }
         
         /* Delete actual file */
         if (this->onProgress) (this->onProgress)(5, 10, "Deleting contextualization CD-ROM");
@@ -1071,7 +1149,11 @@ int VBoxSession::close( bool unmonitored ) {
         if (this->onProgress) (this->onProgress)(6, 10, "Detaching data disk");
         ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Storage Attach (context)=" << ans  );
-        if (ans != 0) return HVE_MODIFY_ERROR;
+        if (ans != 0) {
+            /* Release update lock */
+            this->updateLock = false;
+            return HVE_MODIFY_ERROR;
+        }
         
         /* Unregister/delete iso */
         args.str("");
@@ -1081,7 +1163,11 @@ int VBoxSession::close( bool unmonitored ) {
         if (this->onProgress) (this->onProgress)(7, 10, "Closing data disk medium");
         ans = this->wrapExec(args.str(), NULL, NULL, retries);
         CVMWA_LOG( "Info", "Closemedium (disk)=" << ans  );
-        if (ans != 0) return HVE_MODIFY_ERROR;
+        if (ans != 0) {
+            /* Release update lock */
+            this->updateLock = false;
+            return HVE_MODIFY_ERROR;
+        }
         
         /* Delete actual file */
         if (this->onProgress) (this->onProgress)(8, 10, "Removing data disk");
@@ -1098,6 +1184,10 @@ int VBoxSession::close( bool unmonitored ) {
     /* OK */
     if (this->onProgress) (this->onProgress)(10, 10, "Completed");
     this->state = STATE_CLOSED;
+
+    /* Release update lock */
+    this->updateLock = false;
+
     return HVE_OK;
     CRASH_REPORT_END;
 }
@@ -1507,7 +1597,7 @@ std::string VBoxSession::getProperty( std::string name, bool forceUpdate ) {
     }
     
     /* Invoke property query */
-    int ans = this->wrapExec("guestproperty get "+this->uuid+" \""+name+"\"", &lines);
+    int ans = this->wrapExec("guestproperty get "+this->uuid+" \""+name+"\"", &lines, NULL, 2, 2000);
     if (ans != 0) return "";
     if (lines.empty()) return "";
     
@@ -1538,7 +1628,7 @@ int VBoxSession::setProperty( std::string name, std::string value ) {
     }
     
     /* Perform property update */
-    int ans = this->wrapExec("guestproperty set "+this->uuid+" \""+name+"\" \""+value+"\"", &lines);
+    int ans = this->wrapExec("guestproperty set "+this->uuid+" \""+name+"\" \""+value+"\"", &lines, NULL, 4, 2000);
     if (ans != 0) return HVE_MODIFY_ERROR;
     return 0;
     
@@ -1682,7 +1772,7 @@ std::string VBoxSession::getExtraInfo( int extraInfo ) {
 
     if (extraInfo == EXIF_VIDEO_MODE) {
         CVMWA_LOG("Debug", "Getting video mode")
-        map<string, string> info = this->getMachineInfo();
+        map<string, string> info = this->getMachineInfo( 2000 );
         
         for (std::map<string, string>::iterator it=info.begin(); it!=info.end(); ++it) {
             string pname = (*it).first;
@@ -1843,6 +1933,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
     sess->dataPath = "";
     sess->properties.clear();
     sess->unsyncedProperties.clear();
+    sess->updateLock = false;
     return sess;
     CRASH_REPORT_END;
 }
@@ -2025,7 +2116,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     bool prevEditable;
 
     /* Don't update session if we are in middle of something */
-    if ((session->state == STATE_STARTING) || (session->state == STATE_OPPENING))
+    if ((session->state == STATE_STARTING) || (session->state == STATE_OPPENING) || ((VBoxSession*)session)->updateLock)
         return HVE_INVALID_STATE;
     
     /* Get session's uuid */
@@ -2116,7 +2207,6 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
     /* Parse RDP info */
     if (info.find("VRDE") != info.end()) {
         string rdpInfo = info["VRDE"];
-        CVMWA_LOG("Debug", "Detected VRDE Config '" << rdpInfo << "'");
 
         // Example line: 'enabled (Address 127.0.0.1, Ports 39211, MultiConn: off, ReuseSingleConn: off, Authentication type: null)'
         if (rdpInfo.find("enabled") != string::npos) {
@@ -2276,13 +2366,6 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
         
         /* Store allProps to properties */
         ((VBoxSession*)session)->properties = allProps;
-        
-        /* Debug log */
-        for (std::map<string, string>::iterator it=((VBoxSession*)session)->properties.begin(); it!=((VBoxSession*)session)->properties.end(); ++it) {
-            string pname = (*it).first;
-            string pvalue = (*it).second;
-            CVMWA_LOG("Debug", "Guest Property '" << pname << "' = '" << pvalue << "'");
-        }
 
     }
 
