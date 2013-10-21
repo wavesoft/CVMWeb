@@ -349,7 +349,7 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
         // Check for overridable: version
         } else if (o->HasProperty("version") && __canOverride("version", this->session)) {
             ver = o->GetProperty("version").convert_cast<std::string>();
-            if (!isSanitized(&ver, "01234567890.")) ver=DEFAULT_CERNVM_VERSION;
+            if (!isSanitized(&ver, "01234567890.-")) ver=DEFAULT_CERNVM_VERSION;
             flags |= HVF_SYSTEM_64BIT; // Micro is currently only 64-bit
 
         }

@@ -194,10 +194,14 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
 /**
  * Download the specified CernVM version
  */
-int Hypervisor::cernVMDownload( std::string version, std::string * filename, ProgressFeedback * fb ) {
+int Hypervisor::cernVMDownload( std::string version, std::string * filename, ProgressFeedback * fb, std::string flavor, std::string arch ) {
     CRASH_REPORT_BEGIN;
-    string sURL = "http://cernvm.cern.ch/releases/ucernvm-" + version + ".iso";
+    string sURL = "http://cernvm.cern.ch/releases/ucernvm-images." + version + ".cernvm." + arch + "/ucernvm-" + flavor + "." + version + ".cernvm." + arch + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
+
+    string sChecksumURL = sURL + ".sha256";
+    string sChecksumOutput = sOutput + ".sha256";
+
     *filename = sOutput;
     if (file_exists(sOutput)) {
         return 0;

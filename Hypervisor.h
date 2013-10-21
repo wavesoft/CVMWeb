@@ -72,7 +72,7 @@
 #define HVF_DUAL_NIC           64       // Use secondary adapter instead of creating a NAT rule on the first one
 
 /* Default CernVM Version */
-#define DEFAULT_CERNVM_VERSION  "1.11"
+#define DEFAULT_CERNVM_VERSION  "1.13-12"
 #define DEFAULT_API_PORT        80
 
 /**
@@ -251,7 +251,7 @@ public:
     /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT );
     void                    detectVersion       ( );
-    int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback );
+    int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback, std::string flavor = "prod", std::string arch = "x86_64" );
     int                     cernVMCached        ( std::string version, std::string * filename );
     std::string             cernVMVersion       ( std::string filename );
     int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb );

@@ -135,6 +135,10 @@ bool SimpleFSM::FSMContinue() {
 
 }
 
+/**
+ * Helper function to traverse the FSM graph, trying to find the
+ * shortest path that leads to the given action.
+ */
 void findShortestPath( std::vector< FSMNode * > path, FSMNode * node, int state,	// Arguments
 					  size_t * clipLength, std::vector< FSMNode * > ** bestPath ) {	// State
 
@@ -228,7 +232,7 @@ void SimpleFSM::FSMGoto(int state) {
  * to the state pointed by goto
  */
 void SimpleFSM::FSMSkew(int state) {
-    CVMWA_LOG("Debug", "Skewing througgh " << state << " towards " << fsmTargetState);
+    CVMWA_LOG("Debug", "Skewing through " << state << " towards " << fsmTargetState);
 	std::map<int,FSMNode>::iterator pt;
 
 	// Search given state
