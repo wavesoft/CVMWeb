@@ -27,9 +27,9 @@
 #include "BrowserStreamRequest.h"
 #include "DefaultBrowserStreamHandler.h"
 
-#include "Hypervisor.h"
-#include "DownloadProvider.h"
-#include "Utilities.h"
+#include "Common/Hypervisor.h"
+#include "Common/DownloadProvider.h"
+#include "Common/Utilities.h"
 
 /**
  * Stream handler event delegate to DOWNLOAD_PROVIDER

@@ -95,16 +95,18 @@ set( LIBZ_LIBRARIES zlibstatic )
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/test.cpp 
 	${PLATFORM_SOURCES}
-	${PROJECT_SOURCE_DIR}/../DaemonCtl.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor.cpp
-	${PROJECT_SOURCE_DIR}/../Virtualbox.cpp
-	${PROJECT_SOURCE_DIR}/../ThinIPC.cpp
-	${PROJECT_SOURCE_DIR}/../contextiso.cpp
-	${PROJECT_SOURCE_DIR}/../Utilities.cpp
-	${PROJECT_SOURCE_DIR}/../LocalConfig.cpp
-	${PROJECT_SOURCE_DIR}/../floppyIO.cpp
-	${PROJECT_SOURCE_DIR}/../DownloadProvider.cpp
-	${PROJECT_SOURCE_DIR}/../SimpleFSM.cpp
+	${PROJECT_SOURCE_DIR}/../Common/DaemonCtl.cpp
+	${PROJECT_SOURCE_DIR}/../Common/Hypervisor.cpp
+	${PROJECT_SOURCE_DIR}/../Common/ThinIPC.cpp
+	${PROJECT_SOURCE_DIR}/../Common/contextiso.cpp
+	${PROJECT_SOURCE_DIR}/../Common/Utilities.cpp
+	${PROJECT_SOURCE_DIR}/../Common/LocalConfig.cpp
+	${PROJECT_SOURCE_DIR}/../Common/floppyIO.cpp
+	${PROJECT_SOURCE_DIR}/../Common/DownloadProvider.cpp
+	${PROJECT_SOURCE_DIR}/../Common/SimpleFSM.cpp
+	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxCommon.cpp
+	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxHypervisor.cpp
+	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxSession.cpp
 	)
 
 # Libraries

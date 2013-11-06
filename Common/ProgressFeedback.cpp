@@ -18,17 +18,5 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#ifndef DialogManager_h__
-#define DialogManager_h__
- 
-#include <boost/noncopyable.hpp>
-#include <boost/function.hpp>
-#include "BrowserHost.h"
-#include "CrashReport.h"
- 
-namespace FB { class PluginWindow; }
+#include "ProgressFeedback.h"
 
-bool CVMConfirmDialog(const FB::BrowserHostPtr& host, FB::PluginWindow* win, std::string message);
-void CVMInitializeDialogs();
-
-#endif // DialogManager_h__

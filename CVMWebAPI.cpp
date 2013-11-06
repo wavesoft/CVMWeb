@@ -36,7 +36,7 @@
 #include "CVMWebAPIDaemon.h"
 #include "CVMWebLocalConfig.h"
 
-#include "Dialogs.h"
+#include "CVMDialogs.h"
 
 #include "json/json.h"
 #include "fbjson.h"

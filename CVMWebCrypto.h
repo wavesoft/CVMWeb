@@ -27,11 +27,11 @@
 #include "DOM/Document.h"
 #include "global/config.h"
 
-#include "DownloadProvider.h"
-#include "Utilities.h"
+#include "Common/DownloadProvider.h"
+#include "Common/Utilities.h"
 #include "Hypervisor.h"
-#include "LocalConfig.h"
-#include "CrashReport.h"
+#include "Common/LocalConfig.h"
+#include "Common/CrashReport.h"
 
 #include <openssl/pem.h>
 #include <openssl/sha.h>

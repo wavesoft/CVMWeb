@@ -28,8 +28,9 @@
 #include "Timer.h"
 #include "BrowserHost.h"
 #include "CVMWeb.h"
-#include "Hypervisor.h"
- #include "CrashReport.h"
+ 
+#include "Common/Hypervisor.h"
+#include "Common/CrashReport.h"
 
 class CVMWebLocalConfig : public FB::JSAPIAuto
 {

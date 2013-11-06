@@ -28,14 +28,15 @@
 \**********************************************************/
 #ifndef H_CVMWebPLUGIN
 #define H_CVMWebPLUGIN
-#include "CrashReport.h"
 
 #include "PluginWindow.h"
 #include "PluginEvents/MouseEvents.h"
 #include "PluginEvents/AttachedEvent.h"
 
 #include "PluginCore.h"
-#include "Hypervisor.h"
+
+#include "Common/CrashReport.h"
+#include "Common/Hypervisor.h"
 
 #include "CVMWebCrypto.h"
 

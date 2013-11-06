@@ -266,7 +266,7 @@ public:
              the Hypervisor class in order to use the checkDaemonNeed() function. It's
              a hack because those two systems (JSAPI & HypervisorAPI) should be isolated. */
     std::string             daemonBinPath;
-     
+    
 protected:
     int                                         sessionID;
     DownloadProviderPtr                         downloadProvider;

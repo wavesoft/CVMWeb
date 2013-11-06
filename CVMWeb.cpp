@@ -30,12 +30,12 @@
 #include "CVMWeb.h"
 #include "CVMWebAPI.h"
 #include "CVMBrowserProvider.h"
+#include "CVMDialogs.h"
 
-#include "Hypervisor.h"
-#include "DaemonCtl.h"
-#include "ThinIPC.h"
-#include "Utilities.h"
-#include "Dialogs.h"
+#include "Common/Hypervisor.h"
+#include "Common/DaemonCtl.h"
+#include "Common/ThinIPC.h"
+#include "Common/Utilities.h"
 
 #include "DOM/Window.h"
 

@@ -30,11 +30,12 @@
 #include "JSAPIAuto.h"
 #include "BrowserHost.h"
 
-#include "Utilities.h"
-#include "LocalConfig.h"
+#include "Common/Utilities.h"
+#include "Common/LocalConfig.h"
+#include "Common/CrashReport.h"
+  
 #include "CVMWeb.h"
 #include "CVMBrowserProvider.h"
-#include "CrashReport.h"
 
 #ifndef H_CVMWebAPI
 #define H_CVMWebAPI

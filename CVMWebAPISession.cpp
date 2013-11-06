@@ -30,8 +30,9 @@
 #include "DOM/Document.h"
 #include "global/config.h"
 
-#include "DaemonCtl.h"
-#include "Hypervisor.h"
+#include "Common/DaemonCtl.h"
+#include "Common/Hypervisor.h"
+
 #include "CVMWebAPISession.h"
 
 #include <boost/thread.hpp>

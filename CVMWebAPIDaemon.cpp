@@ -31,11 +31,12 @@
 #include "URI.h"
 #include "global/config.h"
 
-#include "DaemonCtl.h"
-#include "Hypervisor.h"
-#include "CVMWebAPIDaemon.h"
-#include <boost/thread.hpp>
+#include "Common/DaemonCtl.h"
+#include "Common/Hypervisor.h"
 
+#include "CVMWebAPIDaemon.h"
+  
+#include <boost/thread.hpp>
 #include <sstream>
 
 ///////////////////////////////////////////////////////////////////////////////

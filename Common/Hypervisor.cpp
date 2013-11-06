@@ -32,11 +32,12 @@
 
 #include "Utilities.h"
 #include "Hypervisor.h"
-#include "Virtualbox.h"
 #include "DaemonCtl.h"
 
 #include "contextiso.h"
 #include "floppyIO.h"
+
+#include "Hypervisor/Virtualbox/VBoxHypervisor.h"
 
 using namespace std;
 namespace fs = boost::filesystem;

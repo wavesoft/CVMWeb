@@ -28,10 +28,12 @@
 #include "JSAPIAuto.h"
 #include "Timer.h"
 #include "BrowserHost.h"
+
 #include "CVMWeb.h"
-#include "Hypervisor.h"
-#include "Utilities.h"
-#include "CrashReport.h"
+
+#include "Common/Hypervisor.h"
+#include "Common/Utilities.h"
+#include "Common/CrashReport.h"
 
 #ifndef H_CVMWebAPISession
 #define H_CVMWebAPISession

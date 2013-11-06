@@ -133,4 +133,4 @@ private:
 };
 
 
-#endif
+#endif /* end of include guard: SIMPLEFSM_H */

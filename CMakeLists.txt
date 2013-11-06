@@ -14,6 +14,10 @@ file (GLOB GENERAL RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     [^.]*.cpp
     [^.]*.h
     [^.]*.cmake
+    Common/[^.]*.cpp
+    Common/[^.]*.h
+    Hypervisor/Virtualbox/[^.]*.cpp
+    Hypervisor/Virtualbox/[^.]*.h
     )
 
 include_directories(${PLUGIN_INCLUDE_DIRS})
