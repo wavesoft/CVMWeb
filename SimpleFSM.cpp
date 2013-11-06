@@ -100,11 +100,11 @@ void SimpleFSM::FSMRegistryEnd( int rootID ) {
 }
 
 /**
- * Complete FSM registry decleration and build FSM tree
+ * Run next action in the FSM
  */
-bool SimpleFSM::FSMContinue() {
-	if (fsmInsideHandler) return;
-	if (fsmCurrentPath.empty()) return;
+bool SimpleFSM::FSMContinue( bool inThread ) {
+	if (fsmInsideHandler) return false;
+	if (fsmCurrentPath.empty()) return false;
 	fsmInsideHandler = true;
 
 	// Get next action in the path
@@ -117,12 +117,31 @@ bool SimpleFSM::FSMContinue() {
         fsmCurrentPath.pop_front();
 	}
 
+	// Change current node
+	fsmCurrentNode = next;
+
 	// Use guarded execution
 	try {
 
 		// Run the new state
 		if (next->handler)
 			next->handler();
+
+	} catch (boost::thread_interrupted &e) {
+		CVMWA_LOG("Debuf", "FSM Handler interrupted");
+
+		// Cleanup
+		fsmInsideHandler = false;
+
+		if (inThread) {
+			// If we are in-thread, re-throw so it's
+			// catched with the external wrap
+			throw;
+		} else {
+			// Otherwise, return false to indicate that
+			// something failed.
+			return false;
+		}
 
 	} catch ( std::exception &e ) {
 		CVMWA_LOG("Exception", e.what() );
@@ -132,7 +151,7 @@ bool SimpleFSM::FSMContinue() {
 
 	// We are now outside the handler
 	fsmInsideHandler = false;
-
+    return true;
 }
 
 /**
@@ -198,7 +217,7 @@ void SimpleFSM::FSMGoto(int state) {
 	// Prepare clip length
 	size_t clipLength = fsmNodes.size();
 
-	// Prepare receiver
+	// Prepare solver
 	std::vector< FSMNode * > srcPath;
 	std::vector< FSMNode * > *resPath = NULL;
 	findShortestPath( srcPath, fsmCurrentNode, state, &clipLength, &resPath );
@@ -214,6 +233,10 @@ void SimpleFSM::FSMGoto(int state) {
 		fsmTargetState = state;
 
 	}
+
+	// Notify possibly paused thread
+	if (fsmThread != NULL)
+		_fsmWakeup();
 
 #ifdef LOGGING
 	// Present best path
@@ -245,4 +268,104 @@ void SimpleFSM::FSMSkew(int state) {
 	// Continue towards the active target
 	FSMGoto( fsmTargetState );
 
+}
+
+/**
+ * Local function to do FSMContinue when needed in a threaded way
+ */
+void SimpleFSM::FSMThreadLoop() {
+
+	// Catch interruptions
+	try {
+
+		// Infinite thread loop
+		while (true) {
+
+			// Keep running until we run out of steps
+			while (FSMContinue(true)) {
+
+				// Yield our time slice after executing an action
+				fsmThread->yield();
+
+			};
+
+			// After the above loop, we have drained the
+			// event queue. Enter paused state and wait
+			// to be notified when this changes.
+			_fsmPause();
+		}
+
+	} catch (boost::thread_interrupted &e) {
+		CVMWA_LOG("Debug", "Thread interrupted");
+		std::cout << "(( INTERRUPTED ))" << std::endl;
+
+	}
+
+	// Cleanup
+	fsmThread = NULL;
+}
+
+/**
+ * Local function to exit the FSM Thread
+ */
+void SimpleFSM::FSMThreadStop() {
+
+	// Ensure we have a running thread
+	if (fsmThread == NULL) return;
+
+	// Interrupt and reap
+	fsmThread->interrupt();
+	fsmThread->join();
+
+}
+
+/**
+ * Infinitely pause, waiting for a wakeup signal
+ */
+void SimpleFSM::_fsmPause() {
+	CVMWA_LOG("Debug", "Entering paused state");
+
+	// If we are already not paused, don't
+	// do anything
+	if (fsmtPaused) {
+	    boost::unique_lock<boost::mutex> lock(fsmtPauseMutex);
+	    while(fsmtPaused) {
+	        fsmtPauseChanged.wait(lock);
+	    }
+	}
+
+    // Reset paused state
+    fsmtPaused = true;
+	CVMWA_LOG("Debug", "Exiting paused state");
+
+}
+
+/**
+ * Send a wakeup signal
+ */
+void SimpleFSM::_fsmWakeup() {
+	CVMWA_LOG("Debug", "Waking-up paused thread");
+
+    {
+        boost::unique_lock<boost::mutex> lock(fsmtPauseMutex);
+        fsmtPaused = false;
+    }
+    fsmtPauseChanged.notify_all();
+}
+
+/**
+ * Start an FSM thread
+ */
+boost::thread * SimpleFSM::FSMThreadStart() {
+	// If we are already running, return the thread
+	if (fsmThread != NULL)
+		return fsmThread;
+	
+	// Set the current state to paused, effectively
+	// stopping the FSM execution if no wakeup signals are piled
+	fsmtPaused = true;
+
+	// Start and return the new thread
+	fsmThread = new boost::thread(boost::bind(&SimpleFSM::FSMThreadLoop, this));
+	return fsmThread;
 }

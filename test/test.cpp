@@ -21,7 +21,31 @@ public:
 
 };
 
-class VBoxFSM : public SimpleFSM {
+class VBoxSession : public HVSession {
+public:
+
+    virtual int             pause               ();
+    virtual int             close               ( bool unmonitored = false );
+    virtual int             resume              ();
+    virtual int             reset               ();
+    virtual int             stop                ();
+    virtual int             hibernate           ();
+    virtual int             open                ( int cpus, int memory, int disk, std::string cvmVersion, int flags );
+    virtual int             start               ( std::map<std::string,std::string> *userData );
+    virtual int             setExecutionCap     ( int cap);
+    virtual int             setProperty         ( std::string name, std::string key );
+    virtual std::string     getProperty         ( std::string name, bool forceUpdate = false );
+    virtual std::string     getRDPHost          ();
+    virtual std::string     getExtraInfo        ( int extraInfo );
+    virtual std::string     getAPIHost          ();
+    virtual int             getAPIPort          ();
+
+    virtual int             update              ();
+    virtual int             updateFast          ();
+
+};
+
+class VBoxFSM : public SimpleFSM, public HVSession {
 public:
 
     VBoxFSM() {
@@ -86,37 +110,58 @@ public:
 
     }
 
+    /**
+     * Initialize connection with VirtualBox
+     */
     void Initialize() {
         cout << "- Initialize" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(500));
     }
 
+    /**
+     * Load VirtualBox session 
+     */
     void UpdateSession() {
         cout << "- UpdateSession" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(200));
         FSMSkew(3);
     }
 
+    /**
+     * Handle errors
+     */
     void HandleError() {
         cout << "- HandleError" << endl;
     }
 
+    /**
+     * Cure errors
+     */
     void CureError() {
         cout << "- CureError" << endl;
     }
 
+    /**
+     * Create new VM
+     */
     void CreateVM() {
         cout << "- CreateVM" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(500));
     }
 
     void ConfigureVM() {
         cout << "- ConfigureVM" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
     }
 
     void DownloadMedia() {
         cout << "- DownloadMedia" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
     }
 
     void ConfigureVMBoot() {
         cout << "- ConfigureVMBoot" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(200));
     }
 
     void ReleaseVMBoot() {
@@ -125,6 +170,7 @@ public:
 
     void ConfigureVMScratch() {
         cout << "- ConfigureVMScratch" << endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(500));
     }
 
     void ReleaseVMScratch() {
@@ -175,11 +221,23 @@ public:
 
 int main( int argc, char ** argv ) {
 
-    SessionState    state;
-    VBoxFSM         fsm(state);
+    //SessionState    state;
+    VBoxFSM         fsm;
 
+    // Run
+    cout << "* START!" << endl;
     fsm.FSMGoto(7);
-    fsm.FSMContinue();
+
+    fsm.FSMThreadStart();
+
+    Sleep(4000);
+
+    // Destroy
+    cout << "* DESTROY!" << endl;
+    fsm.FSMGoto(3);
+    Sleep(7000);
+
+    fsm.FSMThreadStop();
 
     return 0;
 }

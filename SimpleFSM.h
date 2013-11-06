@@ -26,6 +26,10 @@
 #include <vector>
 #include <map>
 
+#include <boost/thread.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
+
 typedef boost::function< void () >	fsmHandler;
 
 // Forward declerations
@@ -67,6 +71,12 @@ class SimpleFSM {
 public:
 
 	/**
+	 * Constructor
+	 */
+	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmtPauseChanged()
+		{ };
+
+	/**
 	 * Pick the closest path to go from current state to the given state
 	 */
 	void 							FSMGoto(int state);
@@ -80,14 +90,26 @@ public:
 	/**
 	 * Called externally to continue to the next FSM action
 	 */
-	bool 							FSMContinue();
+	bool 							FSMContinue( bool inThread = false );
+
+	/**
+	 * Start the FSM management thread
+	 */
+	boost::thread *					FSMThreadStart();
+
+	/**
+	 * Stop the FSM thread
+	 */
+	void 							FSMThreadStop();
 
 protected:
 
 	void 					        FSMRegistryBegin();
 	void 					        FSMRegistryAdd( int id, fsmHandler handler, ... );
 	void 					        FSMRegistryEnd( int rootID );
+	void 							FSMThreadLoop();
 
+	// Private variables
     std::map<int,std::vector<int>>  fsmTmpRouteLinks;
 	std::map<int,FSMNode>	        fsmNodes;
 	FSMNode	*						fsmRootNode;
@@ -95,6 +117,18 @@ protected:
 	std::list<FSMNode*>				fsmCurrentPath;
 	int								fsmTargetState;
 	bool 							fsmInsideHandler;
+	boost::thread *					fsmThread;
+
+private:
+
+	// Thread synchronization variables
+	bool 							fsmtPaused;
+	boost::mutex 					fsmtPauseMutex;
+	boost::condition_variable 		fsmtPauseChanged;
+
+	// Pause/Resume for long periods of idle-ness
+	void							_fsmPause();
+	void 							_fsmWakeup();
 
 };
 
