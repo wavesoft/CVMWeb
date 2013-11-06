@@ -137,15 +137,12 @@ UnknownTaskPtr BaseProgressTask::beginUnknown ( const std::string& taskName ) {
 }
 
 /**
- * Return the percentage of completeness
+ * By default return the summarized progress stack
  */
 double BaseProgressTask::getProgress() {
 
-	// If we are completed, return excact one.
-	if (completed) return 1.0;
-
 	// Calculate the percentage per slot
-	double v = 1.0 / max;
+	double v = 1.0 / subtasks.size();
 	double value = 0.0;
 
 	// Summarize according to percentage per child

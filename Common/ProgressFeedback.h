@@ -62,7 +62,7 @@ public:
 	/**
 	 * Return the completeness of this task
 	 */
-	double				getProgress		();
+	virtual double		getProgress		() = 0;
 
 	/**
 	 * Return a slotted task instance
@@ -79,11 +79,6 @@ public:
 	void 				onError			( cbError & cb );
 	void 				onProgress		( cbProgress & cb );
 
-	/**
-	 * Mark the task as completed
-	 */
-	void 				complete 		( );
-
 protected:
 
 	// Forward events
@@ -92,9 +87,6 @@ protected:
 
 	// Metrics
 	std::string 						name;
-	size_t 								max;
-	size_t 								current;
-	bool 								completed;
 	BaseProgressTaskPtr					parent;
 
 	// Callback list
@@ -103,39 +95,97 @@ protected:
 	std::vector< cbError >				errorCallbacks;
 	std::vector< cbProgress >			progressCallbacks;
 
+	// List of sub-tasks
 	std::list< BaseProgressTaskPtr > 	subtasks;
 
 };
 
+/**
+ * Slotted tasks class
+ */
 class SlottedTask : public BaseProgressTask {
 public:
 
 	/**
-	 * Return the completeness of this task
+	 * Update the maximum number of steps in this task 
+	 */
+	void 				setMax 		( const size_t max = 0);
+
+	/**
+	 * Increase the step counter by one and display the specified message 
+	 */
+	void 				step 		( const std::string& message );
+
+	/**
+	 * Override the default progress function
 	 */
 	virtual double		getProgress		();
 
+private:
+
+	size_t 								max;
+	size_t 								current;
+
 };
 
+/**
+ * Progress Tasks
+ */
 class ProgressTask : public BaseProgressTask {
 public:
 
 	/**
-	 * Return the completeness of this task
+	 * Update the maximum number of steps in this task 
+	 */
+	void 				setMax 		( const size_t max = 0);
+
+	/**
+	 * Update to a variable progress 
+	 */
+	void 				update 		( const size_t value );
+
+	/**
+	 * Override the default progress function
 	 */
 	virtual double		getProgress		();
 
+private:
+
+	size_t 								max;
+	size_t 								current;
+
 };
 
-class ProgressTask : public BaseProgressTask {
+/**
+ * Unknw
+ */
+class UnknownTask : public BaseProgressTask {
 public:
 
 	/**
-	 * Return the completeness of this task
+	 * Mark the task as completed
+	 */
+	void 				complete 		( const std::string& message );
+
+	/**
+	 * Override the default progress function
 	 */
 	virtual double		getProgress		();
 
+private:
+
+	bool 								completed;
+
 };
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -157,10 +207,6 @@ public:
 	 */
 	void 				unknown 	( const std::string& message );
 
-	/**
-	 * Update the maximum number of steps in this task 
-	 */
-	void 				setMax 		( const size_t max = 0);
 
 	/**
 	 * Start the task and optionally change the maximum number of tasks in advance
