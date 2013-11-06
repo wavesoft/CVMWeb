@@ -28,16 +28,115 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 /* Forward-declaration of ProgressFeedback class */
-class ProgressFeedback;
-typedef boost::shared_ptr< ProgressFeedback >       ProgressFeedbackPtr;
+class BaseProgressTask;
+class ProgressTask;
+class SlottedTask;
+class UnknownTask;
+typedef boost::shared_ptr< BaseProgressTask >       BaseProgressTaskPtr;
+typedef boost::shared_ptr< ProgressTask >       	ProgressTaskPtr;
+typedef boost::shared_ptr< SlottedTask >       		SlottedTaskPtr;
+typedef boost::shared_ptr< UnknownTask >       		UnknownTaskPtr;
+
 
 /* Callback functions reference */
 typedef boost::function<void ( const std::string& message )>    										cbStarted;
 typedef boost::function<void ( const std::string& message )>    										cbCompleted;
-typedef boost::function<void ( const std::string& message, const int errorCode )> 						cbFailed;
-typedef boost::function<void ( const size_t current, const size_t max, const std::string& message )>    cbProgress;
+typedef boost::function<void ( const std::string& message, const int errorCode )> 						cbError;
+typedef boost::function<void ( const double progress, const std::string& message )>    cbProgress;
+
+/**
+ * Base class to monitor progress events
+ */
+class BaseProgressTask: public boost::enable_shared_from_this<BaseProgressTask> {
+public:
+
+	/**
+	 * Progress feedback constructor
+	 */
+	BaseProgressTask 	( const std::string& taskName = "", const size_t maxTasks = 0 
+		) : startedCallbacks(), completedCallbacks(), errorCallbacks(), progressCallbacks(), subtasks(), max(maxTasks), current(0), name(taskName), completed(false) { };
+
+	/**
+	 * Return the completeness of this task
+	 */
+	double				getProgress		();
+
+	/**
+	 * Return a slotted task instance
+	 */
+	 SlottedTaskPtr		beginTasks		( const std::string& message, const size_t tasks = 0 );
+	 ProgressTaskPtr	beginProgress	( const std::string& message, const size_t tasks = 0 );
+	 UnknownTaskPtr		beginUnknown	( const std::string& message );
+
+	/**
+	 * Register callbacks on progress events
+	 */
+	void 				onStarted		( cbStarted & cb );
+	void 				onCompleted		( cbCompleted & cb );
+	void 				onError			( cbError & cb );
+	void 				onProgress		( cbProgress & cb );
+
+	/**
+	 * Mark the task as completed
+	 */
+	void 				complete 		( );
+
+protected:
+
+	// Forward events
+	void 								_forwardProgress( const std::string& message );
+	void 								_forwardError( const std::string& message, const int errorCode );
+
+	// Metrics
+	std::string 						name;
+	size_t 								max;
+	size_t 								current;
+	bool 								completed;
+	BaseProgressTaskPtr					parent;
+
+	// Callback list
+	std::vector< cbStarted >			startedCallbacks;
+	std::vector< cbCompleted >			completedCallbacks;
+	std::vector< cbError >				errorCallbacks;
+	std::vector< cbProgress >			progressCallbacks;
+
+	std::list< BaseProgressTaskPtr > 	subtasks;
+
+};
+
+class SlottedTask : public BaseProgressTask {
+public:
+
+	/**
+	 * Return the completeness of this task
+	 */
+	virtual double		getProgress		();
+
+};
+
+class ProgressTask : public BaseProgressTask {
+public:
+
+	/**
+	 * Return the completeness of this task
+	 */
+	virtual double		getProgress		();
+
+};
+
+class ProgressTask : public BaseProgressTask {
+public:
+
+	/**
+	 * Return the completeness of this task
+	 */
+	virtual double		getProgress		();
+
+};
+
 
 /**
  * General purpose function to report progress events to the user.
@@ -45,18 +144,7 @@ typedef boost::function<void ( const size_t current, const size_t max, const std
 class ProgressFeedback {
 public:
 
-	/**
-	 * Progress feedback constructor
-	 */
-	ProgressFeedback 	() : startedCallbacks(), completedCallbacks(), failedCallbacks(), progressCallbacks(), subtasks(), max(0), current(0) { };
 
-	/**
-	 * Register callbacks on progress events
-	 */
-	void onStarted		( cbStarted & cb );
-	void onCompleted	( cbCompleted & cb );
-	void onFailed		( cbFailed & cb );
-	void onProgress		( cbProgress & cb );
 
 	/**
 	 * Start a new sub-task on this progress  
@@ -75,6 +163,11 @@ public:
 	void 				setMax 		( const size_t max = 0);
 
 	/**
+	 * Start the task and optionally change the maximum number of tasks in advance
+	 */
+	void 				start 		( const std::string& name, const size_t max = 0 );
+
+	/**
 	 * Increase the step counter by one and display the specified message 
 	 */
 	void 				step 		( const std::string& message );
@@ -87,7 +180,7 @@ public:
 	/**
 	 * Complete the current task 
 	 */
-	void 				completed 	( );
+	void 				done 		( );
 
 	/**
 	 * Fail the current task 
@@ -96,17 +189,7 @@ public:
 
 private:
 
-	// Metrics
-	size_t 								max;
-	size_t 								current;
 
-	// Callback list
-	std::vector< cbStarted >			startedCallbacks;
-	std::vector< cbCompleted >			completedCallbacks;
-	std::vector< cbFailed >				failedCallbacks;
-	std::vector< cbProgress >			progressCallbacks;
-
-	std::list< ProgressFeedbackPtr > 	subtasks;
 
 	// Internal callbacks
 

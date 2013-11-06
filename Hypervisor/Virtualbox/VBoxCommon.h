@@ -21,10 +21,13 @@
 #ifndef VBOXCOMMON_H
 #define VBOXCOMMON_H
 
+#include "Common/Hypervisor.h"
+
 /* Global function to try to instantiate a VirtualBox Hypervisor */
 Hypervisor * vboxDetect();
 
 /* Global function to try to install a VirtualBox Hypervisor */
+
 
 
 #endif /* end of include guard: VBOXCOMMON_H */

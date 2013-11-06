@@ -21,9 +21,14 @@
 #ifndef VBOXHYPERVISOR_H
 #define VBOXHYPERVISOR_H
 
-#include "Hypervisor.h"
-#include "CrashReport.h"
+#include "VBoxCommon.h"
+#include "VBoxSession.h"
+
 #include <map>
+
+#include "Common/Hypervisor.h"
+#include "Common/CrashReport.h"
+
 #include <boost/regex.hpp>
 
 /**

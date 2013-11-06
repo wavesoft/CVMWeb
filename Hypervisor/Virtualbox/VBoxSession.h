@@ -21,11 +21,15 @@
 #ifndef VBOXSESSION_H
 #define VBOXSESSION_H
 
-#include "Hypervisor.h"
-#include "CrashReport.h"
-#include <map>
-#include <boost/regex.hpp>
+#include "VBoxCommon.h"
+#include "VBoxHypervisor.h"
 
+#include <map>
+
+#include "Common/Hypervisor.h"
+#include "Common/CrashReport.h"
+
+#include <boost/regex.hpp>
 
 /**
  * VirtualBox Session

@@ -26,9 +26,9 @@
 #include <map>
 #include <algorithm>
 
-#include "Hypervisor.h"
-#include "Virtualbox.h"
-#include "Utilities.h"
+#include "VBoxHypervisor.h"
+#include "Common/Hypervisor.h"
+#include "Common/Utilities.h"
 
 using namespace std;
 
