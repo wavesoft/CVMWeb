@@ -96,7 +96,7 @@ public:
         this->name = "";
         this->apiPort = DEFAULT_API_PORT;
         this->flags = 0;
-        this->userData = "";
+        this->userData = NULL;
         this->diskChecksum = "";
         this->pid = 0;
         this->editable = false;
@@ -113,7 +113,11 @@ public:
     std::string             ip;
     std::string             key;
     std::string             name;
-    std::string             userData;
+
+    /* Currently active user-data */
+    std::map<std::string,
+        std::string> *      userData;
+
     std::vector<std::string> overridableVars;
     
     int                     cpus;

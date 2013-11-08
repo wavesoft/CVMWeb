@@ -116,7 +116,7 @@ std::string changeUpperIP( std::string baseIP, int value ) {
 /** 
  * Return virtual machine information
  */
-map<string, string> Virtualbox::getMachineInfo( std::string uuid, int timeout ) {
+map<string, string> VBoxHypervisor::getMachineInfo( std::string uuid, int timeout ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
@@ -140,7 +140,7 @@ map<string, string> Virtualbox::getMachineInfo( std::string uuid, int timeout ) 
 /**
  * Return all the properties of the guest
  */
-map<string, string> Virtualbox::getAllProperties( string uuid ) {
+map<string, string> VBoxHypervisor::getAllProperties( string uuid ) {
     CRASH_REPORT_BEGIN;
     map<string, string> ans;
     vector<string> lines;
@@ -182,7 +182,7 @@ map<string, string> Virtualbox::getAllProperties( string uuid ) {
 /**
  * Load sessions if they are not yet loaded
  */
-bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbProgress, int progressMin , int progressMax, int progressTotal ) {
+bool VBoxHypervisor::waitTillReady( std::string pluginVersion, callbackProgress cbProgress, int progressMin , int progressMax, int progressTotal ) {
     CRASH_REPORT_BEGIN;
     
     /**
@@ -215,7 +215,7 @@ bool Virtualbox::waitTillReady( std::string pluginVersion, callbackProgress cbPr
 /**
  * Return a property from the VirtualBox guest
  */
-std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
+std::string VBoxHypervisor::getProperty( std::string uuid, std::string name ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     string value;
@@ -243,7 +243,7 @@ std::string Virtualbox::getProperty( std::string uuid, std::string name ) {
 /**
  * Return Virtualbox sessions instead of classic
  */
-HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
+HVSession * VBoxHypervisor::allocateSession( std::string name, std::string key ) {
     CRASH_REPORT_BEGIN;
     VBoxSession * sess = new VBoxSession();
     sess->name = name;
@@ -262,7 +262,7 @@ HVSession * Virtualbox::allocateSession( std::string name, std::string key ) {
 /**
  * Load capabilities
  */
-int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
+int VBoxHypervisor::getCapabilities ( HVINFO_CAPS * caps ) {
     CRASH_REPORT_BEGIN;
     map<string, string> data;
     vector<string> lines, parts;
@@ -354,7 +354,7 @@ int Virtualbox::getCapabilities ( HVINFO_CAPS * caps ) {
 /**
  * Get a list of mediums managed by VirtualBox
  */
-std::vector< std::map< std::string, std::string > > Virtualbox::getDiskList() {
+std::vector< std::map< std::string, std::string > > VBoxHypervisor::getDiskList() {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     std::vector< std::map< std::string, std::string > > resMap;
@@ -428,7 +428,7 @@ int __getPIDFromFile( std::string logPath ) {
 /**
  * Update session information from VirtualBox
  */
-int Virtualbox::updateSession( HVSession * session, bool fast ) {
+int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> vms, diskinfo;
@@ -698,7 +698,7 @@ int Virtualbox::updateSession( HVSession * session, bool fast ) {
 /**
  * Load session state from VirtualBox
  */
-int Virtualbox::loadSessions() {
+int VBoxHypervisor::loadSessions() {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> vms, diskinfo;
@@ -747,7 +747,7 @@ int Virtualbox::loadSessions() {
 /**
  * Check if the hypervisor has the extension pack installed (used for the more advanced RDP)
  */
-bool Virtualbox::hasExtPack() {
+bool VBoxHypervisor::hasExtPack() {
     CRASH_REPORT_BEGIN;
     
     /**
@@ -776,7 +776,7 @@ bool Virtualbox::hasExtPack() {
  * on it's own.
  *
  */
-int Virtualbox::installExtPack( string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin, int progressMax, int progressTotal ) {
+int VBoxHypervisor::installExtPack( string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin, int progressMax, int progressTotal ) {
     CRASH_REPORT_BEGIN;
 
     /* Notify extension pack installation */

@@ -23,11 +23,15 @@
 
 #include "Common/Hypervisor.h"
 
+/* Forward-declare the classes */
+class VBoxSession;
+class VBoxHypervisor;
+
 /* Global function to try to instantiate a VirtualBox Hypervisor */
-Hypervisor * vboxDetect();
+Hypervisor * 	vboxDetect();
 
 /* Global function to try to install a VirtualBox Hypervisor */
-
+bool 			vboxInstall();
 
 
 #endif /* end of include guard: VBOXCOMMON_H */

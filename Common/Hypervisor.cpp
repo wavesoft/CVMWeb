@@ -611,94 +611,14 @@ void Hypervisor::setDownloadProvider( DownloadProviderPtr p ) {
  */
 Hypervisor * detectHypervisor() {
     CRASH_REPORT_BEGIN;
-    using namespace std;
-    
-    Hypervisor * hv;
-    vector<string> paths;
-    string bin, p;
-    
-    /* In which directories to look for the binary */
-    #ifdef _WIN32
-    paths.push_back( "C:/Program Files/Oracle/VirtualBox" );
-    paths.push_back( "C:/Program Files (x86)/Oracle/VirtualBox" );
-    #endif
-    #if defined(__APPLE__) && defined(__MACH__)
-    paths.push_back( "/Applications/VirtualBox.app/Contents/MacOS" );
-    #endif
-    #ifdef __linux__
-    paths.push_back( "/usr" );
-    paths.push_back( "/usr/local" );
-    paths.push_back( "/opt/VirtualBox" );
-    #endif
-    
-    /* Detect hypervisor */
-    for (vector<string>::iterator i = paths.begin(); i != paths.end(); i++) {
-        p = *i;
-        
-        /* Check for virtualbox */
-        #ifdef _WIN32
-        bin = p + "/VBoxManage.exe";
-        if (file_exists(bin)) {
-            hv = new Virtualbox();
-            hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p;
-            hv->hvBinary = bin;
-            ((Virtualbox*)hv)->hvGuestAdditions = "";
-            bin = p + "/VBoxGuestAdditions.iso";
-            if (file_exists(bin)) {
-                ((Virtualbox*)hv)->hvGuestAdditions = bin;
-            }
-            hv->detectVersion();
-            hv->daemonBinPath = "";
-            return hv;
-        }
-        #endif
-        #if defined(__APPLE__) && defined(__MACH__)
-        bin = p + "/VBoxManage";
-        if (file_exists(bin)) {
-            hv = new Virtualbox();
-            hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p;
-            hv->hvBinary = bin;
-            ((Virtualbox*)hv)->hvGuestAdditions = "";
-            bin = p + "/VBoxGuestAdditions.iso";
-            if (file_exists(bin)) {
-                ((Virtualbox*)hv)->hvGuestAdditions = bin;
-            }
-            hv->detectVersion();
-            hv->daemonBinPath = "";
-            return hv;
-        }
-        #endif
-        #ifdef __linux__
-        bin = p + "/bin/VBoxManage";
-        if (file_exists(bin)) {
-            hv = new Virtualbox();
-            hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p + "/bin";
-            hv->hvBinary = bin;
-            ((Virtualbox*)hv)->hvGuestAdditions = "";
-            
-            // (1) Check for additions on XXX/share/virtualbox [/usr, /usr/local]
-            bin = p + "/share/virtualbox/VBoxGuestAdditions.iso";
-            if (!file_exists(bin)) {
+    Hypervisor * hv = NULL;
 
-                // (2) Check for additions on XXX/additions [/opt/VirtualBox]
-                bin = p + "/additions/VBoxGuestAdditions.iso";
-                if (file_exists(bin)) {
-                    ((Virtualbox*)hv)->hvGuestAdditions = bin;
-                }
+    /* 1) Look for Virtualbox */
+    hv = vboxDetect();
+    if (hv != NULL) return hv;
 
-            } else {
-                ((Virtualbox*)hv)->hvGuestAdditions = bin;
-            }
-            hv->detectVersion();
-            hv->daemonBinPath = "";
-            return hv;
-        }
-        #endif
-        
-    }
+    /* 2) Check for other hypervisors */
+    // TODO: Implement this
     
     /* No hypervisor found */
     return NULL;
@@ -1213,6 +1133,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     /**
      * If we are installing VirtualBox, make sure the VBOX Extension pack are installed
      */
+     /*
     if ((hv != NULL) && (hv->type == HV_VIRTUALBOX)) {
         if ( !((Virtualbox*)hv)->hasExtPack() ) {
 
@@ -1224,6 +1145,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 
         }
     }
+    */
 
     /**
      * Release hypervisor

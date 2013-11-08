@@ -26,6 +26,7 @@
 
 #include <map>
 
+#include "Common/Utilities.h"
 #include "Common/Hypervisor.h"
 #include "Common/CrashReport.h"
 
@@ -34,10 +35,10 @@
 /**
  * VirtualBox Hypervisor
  */
-class Virtualbox : public Hypervisor {
+class VBoxHypervisor : public Hypervisor {
 public:
 
-    Virtualbox() : Hypervisor() {
+    VBoxHypervisor() : Hypervisor() {
         this->sessionLoaded = false;
     };
 
