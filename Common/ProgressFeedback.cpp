@@ -20,6 +20,9 @@
 
 #include "ProgressFeedback.h"
 
+/** #####################################################################################
+ *  # ProgressTask Implementation - Base Task
+ ** ##################################################################################### */
 
 /**
  * Register a callback that handles the 'started' event
@@ -48,6 +51,17 @@ void ProgressTask::onError	( cbError & cb ) {
 void ProgressTask::onProgress ( cbProgress & cb ) {
 	progressCallbacks.push_back(cb);
 }
+
+/**
+ * Mark the task as completed
+ */
+void ProgressTask::complete ( const std::string& message ) {
+
+	// Notify as completed
+	_notifyCompleted(message);
+
+}
+
 
 /**
  * Let listeners know that we are completed
@@ -173,6 +187,10 @@ void ProgressTask::_forwardError( const std::string& message, const int errorCod
 
 }
 
+/** #####################################################################################
+ *  # FiniteTask Implementation - Finite Task Set
+ ** ##################################################################################### */
+
 /**
  * Check if the task is completed
  */
@@ -271,7 +289,6 @@ void FiniteTask::setMax ( size_t maxTasks ) {
 
 }
 
-
 /**
  * Mark the task as completed
  */
@@ -323,4 +340,119 @@ FiniteTask::begin( const std::message& message ) {
 	// Forward update
 	_notifyUpdate( message );
 
+}
+
+/** #####################################################################################
+ *  # VariableTask Implementation - Variable Task Set
+ ** ##################################################################################### */
+
+/**
+ * Check if the task is completed
+ */
+bool VariableTask::isCompleted ( ) {
+
+	// If I haven't started, return false
+	if (!started) return false;
+
+	// If I am already completed, return true
+	if (completed) return true;
+
+	// If we have current == max return true
+	if (current == max) return true;
+
+	// Otherwise, false
+	return false;
+
+}
+
+/**
+ * Return progress event
+ */
+double VariableTask::getProgress ( ) {
+
+	// If I am already completed, return 1.0
+	if (completed) return 1.0;
+
+	// If I haven't started, return 0.0
+	if (!started) return 0.0;
+
+	// Return ammount of tasks completed
+	return (double)current / (double)max;
+
+}
+
+/**
+ * Set max value
+ */
+void FiniteTask::setMax ( size_t maxValue ) {
+
+	// Update max value
+	max = maxValue;
+
+	// Trigger update
+	_notifyUpdate( lastMessage );
+
+}
+
+/**
+ * Update value
+ */
+void FiniteTask::update ( size_t value ) {
+
+	// Update value
+	max = value;
+
+	// Trigger update
+	_notifyUpdate( lastMessage );
+
+}
+
+/**
+ * Update the default value
+ */
+void FiniteTask::setMessage ( const std::string& message ) {
+	lastMessage = message;
+}
+
+
+/** #####################################################################################
+ *  # BooleanTask Implementation - Variable Task Set
+ ** ##################################################################################### */
+
+/**
+ * Check if the task is completed
+ */
+bool BooleanTask::isCompleted ( ) {
+
+	// If I am already completed, return 1.0
+	if (completed) return true;
+
+	// If I haven't started, return 0.0
+	if (!started) return false;
+
+	// Otherwise I am not completed
+	return true;
+
+}
+
+/**
+ * Return progress event
+ */
+double BooleanTask::getProgress ( ) {
+
+	// If I am already completed, return 1.0
+	if (completed) return 1.0;
+
+	// If I haven't started, return 0.0
+	if (!started) return 0.0;
+
+	// Otherwise I am not completed
+	return 0.0;
+}
+
+/**
+ * Reset the state to non-completed
+ */
+void BooleanTask::reset ( ) {
+	completed = false;
 }

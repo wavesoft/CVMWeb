@@ -88,6 +88,12 @@ public:
 	 */
 	void 				onProgress		( cbProgress & cb );
 
+	/**
+	 * Override the complete function
+	 */
+	void 				complete 		( const std::message& message );
+
+
 protected:
 
 	//////////////////////////
@@ -155,6 +161,7 @@ public:
 	//////////////////////
 	// Constructor
 	//////////////////////
+
 	ProgressTask() : ProgressTask(), tasks(), taskObjects(), taskIndex(0) { };
 
 	/**
@@ -172,11 +179,6 @@ public:
 	 */
 	template <typename T>
 	 	boost::shared_ptr<T> 	begin( const std::message& message );
-
-	/**
-	 * Mark the entire stack of objects as completed
-	 */
-	void 						complete( const std::message& message );
 
 
 protected:
@@ -220,6 +222,89 @@ private:
 
 };
 
+
+/**
+ * A variable task is like the download progress. It has multiple steps
+ */
+class VariableTask: public ProgressTask {
+public:
+
+	VariableTask() : ProgressTask(), max(0), current(0) { };
+
+	/**
+	 * Update the default message for all the tasks 
+	 */
+	void 				setMessage 		( const std::string& message );
+
+	/**
+	 * Set maximum value
+	 */
+	void 				setMax			( size_t maxValue );
+
+	/**
+	 * Update value
+	 */
+	void 				update 			( size_t value );
+
+protected:
+
+	//////////////////////
+	// Implementation
+	//////////////////////
+
+	/**
+	 * Check if the tasks are completed
+	 */
+	virtual bool 		isCompleted		( );
+
+
+	/**
+	 * Return the progress value of this task
+	 */
+	virtual double 		getProgress		( );
+
+
+private:
+
+	// Variable size
+	size_t 							max;
+	size_t							current;
+
+
+};
+
+
+/**
+ * Base class to monitor progress events
+ */
+class BooleanTask: public ProgressTask {
+public:
+
+	BooleanTask() : ProgressTask(), max(0), current(0) { };
+
+	/**
+	 * Reset to non-completed state
+	 */
+	void 				reset 			( );
+
+protected:
+
+	//////////////////////
+	// Implementation
+	//////////////////////
+
+	/**
+	 * Check if the tasks are completed
+	 */
+	virtual bool 		isCompleted		( );
+
+
+	/**
+	 * Return the progress value of this task
+	 */
+	virtual double 		getProgress		( );
+
+};
 
 
 #endif /* end of include guard: PROGRESSFEEDBACK_H */
