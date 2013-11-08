@@ -669,9 +669,9 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
 
         if (allProps.find("/CVMWeb/userData") == allProps.end()) {
-            session->userData = "";
+            //session->userData = "";
         } else {
-            session->userData = base64_decode(allProps["/CVMWeb/userData"]);
+            //session->userData = base64_decode(allProps["/CVMWeb/userData"]);
         }
 
         if (allProps.find("/CVMWeb/localApiPort") == allProps.end()) {

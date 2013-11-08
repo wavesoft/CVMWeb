@@ -306,7 +306,7 @@ int VBoxSession::setProperty ( std::string name, std::string key ) {
 /**
  * Get a property of the VM
  */
-std::string VBoxSession::getProperty ( std::string name, bool forceUpdate = false ) {
+std::string VBoxSession::getProperty ( std::string name, bool forceUpdate ) {
     return "";
 }
 
@@ -372,7 +372,7 @@ int VBoxSession::updateFast ( ) {
  * Wrapper to call the appropriate function in the hypervisor and
  * automatically pass the session ID for us.
  */
-int VBoxSession::wrapExec ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg = NULL, int retries = 4, int timeout = SYSEXEC_TIMEOUT ) {
+int VBoxSession::wrapExec ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries, int timeout ) {
     return HVE_NOT_IMPLEMENTED;
 }
 
@@ -401,7 +401,7 @@ std::string VBoxSession::getHostOnlyAdapter ( ) {
 /**
  * Return the properties of the VM.
  */
-std::map<std::string, std::string> VBoxSession::getMachineInfo ( int timeout = SYSEXEC_TIMEOUT ) {
+std::map<std::string, std::string> VBoxSession::getMachineInfo ( int timeout ) {
     std::map<std::string, std::string> info;
 
     return info;
@@ -417,6 +417,6 @@ int VBoxSession::startVM ( ) {
 /**
  * Send control commands to the VM.
  */
-int VBoxSession::controlVM ( std::string how, int timeout = SYSEXEC_TIMEOUT ) {
+int VBoxSession::controlVM ( std::string how, int timeout ) {
     return HVE_NOT_IMPLEMENTED;
 }
