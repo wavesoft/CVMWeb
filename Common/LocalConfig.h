@@ -58,6 +58,11 @@ public:
     static      LocalConfigPtr  global();
 
     /**
+     * Return a LocalConfig Shared Pointer for the runtime config
+     */
+    static      LocalConfigPtr  runtime();
+
+    /**
      * Return a LocalConfig Shared Pointer for the specified runtime config
      */
     static      LocalConfigPtr  forRuntime( const std::string& name );
@@ -117,6 +122,16 @@ public:
      */
     std::string                 getPath         ( std::string configFile );
 
+    /**
+     * Save the map to file
+     */
+    bool                        save            ( );
+
+    /**
+     * Load the map from file
+     */
+    bool                        load            ( );
+
 private:
 
     /**
@@ -133,6 +148,11 @@ private:
      * Used by the global() function to implement singleton template
      */
     static LocalConfigPtr       globalConfigSingleton;
+
+    /**
+     * Used by the runtime() function to implement singleton template
+     */
+    static LocalConfigPtr       runtimeConfigSingleton;
 
 protected:
     

@@ -3,6 +3,8 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <map>
+#include <string>
 
 #include "Common/Utilities.h"
 #include "Common/Hypervisor.h"
@@ -21,9 +23,12 @@ using namespace std;
 
 int main( int argc, char ** argv ) {
 
+    std::vector< std::string > keys = LocalConfig::runtime()->enumFiles( "session-" );
+
     //SessionState    state;
-    LocalConfigPtr      config = LocalConfig::forRuntime("session-test");
+    LocalConfigPtr      config = LocalConfig::forRuntime("session-509a8252-add2-4c2e-a4d1-a00fbbd8e5e5");
     VBoxSession         fsm(config);
+    config->save();
 
     // Run
     cout << "* START!" << endl;

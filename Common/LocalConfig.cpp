@@ -20,10 +20,12 @@
 
 #include <boost/filesystem.hpp> 
 
+#include "Hypervisor.h"
 #include "LocalConfig.h"
 
-// Initialize global parameter
+// Initialize singletons
 LocalConfigPtr LocalConfig::globalConfigSingleton;
+LocalConfigPtr LocalConfig::runtimeConfigSingleton;
 
 /**
  * Return a LocalConfig Shared Pointer for the global config
@@ -38,6 +40,23 @@ LocalConfigPtr LocalConfig::global() {
 
     // Return reference
     return LocalConfig::globalConfigSingleton;
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Return a LocalConfig Shared Pointer for the runtime config
+ */
+LocalConfigPtr LocalConfig::runtime() {
+    CRASH_REPORT_BEGIN;
+
+    // Ensure we have signeton
+    if (!LocalConfig::runtimeConfigSingleton) {
+        LocalConfig::runtimeConfigSingleton = boost::make_shared< LocalConfig >( getAppDataPath() + "/run", "runtime" );
+    }
+
+    // Return reference
+    return LocalConfig::runtimeConfigSingleton;
 
     CRASH_REPORT_END;
 }
@@ -300,8 +319,27 @@ time_t LocalConfig::getLastModified ( std::string configFile ) {
 void LocalConfig::commitChanges ( ) {
     CRASH_REPORT_BEGIN;
 
+    // Save changes to file
+    this->save();
+
+    CRASH_REPORT_END;
+}
+
+bool LocalConfig::save ( ) {
+    CRASH_REPORT_BEGIN;
+
     // Save map to file
-    this->saveMap( configName, parameters.get() )
+    return this->saveMap( configName, parameters.get() );
+
+    CRASH_REPORT_END;
+}
+
+bool LocalConfig::load ( ) {
+    CRASH_REPORT_BEGIN;
+
+    // Save map to file
+    return this->loadMap( configName, parameters.get() );
+
 
     CRASH_REPORT_END;
 }
