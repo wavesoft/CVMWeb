@@ -30,6 +30,7 @@
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 
+#include "CVMGlobals.h"
 #include "Utilities.h"
 #include "Hypervisor.h"
 #include "DaemonCtl.h"
@@ -447,30 +448,29 @@ void Hypervisor::detectVersion() {
 int Hypervisor::sessionValidate ( const std::string& name, const std::string& key ) {
     CRASH_REPORT_BEGIN;
 
-    /* Hash the specified key */
+    // Calculate the SHA256 checksum of the key, salted with a pre-defined salt
     std::string keyHash;
-    sha256_buffer( key, &keyHash );
+    sha256_buffer( CRYPTO_SALT + key, &keyHash );
 
-    /* Search sessions for name/key match */
-    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSessionPtr sess = (*i).second;
-        if (sess->parameters->get("name","").compare(name) == 0) {
-            if (sess->parameters->get("key","").compare(keyHash) == 0) { /* Check secret key */
+    // Get a session that matches the given name
+    HVSessionPtr sess = this->sessionByName( name );
 
-                // Return "Found and correct password"
-                return 1;
+    // No session found? Return 0
+    if (!sess) return 0;
 
-            } else {
+    // Compare key
+    if (sess->parameters->get("key", "").compare(keyHash) == 0) {
 
-                // Return "Found but wrong password"
-                return 2;
+        // Correct password
+        return 1;
 
-            }
-        }
+    } else {
+
+        // Invalid password
+        return 2;
+
     }
 
-    // Return "Not found"
-    return 0;
     CRASH_REPORT_END;
 }
 
@@ -502,43 +502,64 @@ HVSession * Hypervisor::sessionLocate( std::string uuid ) {
 HVSessionPtr Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
     CRASH_REPORT_BEGIN;
     
-    /* Unset pointer */
+    // Default unsetted pointer used for invalid responses
     HVSessionPtr voidPtr;
 
-    /* Hash the specified key */
+    // Calculate the SHA256 checksum of the key, salted with a pre-defined salt
     std::string keyHash;
-    sha256_buffer( key, &keyHash );
+    sha256_buffer( CRYPTO_SALT + key, &keyHash );
 
-    /* Check for running sessions with the given credentials */
-    CVMWA_LOG( "Info", "Checking sessions (" << this->sessions.size() << ")");
-    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSessionPtr sess = (*i).second;
-        CVMWA_LOG( "Info", "Checking session name=" << sess->parameters->get("name","(missing)") << 
-                                           ", key=" << sess->parameters->get("key","(missing)") << 
-                                          ", uuid=" << sess->parameters->get("uuid","(missing)") << 
-                                         ", state=" << sess->parameters->get("state","(missing)")  );
-        
-        if (sess->parameters->get("name","").compare(name) == 0) {
-            if (sess->parameters->get("key","").compare(keyHash) == 0) { /* Check secret key */
-                return sess;
-            } else {
-                return voidPtr;
-            }
+    // Get a session that matches the given name
+    HVSessionPtr sess = this->sessionByName( name );
+    
+    // If we found one, continue
+    if (sess) {
+        // Validate secret key
+        if (sess->parameters->get("key","").compare(keyHash) == 0) {
+            // Exists and it's valid
+            return sess;
+        } else {
+            // Exists but the password is invalid
+            return voidPtr;
         }
     }
-    
-    /* Allocate a new session */
-    HVSessionPtr sess = this->sessionAllocate();
+
+    // Otherwise, allocate one
+    sess = this->sessionAllocate();
     if (!sess) return voidPtr;
 
-    /* Populate parameters */
+    // Populate parameters
     sess->parameters->set("name", name);
     sess->parameters->set("key", keyHash);
     
-    /* Return the handler */
+    // Return the handler
     return sess;
     CRASH_REPORT_END;
 }
+
+/**
+ * Return a session object by locating it by name
+ */
+HVSessionPtr Hypervisor::sessionByName ( const std::string& name ) {
+    CRASH_REPORT_BEGIN;
+    HVSessionPtr voidPtr;
+
+    // Iterate over sessions
+    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSessionPtr sess = (*i).second;
+
+        // Session found
+        if (sess->parameters->get("name","").compare(name) == 0) {
+            return sess;
+        }
+    }
+
+    // Return void
+    return voidPtr;
+
+    CRASH_REPORT_END;
+}
+
 
 /**
  * Register a session to the session stack and allocate a new unique ID
