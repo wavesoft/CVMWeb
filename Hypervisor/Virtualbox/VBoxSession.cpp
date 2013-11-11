@@ -280,7 +280,7 @@ int VBoxSession::hibernate ( ) {
 int VBoxSession::start ( std::map<std::string,std::string> *userData ) {
     
     // Update user data
-    this->userData = userData;
+    *(this->userData->parameters.get()) = *userData;
 
     // Switch to running state
     FSMGoto(7);

@@ -69,15 +69,18 @@ INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
 if (WIN32)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/* )
 elseif(APPLE)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* )
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/* )
 elseif(UNIX)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/*.a
-		${FB_BOOST_LIB_DIR}/system/*.a )
+		${FB_BOOST_LIB_DIR}/system/*.a
+		${FB_BOOST_LIB_DIR}/filesystem/*.a )
 ENDIF(WIN32)
 IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
@@ -85,6 +88,11 @@ ENDIF()
 
 # Add custom definitions
 ADD_DEFINITIONS(-DLOGGING)   
+
+# Windows additional definitions
+if (WIN32)
+	ADD_DEFINITIONS(-DNOMINMAX)   
+endif(WIN32)
 
 # Build zlib statically from the resources
 add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
@@ -116,3 +124,8 @@ target_link_libraries ( ${PROJECT_NAME} ${CURL_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${OPENSSL_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${BOOST_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${LIBZ_LIBRARIES} )
+
+# Windows additional libraries
+if (WIN32)
+	target_link_libraries ( ${PROJECT_NAME} wsock32.lib Ws2_32.lib )
+endif(WIN32)

@@ -429,6 +429,11 @@ int __getPIDFromFile( std::string logPath ) {
  * Update session information from VirtualBox
  */
 int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
+    return HVE_NOT_IMPLEMENTED;
+}
+
+/*
+int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> vms, diskinfo;
@@ -436,27 +441,27 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
     string err;
     bool prevEditable;
 
-    /* Don't update session if we are in middle of something */
+    // Don't update session if we are in middle of something
     if ((session->state == STATE_STARTING) || (session->state == STATE_OPPENING) || ((VBoxSession*)session)->updateLock)
         return HVE_INVALID_STATE;
     
-    /* Get session's uuid */
+    // Get session's uuid
     string uuid = session->uuid;
     if (uuid.empty()) return HVE_USAGE_ERROR;
     
-    /* Collect details */
+    // Collect details
     map<string, string> info = this->getMachineInfo( uuid, 2000 );
     if (info.empty()) 
         return HVE_NOT_FOUND;
     if (info.find(":ERROR:") != info.end())
         return HVE_IO_ERROR;
     
-    /* Reset flags */
+    // Reset flags
     prevEditable = session->editable;
     session->flags = 0;
     session->editable = true;
     
-    /* Check state */
+    // Check state
     session->state = STATE_OPEN;
     if (info.find("State") != info.end()) {
         string state = info["State"];
@@ -473,7 +478,7 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
     }
     
-    /* If session switched to editable state, commit pending property changes */
+    // If session switched to editable state, commit pending property changes
     if (session->editable && !prevEditable && !((VBoxSession*)session)->unsyncedProperties.empty()) {
         for (std::map<string, string>::iterator it=((VBoxSession*)session)->unsyncedProperties.begin(); 
                 it!=((VBoxSession*)session)->unsyncedProperties.end(); ++it) {
@@ -485,16 +490,16 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
     }
     
-    /* Reset property maps */
+    // Reset property maps
     ((VBoxSession*)session)->unsyncedProperties.clear();
     ((VBoxSession*)session)->properties.clear();
     
-    /* Get CPU */
+    // Get CPU
     if (info.find("Number of CPUs") != info.end()) {
         session->cpus = ston<int>( info["Number of CPUs"] );
     }
     
-    /* Check flags */
+    // Check flags
     if (info.find("Guest OS") != info.end()) {
         string guestOS = info["Guest OS"];
         if (guestOS.find("64 bit") != string::npos) {
@@ -502,7 +507,7 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
     }
 
-    /* Find configuration folder */
+    // Find configuration folder
     if (info.find("Guest OS") != info.end()) {
         string settingsFolder = info["Settings file"];
 
@@ -525,7 +530,7 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
 
     }
 
-    /* Parse RDP info */
+    // Parse RDP info
     if (info.find("VRDE") != info.end()) {
         string rdpInfo = info["VRDE"];
 
@@ -553,26 +558,26 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         CVMWA_LOG("Debug", "VRDE config not found");
     }
     
-    /* Parse memory */
+    // Parse memory
     if (info.find("Memory size") != info.end()) {
         session->cpus = ston<int>( info["Number of CPUs"] );
 
-        /* Parse memory */
+        // Parse memory
         string mem = info["Memory size"];
         mem = mem.substr(0, mem.length()-2);
         session->memory = ston<int>(mem);
 
     }
     
-    /* Parse CernVM Version from the ISO */
+    // Parse CernVM Version from the ISO
     session->version = DEFAULT_CERNVM_VERSION;
     if (info.find( BOOT_DSK ) != info.end()) {
 
-        /* Get the filename of the iso */
+        // Get the filename of the iso
         getKV( info[ BOOT_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
         
-        /* Extract CernVM Version from file */
+        // Extract CernVM Version from file
         session->version = this->cernVMVersion( kk );
         if (session->version.empty()) { 
             // (If we could not find a version number it's a disk-deployment)
@@ -581,40 +586,40 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
     }
     
-    /* Check if there are guest additions mounted and update flags */
+    // Check if there are guest additions mounted and update flags
     if (info.find( GUESTADD_DSK ) != info.end()) {
         
-        /* Get the filename of the iso */
+        // Get the filename of the iso
         getKV( info[ GUESTADD_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
         
-        /* Check if we have the guest additions disk */
+        // Check if we have the guest additions disk
         if ( kk.compare(this->hvGuestAdditions) == 0 ) 
             session->flags |= HVF_GUEST_ADDITIONS;
         
     }
     
-    /* Check if we have floppy adapter. If we do, it means we are using floppyIO -> updateFlags */
+    // Check if we have floppy adapter. If we do, it means we are using floppyIO -> updateFlags
     if (info.find( FLOPPYIO_ENUM_NAME ) != info.end()) {
         session->flags |= HVF_FLOPPY_IO;
     }
     
-    /* Parse disk size */
+    // Parse disk size
     session->disk = 1024;
     if (info.find( SCRATCH_DSK ) != info.end()) {
 
-        /* Get the filename of the iso */
+        // Get the filename of the iso
         getKV( info[ SCRATCH_DSK ], &kk, &kv, '(', 0 );
         kk = kk.substr(0, kk.length()-1);
         
-        /* Collect disk info */
+        // Collect disk info
         int ans;
         NAMED_MUTEX_LOCK(kk);
         ans = this->exec("showhdinfo \""+kk+"\"", &lines, &err, 2, 2000);
         NAMED_MUTEX_UNLOCK;
         if (ans == 0) {
         
-            /* Tokenize data */
+            // Tokenize data
             diskinfo = tokenize( &lines, ':' );
             if (diskinfo.find("Logical size") != diskinfo.end()) {
                 kk = diskinfo["Logical size"];
@@ -625,23 +630,23 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
     }
     
-    /* Parse execution cap */
+    // Parse execution cap
     session->executionCap = 100;
     if (info.find( "CPU exec cap" ) != info.end()) {
         
-        /* Get execution cap */
+        // Get execution cap
         kk = info["CPU exec cap"];
         kk = kk.substr(0, kk.length()-1); // Strip %
         
-        /* Convert to number */
+        // Convert to number
         session->executionCap = ston<int>( kk );
         
     }
     
-    /* If we want to be fast, skip time-consuming operations */
+    // If we want to be fast, skip time-consuming operations
     if (!fast) {
 
-        /* Parse all properties concurrently */
+        // Parse all properties concurrently
         map<string, string> allProps = this->getAllProperties( uuid );
 
         if (allProps.find("/CVMWeb/daemon/controlled") == allProps.end()) {
@@ -681,19 +686,20 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
         }
         CVMWA_LOG("Debug", "LocalAPI Port = " << ((VBoxSession *)session)->localApiPort);
 
-        /* Get hypervisor pid from file */
+        // Get hypervisor pid from file
         if (info.find("Log folder") != info.end())
             session->pid = __getPIDFromFile( info["Log folder"] );
         
-        /* Store allProps to properties */
+        // Store allProps to properties
         ((VBoxSession*)session)->properties = allProps;
 
     }
 
-    /* Updated successfuly */
+    // Updated successfuly
     return HVE_OK;
     CRASH_REPORT_END;
 }
+*/
 
 /**
  * Load session state from VirtualBox

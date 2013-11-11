@@ -59,18 +59,61 @@ public:
     /**
      * Return a LocalConfig Shared Pointer for the specified runtime config
      */
-    static      LocalConfigPtr  forRuntime( std::string name );
+    static      LocalConfigPtr  forRuntime( const std::string& name );
 
-   
+    /**
+     * Upgrade a ParameterMap to a LocalConfig Shared Pointer for the specifeid runtime config
+     */
+    static      LocalConfigPtr  upgrade( ParameterMapPtr map, const std::string& name );
+
+    /**
+     * Populate the given vector with the lines from a config file with the given name
+     */
     bool                        loadLines       ( std::string file, std::vector<std::string> * lines );
+
+    /**
+     * Populate the given string bufer from a config file with the given name
+     */
     bool                        loadBuffer      ( std::string file, std::string * buffer );
+
+    /**
+     * Populate the given dictionary from a config file with the given name
+     */
     bool                        loadMap         ( std::string file, std::map<std::string, std::string> * map );
+
+    /**
+     * Save the lines from the given buffer to a config file with the given name
+     */
     bool                        saveLines       ( std::string file, std::vector<std::string> * lines );
+
+    /**
+     * Save the contents of the buffer to a config file with the given name
+     */
     bool                        saveBuffer      ( std::string file, std::string * buffer );
+
+    /**
+     * Store the contents of the specified dictionary to a config file with the given name
+     */
     bool                        saveMap         ( std::string file, std::map<std::string, std::string> * map );
-    
+
+    /**
+     * Enumerate the names of the config files in the specified directory that matches the specified prefix.
+     */
+    std::vector< std::string >  enumFiles       ( std::string prefix = "" );
+
+    /**
+     * Return the modification time of the specified file
+     */
     time_t                      getLastModified ( std::string configFile );
+
+    /**
+     * Check if the specified file name exists
+     */
     bool                        exists          ( std::string configFile );
+
+    /**
+     * Return the full-path of the specified config file name
+     */
     std::string                 getPath         ( std::string configFile );
 
 private:

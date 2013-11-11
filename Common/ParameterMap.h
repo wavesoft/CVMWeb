@@ -53,7 +53,7 @@ public:
 	/**
 	 * Create a new blank parameter map
 	 */
-	ParameterMap( ) : parent(), prefix("") {
+	ParameterMap( ) : parent(), prefix(""), locked(false), changed(false) {
 
 		// Allocate a new shared pointer
 		parameters = boost::make_shared< std::map< std::string, std::string > >( );
@@ -61,14 +61,47 @@ public:
 	};
 
 	/**
+	 * Create a new parameter map with the specified parameters
+	 */
+	ParameterMap( ParameterDataMapPtr parametersptr, std::string pfx ) : parent(), parameters(parametersptr), prefix(pfx), locked(false), changed(false) 
+		{ };
+
+
+	/**
 	 * Create a new parameter map by using the specified as parent
 	 */
-	ParameterMap( ParameterMapPtr parentptr, std::string pfx ) : parent(parentptr), prefix(pfx) {
+	ParameterMap( ParameterMapPtr parentptr, std::string pfx ) : parent(parentptr), prefix(pfx), locked(false), changed(false) {
 
 		// Use the pointer from the parent class
 		parameters = parentptr->parameters;
 
 	};
+
+	/** 
+	 * Lock updates
+	 */
+	void 						lock 			( );
+
+	/** 
+	 * Unlock updates and commit
+	 */
+	void 						unlock 			( );
+
+	/**
+	 * Empty the parameter set
+	 *
+	 * This function will remove only the parameters under the
+	 * current prefix.
+	 */
+	void 						clear			( );
+
+	/**
+	 * Clean the entire parameter set
+	 *
+	 * This function will remove all the parameters in the dictionary
+	 * that will also affect subgroup children.
+	 */
+	void 						clearAll		( );
 
 	/**
 	 * Return a string parameter value
@@ -79,6 +112,11 @@ public:
      * Set a string parameter
      */
     void                        set             ( const std::string& name, std::string value );
+
+    /**
+     * Set a string parameter only if there is no value already
+     */
+    void                        setDefault      ( const std::string& name, std::string value );
 
     /**
      * Get a numeric parameter value
@@ -100,6 +138,16 @@ public:
      */
     std::vector< std::string >	enumKeys    	( );
 
+    /**
+     * Update all the parameters from the specified map
+     */
+    void						fromMap			( std::map< std::string, std::string> * map, bool clearBefore = false );
+
+    /**
+     * Store all the parameters to the specified map
+     */
+    void						toMap			( std::map< std::string, std::string> * map, bool clearBefore = false );
+
    	/**
    	 * Overload bracket operator
    	 */
@@ -107,21 +155,31 @@ public:
     std::string & operator 		[]				(const std::string& i) {return parameters->at(i);}
 
 	/**
-	 * Publically accessible parameter map
+	 * The parameter map contents
 	 */
 	ParameterDataMapPtr			parameters;
-
-private:
 
 	/**
 	 * Prefix for all the parameters
 	 */
 	std::string					prefix;
 
+private:
+
 	/**
 	 * Optional parent class
 	 */
 	ParameterMapPtr				parent;
+
+	/**
+	 * Flags if we are locked
+	 */
+	bool						locked;
+
+	/**
+	 * Flags if something was chaged between a locked() state
+	 */
+	bool 						changed;
 
 protected:
 	

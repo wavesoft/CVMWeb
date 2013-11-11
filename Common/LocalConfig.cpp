@@ -18,6 +18,8 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#include <boost/filesystem.hpp> 
+
 #include "LocalConfig.h"
 
 // Initialize global parameter
@@ -27,6 +29,7 @@ LocalConfigPtr LocalConfig::globalConfigSingleton;
  * Return a LocalConfig Shared Pointer for the global config
  */
 LocalConfigPtr LocalConfig::global() {
+    CRASH_REPORT_BEGIN;
 
     // Ensure we have signeton
     if (!LocalConfig::globalConfigSingleton) {
@@ -36,16 +39,19 @@ LocalConfigPtr LocalConfig::global() {
     // Return reference
     return LocalConfig::globalConfigSingleton;
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Return a LocalConfig Shared Pointer for the specified runtime config
  */
-LocalConfigPtr LocalConfig::forRuntime( std::string name ) {
+LocalConfigPtr LocalConfig::forRuntime( const std::string& name ) {
+    CRASH_REPORT_BEGIN;
 
     // Return a shared pointer instance
     return boost::make_shared< LocalConfig >( getAppDataPath() + "/run", name );
     
+    CRASH_REPORT_END;
 }
 
 /**
@@ -64,6 +70,42 @@ LocalConfig::LocalConfig ( std::string path, std::string name ) : ParameterMap()
     CRASH_REPORT_END;
 }
 
+/**
+ * Enumerate the names of the config files in the specified directory that matches the specified prefix.
+ */
+std::vector< std::string > LocalConfig::enumFiles ( std::string prefix ) {
+    CRASH_REPORT_BEGIN;
+
+    boost::filesystem::path configDir( this->configDir );
+    boost::filesystem::directory_iterator end_iter;
+
+    std::vector< std::string > result;
+
+    // Start scanning configuration directory
+    if ( boost::filesystem::exists(configDir) && boost::filesystem::is_directory(configDir)) {
+        for( boost::filesystem::directory_iterator dir_iter(configDir) ; dir_iter != end_iter ; ++dir_iter) {
+            if (boost::filesystem::is_regular_file(dir_iter->status()) ) {
+
+                // Get the filename
+                std::string fn = dir_iter->path().filename().string();
+
+                // Check if prefix and suffix matches
+                if ( ( (prefix.empty()) || (fn.substr(0, prefix.length()).compare(prefix) == 0 ) ) &&
+                     ( fn.substr(fn.length()-5, 5).compare(".conf") == 0 )   ) {
+
+                    // Return name
+                    result.push_back( fn.substr(0, fn.length()-5) );
+
+                }
+
+            }
+        }
+    }
+
+    // Return results
+    return result;
+    CRASH_REPORT_END;
+}
 
 /**
  * Save all the lines to the given list file

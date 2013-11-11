@@ -113,9 +113,9 @@ int Hypervisor::getUsage( HVINFO_RES * resCount ) {
     resCount->disk = 0;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        resCount->memory += sess->memory;
-        resCount->cpus += sess->cpus;
-        resCount->disk += sess->disk;
+        resCount->memory += sess->parameters->getNum<int>( "memory" );
+        resCount->cpus += sess->parameters->getNum<int>( "cpus" );
+        resCount->disk += sess->parameters->getNum<int>( "disk" );
     }
     return HVE_OK;
     CRASH_REPORT_END;
@@ -419,10 +419,6 @@ HVSession * Hypervisor::allocateSession ( std::string name, std::string key ) {
     HVSession * sess = new HVSession();
     sess->name = name;
     sess->key = key;
-    sess->daemonControlled = false;
-    sess->daemonMinCap = 0;
-    sess->daemonMaxCap = 100;
-    sess->daemonFlags = 0;
     return sess;
     CRASH_REPORT_END;
 }
@@ -569,8 +565,9 @@ int Hypervisor::checkDaemonNeed() {
     bool daemonNeeded = false;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
-        CVMWA_LOG( "Info", "Session " << sess->uuid << ", daemonControlled=" << sess->daemonControlled << ", state=" << sess->state );
-        if ( sess->daemonControlled && ((sess->state == STATE_OPEN) || (sess->state == STATE_STARTED) || (sess->state == STATE_PAUSED)) ) {
+        int daemonControlled = sess->parameters->getNum<int>("daemonControlled");
+        CVMWA_LOG( "Info", "Session " << sess->uuid << ", daemonControlled=" << daemonControlled << ", state=" << sess->state );
+        if ( daemonControlled && ((sess->state == STATE_OPEN) || (sess->state == STATE_STARTED) || (sess->state == STATE_PAUSED)) ) {
             daemonNeeded = true;
             break;
         }

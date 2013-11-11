@@ -41,7 +41,29 @@ void ParameterMap::set ( const std::string& kname, std::string value ) {
     CRASH_REPORT_BEGIN;
     std::string name = prefix + kname;
     parameters->insert(std::pair< std::string, std::string >( name, value ));
-    commitChanges();
+    if (!locked) {
+        commitChanges();
+    } else {
+        changed = true;
+    }
+    CRASH_REPORT_END;
+}
+
+/**
+ * Set a string parameter only if the value is missing.
+ * This does not trigger the commitChanges function.
+ */
+void ParameterMap::setDefault ( const std::string& kname, std::string value ) {
+    CRASH_REPORT_BEGIN;
+    std::string name = prefix + kname;
+
+    // If the entry already exists, exit
+    if (parameters->find(name) != parameters->end()) return;
+
+    // Otherwise insert the entry
+    // (But don't trigger commitChanges)
+    parameters->insert(std::pair< std::string, std::string >( name, value ));
+
     CRASH_REPORT_END;
 }
 
@@ -64,7 +86,57 @@ template<typename T> void ParameterMap::setNum ( const std::string& kname, T val
     CRASH_REPORT_BEGIN;
     std::string name = prefix + kname;
     parameters->insert(std::pair< std::string, std::string >( name, ntos<T>( value ) ));
-    commitChanges();
+    if (!locked) {
+        commitChanges();
+    } else {
+        changed = true;
+    }
+    CRASH_REPORT_END;
+}
+
+/**
+ * Empty the parameter set
+ */
+void  ParameterMap::clear( ) {
+    CRASH_REPORT_BEGIN;
+
+    // Get the keys for this group
+    std::vector<std::string> myKeys = enumKeys();
+
+    // Delete keys
+    for (std::vector<std::string>::iterator it = myKeys.begin(); it != myKeys.end(); ++it) {
+        parameters->erase( *it );
+    }
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Empty all the parameter set
+ */
+void  ParameterMap::clearAll( ) {
+    CRASH_REPORT_BEGIN;
+    parameters->clear();
+    CRASH_REPORT_END;
+}
+
+/**
+ * Lock the parameter map disable updates
+ */
+void ParameterMap::lock ( ) {
+    CRASH_REPORT_BEGIN;
+    locked = true;
+    changed = false;
+    CRASH_REPORT_END;
+}
+
+/**
+ * Unlock the parameter map and enable updates
+ */
+void ParameterMap::unlock ( ) {
+    CRASH_REPORT_BEGIN;
+    locked = false;
+    if (changed) commitChanges();
     CRASH_REPORT_END;
 }
 
@@ -72,16 +144,19 @@ template<typename T> void ParameterMap::setNum ( const std::string& kname, T val
  * Locally overridable function to commit changes to the dictionary
  */
 void ParameterMap::commitChanges ( ) {
+    CRASH_REPORT_BEGIN;
 
     // Forward event to parent
     if (parent) parent->commitChanges();
     
+    CRASH_REPORT_END;
 }
 
 /**
  * Return a sub-parameter group instance
  */
 ParameterMapPtr ParameterMap::subgroup( const std::string& kname ) {
+    CRASH_REPORT_BEGIN;
 
     // Calculate the prefix of the sub-group
     std::string name = prefix + kname + GROUP_PREFIX;
@@ -90,12 +165,15 @@ ParameterMapPtr ParameterMap::subgroup( const std::string& kname ) {
     // as parent.
     return boost::make_shared<ParameterMap>( shared_from_this(), name );
 
+    CRASH_REPORT_END;
 }
 
 /**
  * Enumerate the variable names that match our current prefix
  */
 std::vector< std::string > ParameterMap::enumKeys ( ) {
+    CRASH_REPORT_BEGIN;
+
     std::vector< std::string > keys;
 
     // Loop over the entries in the record
@@ -116,6 +194,49 @@ std::vector< std::string > ParameterMap::enumKeys ( ) {
     // Return the keys vector
     return keys;
 
+    CRASH_REPORT_END;
+}
+
+
+/**
+ * Update all the parameters from the specified map
+ */
+void ParameterMap::fromMap ( std::map< std::string, std::string> * map, bool clearBefore ) {
+    CRASH_REPORT_BEGIN;
+
+    // Check if we have to clean the keys first
+    if (clearBefore) clear();
+
+    // Store values
+    for (std::map< std::string, std::string>::iterator it = map->begin(); it != map->end(); ++it) {
+        parameters->insert(std::pair< std::string, std::string >(
+                (*it).first, (*it).second
+            ));
+    }
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Store all the parameters to the specified map
+ */
+void ParameterMap::toMap ( std::map< std::string, std::string> * map, bool clearBefore ) {
+    CRASH_REPORT_BEGIN;
+
+    // Check if we have to clean the keys first
+    if (clearBefore) map->clear();
+
+    // Get the keys for this group
+    std::vector<std::string> myKeys = enumKeys();
+
+    // Store my keys to map
+    for (std::vector<std::string>::iterator it = myKeys.begin(); it != myKeys.end(); ++it) {
+        map->insert(std::pair< std::string, std::string >(
+                *it, parameters->at(*it)
+            ));
+    }
+
+    CRASH_REPORT_END;
 }
 
 /**

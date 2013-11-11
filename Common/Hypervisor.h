@@ -84,42 +84,59 @@ class HVSession {
 public:
     
     HVSession() : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters() {
+
+        // The unique ID for this session (indexing parameter)
+        this->uuid = "";
+
+        // Prepare configurable parameters
+        parameters->setDefault("cpus",                  "1");
+        parameters->setDefault("memory",                "512");
+        parameters->setDefault("disk",                  "1024");
+        parameters->setDefault("executionCap",          "100");
+        parameters->setDefault("apiPort",               BOOST_PP_STRINGIZE( DEFAULT_API_PORT ) );
+        parameters->setDefault("flags",                 "0");
+        parameters->setDefault("daemonControlled",      "0");
+        parameters->setDefault("daemonMinCap",          "0");
+        parameters->setDefault("daemonMaxCap",          "0");
+        parameters->setDefault("daemonFlags",           "0");
+
+        // Set default string parameters
+        parameters->setDefault("ip",                    "");
+        parameters->setDefault("key",                   "");
+        parameters->setDefault("name",                  "");
+        parameters->setDefault("diskURL",               "");
+        parameters->setDefault("diskChecksum",          "");
+        parameters->setDefault("cernvmVersion",         DEFAULT_CERNVM_VERSION);
+
+        // Set default userdata
+        userData = parameters->subgroup("user-data");
         
-        // Set default parameters
-        parameters.setNum("cpus",           1);
-        parameters.setNum("memory",         512);
-        parameters.setNum("disk",           1024);
-        parameters.setNum("executionCap",   100);
-        parameters.setNum("apiPort",        DEFAULT_API_PORT);
-        parameters.setNum("flags",          0);
-        parameters.set("uuid",              "");
-        parameters.set("ip",                "");
-        parameters.set("key",               "");
-        parameters.set("name",              "");
-        parameters.set("name",              "");
+        // Local volatile parameters
+        this->internalID = 0;
+
+        // Dynamic, discoverable parameters
+        this->editable = false;
+        this->state = 0;
+        this->pid = 0;
+        this->ip = "";
 
 
         //this->cpus = 1;
         //this->memory = 256;
         //this->disk = 1024;
         //this->executionCap = 100;
-        this->state = 0;
-        this->internalID = 0;
         //this->uuid = "";
-        //this->ip = "";
         //this->key = "";
         //this->name = "";
         //this->apiPort = DEFAULT_API_PORT;
         //this->flags = 0;
-        this->userData = NULL;
-        this->diskChecksum = "";
-        this->pid = 0;
-        this->editable = false;
+        //this->userData = NULL;
+        //this->diskChecksum = "";
         
-        this->daemonControlled = false;
-        this->daemonMinCap = 0;
-        this->daemonMaxCap = 100;
-        this->daemonFlags = 0;
+        //this->daemonControlled = false;
+        //this->daemonMinCap = 0;
+        //this->daemonMaxCap = 100;
+        //this->daemonFlags = 0;
         
         
     };
@@ -130,32 +147,33 @@ public:
     std::string             name;
 
     /* Currently active user-data */
-    std::map<std::string,
-        std::string> *      userData;
+    //std::map<std::string,
+    //    std::string> *      userData;
 
     std::vector<std::string> overridableVars;
     
-    int                     cpus;
-    int                     memory;
-    int                     disk;
-    int                     executionCap;
+    //int                     cpus;
+    //int                     memory;
+    //int                     disk;
+    //int                     executionCap;
     int                     state;
-    int                     apiPort;
+    //int                     apiPort;
     std::string             version;
     std::string             diskChecksum;
     
-    int                     flags;
+    //int                     flags;
     int                     pid;
     bool                    editable;
     
-    bool                    daemonControlled;
-    int                     daemonMinCap;
-    int                     daemonMaxCap;
-    int                     daemonFlags;
+    //bool                    daemonControlled;
+    //int                     daemonMinCap;
+    //int                     daemonMaxCap;
+    //int                     daemonFlags;
 
     int                     internalID;
 
-    ParameterMap            parameters;
+    ParameterMapPtr         userData;
+    ParameterMapPtr         parameters;
         
     virtual int             pause();
     virtual int             close( bool unmonitored = false );
