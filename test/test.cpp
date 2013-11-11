@@ -10,6 +10,7 @@
 #include "Common/DaemonCtl.h"
 #include "Common/DownloadProvider.h"
 #include "Common/SimpleFSM.h"
+#include "Common/LocalConfig.h"
 
 #include "Hypervisor/Virtualbox/VBoxSession.h"
 
@@ -21,7 +22,8 @@ using namespace std;
 int main( int argc, char ** argv ) {
 
     //SessionState    state;
-    VBoxSession         fsm;
+    LocalConfigPtr      config = LocalConfig::forRuntime("session-test");
+    VBoxSession         fsm(config);
 
     // Run
     cout << "* START!" << endl;

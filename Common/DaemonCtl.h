@@ -2,6 +2,7 @@
 #ifndef DAEMONCTL_H_4LFX6MZT
 #define DAEMONCTL_H_4LFX6MZT
 
+#include "CVMGlobals.h"
 #include "ThinIPC.h"
 #include "CrashReport.h"
 #include <string>
@@ -26,9 +27,6 @@ typedef struct {
 #define DF_SUSPEND          0x01    // Suspend VM instead of pausing
 #define DF_AUTOSTART        0x02    // If the VM is down, start it with blank userData
 #define DF_AUTODESTROY      0x04    // If the VM is down, destroy it
-
-/* Config constants */
-#define DAEMON_PORT         58740
 
 /* Daemon controlling functions */
 std::string             getDaemonLockfile   ( );

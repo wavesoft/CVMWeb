@@ -33,7 +33,8 @@
 #include "Common/Utilities.h"
 #include "Common/LocalConfig.h"
 #include "Common/CrashReport.h"
-  
+
+#include "CVMGlobals.h"
 #include "CVMWeb.h"
 #include "CVMBrowserProvider.h"
 
@@ -46,9 +47,6 @@
 #define CVME_NOT_VALIDATED      -12 /* Same to HVE_NOT_VALIDATED */
 #define CVME_NOT_TRUSTED        -13 /* Same to HVE_NOT_TRUSTED */
 #define CVME_PASSWORD_DENIED    -20
-
-#define THROTTLE_TIMESPAN       5000 /* Delay between twon concecutive user denies */
-#define THROTTLE_TRIES          2    /* After how many denies the plugin will be blocked */
 
 class CVMWebAPI : public FB::JSAPIAuto
 {

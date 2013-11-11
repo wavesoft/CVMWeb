@@ -35,12 +35,18 @@
 #include <boost/regex.hpp>
 
 /**
+ * Shared Pointer Definition
+ */
+class VBoxSession;
+typedef boost::shared_ptr< VBoxSession >                VBoxSessionPtr;
+
+/**
  * Virtualbox Session, built around a Finite-State-Machine model
  */
 class VBoxSession : public SimpleFSM, public HVSession {
 public:
 
-    VBoxSession() : SimpleFSM(), HVSession() {
+    VBoxSession( ParameterMapPtr param ) : SimpleFSM(), HVSession(param) {
 
         FSM_REGISTRY(1,             // Entry point is on '1'
         {

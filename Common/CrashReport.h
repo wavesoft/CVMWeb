@@ -30,15 +30,13 @@
 
 #else
 
+ 	#include "CVMGlobals.h"
+
     #include <iostream>
  	#include <sstream>
 	#include <string.h>
 	#include <curl/curl.h>
 	#include "Utilities.h"
-
-    #define CRASH_REPORT_URL            "http://labs.wavesoft.gr/report/crash-report.php"
-	#define CRASH_REPORT_HEAD			"An exception occured in a user's CVMWebAPI plugin. The following report is produced for troubleshooting:"
-	#define CRASH_LOG_SCROLLBACK		300
 
 	#if defined(_MSC_VER)
 

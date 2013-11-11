@@ -266,12 +266,12 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     if (needsReload) {
         // Download the authorized keystore
         CVMWA_LOG( "Crypto", "Downloading updated keystore" );
-        int res = downloadProvider->downloadFile( CRYPTO_URL_STORE, localKeystore );
+        int res = downloadProvider->downloadFile( URL_CRYPTO_STORE, localKeystore );
         if ( res != HVE_OK ) return res;
 
         // Download the keystore signature
         CVMWA_LOG( "Crypto", "Downloading store signature" );
-        res = downloadProvider->downloadFile( CRYPTO_URL_SIGNATURE, localKeystoreSig );
+        res = downloadProvider->downloadFile( URL_CRYPTO_SIGNATURE, localKeystoreSig );
         if ( res != HVE_OK ) return res;
     
         // Validate files

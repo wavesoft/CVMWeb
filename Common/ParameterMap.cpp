@@ -23,6 +23,13 @@
 #include "ParameterMap.h"
 
 /**
+ * Allocate a new shared pointer
+ */
+ParameterMapPtr ParameterMap::instance ( ) {
+    return boost::make_shared< ParameterMap >();
+}
+
+/**
  * Return a string parameter value
  */
 std::string ParameterMap::get( const std::string& kname, std::string defaultValue ) {
@@ -159,7 +166,7 @@ ParameterMapPtr ParameterMap::subgroup( const std::string& kname ) {
     CRASH_REPORT_BEGIN;
 
     // Calculate the prefix of the sub-group
-    std::string name = prefix + kname + GROUP_PREFIX;
+    std::string name = prefix + kname + PMAP_GROUP_SEPARATOR;
 
     // Return a new ParametersMap instance that encapsulate us
     // as parent.
@@ -182,7 +189,7 @@ std::vector< std::string > ParameterMap::enumKeys ( ) {
 
         // Check for matching prefix and lack of group separator in the rest of the key
         if ( (key.substr(0, prefix.length()).compare(prefix) == 0) && // Prefix Matches
-             (key.substr(prefix.length(), key.length() - prefix.length() ).find(GROUP_PREFIX) == std::string::npos) // No group separator found
+             (key.substr(prefix.length(), key.length() - prefix.length() ).find(PMAP_GROUP_SEPARATOR) == std::string::npos) // No group separator found
             ) {
 
             // Store key name without prefix

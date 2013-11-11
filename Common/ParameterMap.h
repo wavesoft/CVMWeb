@@ -22,17 +22,14 @@
 #ifndef PARAMETERMAP_H
 #define PARAMETERMAP_H
 
+#include "CVMGlobals.h"
+
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/make_shared.hpp>
 
 #include <string>
 #include <map>
 #include <vector>
-
-/**
- * The prefix separator for groupping parameter names
- */
-#define GROUP_PREFIX	"/"
 
 /**
  * Shared pointer for the map instance
@@ -50,6 +47,11 @@ typedef boost::shared_ptr< std::map< std::string, std::string > >       Paramete
  */
 class ParameterMap : public boost::enable_shared_from_this<ParameterMap> {
 public:
+
+	/**
+	 * Shorthand function to create a new map
+	 */
+	static ParameterMapPtr 		instance		( );
 
 	/**
 	 * Create a new blank parameter map

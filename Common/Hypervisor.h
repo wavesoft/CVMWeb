@@ -22,6 +22,10 @@
 #ifndef HVENV_H
 #define HVENV_H
 
+#include <boost/enable_shared_from_this.hpp>
+
+#include "CVMGlobals.h"
+
 #include "DownloadProvider.h"
 #include "Utilities.h"
 #include "CrashReport.h"
@@ -73,21 +77,27 @@
 #define HVF_GRAPHICAL          32       // Enable graphical extension (like drag-n-drop)
 #define HVF_DUAL_NIC           64       // Use secondary adapter instead of creating a NAT rule on the first one
 
-/* Default CernVM Version */
-#define DEFAULT_CERNVM_VERSION  "1.13-12"
-#define DEFAULT_API_PORT        80
+/**
+ * Shared Pointer Definition
+ */
+class HVSession;
+typedef boost::shared_ptr< HVSession >                  HVSessionPtr;
 
 /**
  * A hypervisor session is actually a VM instance.
  * This is where the actual I/O happens
  */
-class HVSession {
+class HVSession : public boost::enable_shared_from_this<HVSession> {
 public:
-    
-    HVSession() : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters() {
 
-        // The unique ID for this session (indexing parameter)
-        this->uuid = "";
+
+    /**
+     * Session constructor
+     * THIS IS A PRIVATE METHOD, YOU SHOULD CALL THE STATIC HVSession::alloc() or HVSession::resume( uuid ) functions!
+     *
+     * A required parameter is the parameter map of the session.
+     */
+    HVSession( ParameterMapPtr param ) : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
 
         // Prepare configurable parameters
         parameters->setDefault("cpus",                  "1");
@@ -102,6 +112,7 @@ public:
         parameters->setDefault("daemonFlags",           "0");
 
         // Set default string parameters
+        parameters->setDefault("uuid",                  "");
         parameters->setDefault("ip",                    "");
         parameters->setDefault("key",                   "");
         parameters->setDefault("name",                  "");
@@ -112,6 +123,9 @@ public:
         // Set default userdata
         userData = parameters->subgroup("user-data");
         
+        // Local non-volatile parameters used for speed-up
+        this->uuid = parameters->get("uuid");
+
         // Local volatile parameters
         this->internalID = 0;
 
@@ -271,27 +285,24 @@ public:
     std::string             lastExecError;
         
     /* Session management commands */
-    std::vector<HVSession*> sessions;
-    HVSession *             sessionLocate       ( std::string uuid );
-    HVSession *             sessionOpen         ( const std::string & name, const std::string & key );
-    HVSession *             sessionGet          ( int id );
-    int                     sessionFree         ( int id );
-    int                     sessionValidate     ( std::string name, std::string key );
+    std::map< std::string, 
+        HVSessionPtr >      sessions;
+    HVSessionPtr            sessionByGUID       ( const std::string& uuid );
+    HVSessionPtr            sessionByName       ( const std::string& name );
+    HVSessionPtr            sessionOpen         ( const std::string& name, const std::string& key );
+    int                     sessionValidate     ( const std::string& name, const std::string& key );
+    virtual HVSessionPtr    sessionAllocate     ( ) = 0;
 
     /* Overridable functions */
-    virtual int             loadSessions        ( );
-    virtual int             updateSession       ( HVSession * session );
-    virtual HVSession *     allocateSession     ( std::string name, std::string key );
-    virtual int             freeSession         ( HVSession * sess );
-    virtual int             registerSession     ( HVSession * sess );
-    virtual int             getUsage            ( HVINFO_RES * usage);
-    virtual int             getCapabilities     ( HVINFO_CAPS * caps );
+    virtual int             loadSessions        ( ) = 0;
+    virtual int             getCapabilities     ( HVINFO_CAPS * caps ) = 0;
     virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
+    virtual int             getUsage            ( HVINFO_RES * usage);
     
     /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT );
     void                    detectVersion       ( );
-    int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback, std::string flavor = "prod", std::string arch = "x86_64" );
+    int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback, std::string flavor = DEFAULT_CERNVM_FLAVOR, std::string arch = DEFAULT_CERNVM_ARCH );
     int                     cernVMCached        ( std::string version, std::string * filename );
     std::string             cernVMVersion       ( std::string filename );
     int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb );

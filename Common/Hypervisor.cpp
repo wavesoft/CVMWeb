@@ -42,29 +42,13 @@
 using namespace std;
 namespace fs = boost::filesystem;
 
-/* Incomplete type placeholders */
-bool Hypervisor::waitTillReady(string,callbackProgress,int,int,int) { return false; }
-int Hypervisor::loadSessions()                                      { return HVE_NOT_IMPLEMENTED; }
-int Hypervisor::updateSession( HVSession * session )                { return HVE_NOT_IMPLEMENTED; }
-int Hypervisor::getCapabilities ( HVINFO_CAPS * )                   { return HVE_NOT_IMPLEMENTED; }
-int HVSession::pause()                                              { return HVE_NOT_IMPLEMENTED; }
-int HVSession::close( bool unmonitored )                            { return HVE_NOT_IMPLEMENTED; }
-int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
-int HVSession::resume()                                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
-int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
-int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::updateFast()                                         { return HVE_NOT_IMPLEMENTED; }
-int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
-                                                                    { return HVE_NOT_IMPLEMENTED; }
-int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
-int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
-int HVSession::getAPIPort()                                         { return 0; }
-std::string HVSession::getAPIHost()                                 { return ""; }
-std::string HVSession::getProperty( std::string name )              { return ""; }
-std::string HVSession::getRDPHost()                                 { return ""; }
-std::string HVSession::getExtraInfo( int extraInfo )                { return ""; }
+/////////////////////////////////////
+/////////////////////////////////////
+////
+//// Tool Functions
+////
+/////////////////////////////////////
+/////////////////////////////////////
 
 /** 
  * Return the string representation of the given error code
@@ -91,6 +75,86 @@ std::string hypervisorErrorStr( int error ) {
     CRASH_REPORT_END;
 };
 
+
+/**
+ * Decompress phase
+ */
+int __diskExtract( const std::string& sGZOutput, const std::string& checksum, const std::string& sOutput, ProgressFeedback * fb ) {
+    CRASH_REPORT_BEGIN;
+    std::string sChecksum;
+    int res;
+    
+    // Validate file integrity
+    sha256_file( sGZOutput, &sChecksum );
+    if (sChecksum.compare( checksum ) != 0) {
+        
+        // Invalid checksum, remove file
+        CVMWA_LOG("Info", "Invalid local checksum (" << sChecksum << ")");
+        ::remove( sGZOutput.c_str() );
+        
+        // (Let the next block re-download the file)
+        return HVE_NOT_VALIDATED;
+        
+    } else {
+        
+        // Notify progress (from another thread)
+        boost::thread * t = NULL;
+        if ((fb != NULL) && (fb)) t = new boost::thread( boost::bind( fb->callback, fb->max, fb->total, "Extracting compressed disk" ) );
+
+        // Decompress the file
+        CVMWA_LOG("Info", "File exists and checksum valid, decompressing " << sGZOutput << " to " << sOutput );
+        res = decompressFile( sGZOutput, sOutput );
+        if (res != HVE_OK) {
+            if (t != NULL) { t->join(); delete t; }
+            return res;
+        }
+    
+        // Delete sGZOutput if sOutput is there
+        if (file_exists(sOutput)) {
+            CVMWA_LOG("Info", "File is in place" );
+            ::remove( sGZOutput.c_str() );
+        } else {
+            CVMWA_LOG("Info", "Could not find the extracted file!" );
+            if (t != NULL) { t->join(); delete t; }
+            return HVE_EXTERNAL_ERROR;
+        }
+    
+        // We got the filename
+        if (t != NULL) { t->join(); delete t; }
+        return HVE_OK;
+
+    }
+    CRASH_REPORT_END;
+}
+
+/////////////////////////////////////
+/////////////////////////////////////
+////
+//// HVSession Implementation
+////
+/////////////////////////////////////
+/////////////////////////////////////
+
+/* Incomplete type placeholders */
+int HVSession::pause()                                              { return HVE_NOT_IMPLEMENTED; }
+int HVSession::close( bool unmonitored )                            { return HVE_NOT_IMPLEMENTED; }
+int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
+int HVSession::resume()                                             { return HVE_NOT_IMPLEMENTED; }
+int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
+int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
+int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
+int HVSession::updateFast()                                         { return HVE_NOT_IMPLEMENTED; }
+int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
+                                                                    { return HVE_NOT_IMPLEMENTED; }
+int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
+int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
+int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
+int HVSession::getAPIPort()                                         { return 0; }
+std::string HVSession::getAPIHost()                                 { return ""; }
+std::string HVSession::getProperty( std::string name )              { return ""; }
+std::string HVSession::getRDPHost()                                 { return ""; }
+std::string HVSession::getExtraInfo( int extraInfo )                { return ""; }
+
 /**
  * Try to connect to the API port and check if it succeeded
  */
@@ -103,6 +167,17 @@ bool HVSession::isAPIAlive( unsigned char handshake ) {
     CRASH_REPORT_END;
 }
 
+/////////////////////////////////////
+/////////////////////////////////////
+////
+//// Hypervisor Implementation
+////
+/////////////////////////////////////
+/////////////////////////////////////
+
+/* Incomplete type placeholders */
+bool Hypervisor::waitTillReady(string,callbackProgress,int,int,int)  { return false; }
+
 /**
  * Measure the resources from the sessions
  */
@@ -111,8 +186,8 @@ int Hypervisor::getUsage( HVINFO_RES * resCount ) {
     resCount->memory = 0;
     resCount->cpus = 0;
     resCount->disk = 0;
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
+    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSessionPtr sess = (*i).second;
         resCount->memory += sess->parameters->getNum<int>( "memory" );
         resCount->cpus += sess->parameters->getNum<int>( "cpus" );
         resCount->disk += sess->parameters->getNum<int>( "disk" );
@@ -166,7 +241,7 @@ int Hypervisor::buildFloppyIO ( std::string userData, std::string * filename ) {
 };
 
 /**
- * Get the CernVM version of the filename specified
+ * Extract the CernVM version from the filename specified
  */
 std::string Hypervisor::cernVMVersion( std::string filename ) {
     CRASH_REPORT_BEGIN;
@@ -179,16 +254,18 @@ std::string Hypervisor::cernVMVersion( std::string filename ) {
 
 /**
  * Check if the given CernVM version is cached
+ * This function optionally updates the filename pointer specified
  */
 int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
     CRASH_REPORT_BEGIN;
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
     if (file_exists(sOutput)) {
-        *filename = sOutput;
+        if (filename != NULL) *filename = sOutput;
+        return 1;
     } else {
-        *filename = "";
+        if (filename != NULL) *filename = "";
+        return 0;
     }
-    return 0;
     CRASH_REPORT_END;
 }
 
@@ -197,7 +274,7 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
  */
 int Hypervisor::cernVMDownload( std::string version, std::string * filename, ProgressFeedback * fb, std::string flavor, std::string arch ) {
     CRASH_REPORT_BEGIN;
-    string sURL = "http://cernvm.cern.ch/releases/ucernvm-images." + version + ".cernvm." + arch + "/ucernvm-" + flavor + "." + version + ".cernvm." + arch + ".iso";
+    string sURL = URL_CERNVM_RELEASES "/ucernvm-images." + version + ".cernvm." + arch + "/ucernvm-" + flavor + "." + version + ".cernvm." + arch + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
 
     string sChecksumURL = sURL + ".sha256";
@@ -212,56 +289,6 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, Pro
     CRASH_REPORT_END;
 };
 
-/**
- * Decompress phase
- */
-int __diskExtract( const std::string& sGZOutput, const std::string& checksum, const std::string& sOutput, ProgressFeedback * fb ) {
-    CRASH_REPORT_BEGIN;
-    std::string sChecksum;
-    int res;
-    
-    // Validate file integrity
-    sha256_file( sGZOutput, &sChecksum );
-    if (sChecksum.compare( checksum ) != 0) {
-        
-        // Invalid checksum, remove file
-        CVMWA_LOG("Info", "Invalid local checksum (" << sChecksum << ")");
-        ::remove( sGZOutput.c_str() );
-        
-        // (Let the next block re-download the file)
-        return HVE_NOT_VALIDATED;
-        
-    } else {
-        
-        // Notify progress (from another thread)
-        boost::thread * t = NULL;
-        if ((fb != NULL) && (fb)) t = new boost::thread( boost::bind( fb->callback, fb->max, fb->total, "Extracting compressed disk" ) );
-
-        // Decompress the file
-        CVMWA_LOG("Info", "File exists and checksum valid, decompressing " << sGZOutput << " to " << sOutput );
-        res = decompressFile( sGZOutput, sOutput );
-        if (res != HVE_OK) {
-            if (t != NULL) { t->join(); delete t; }
-            return res;
-        }
-    
-        // Delete sGZOutput if sOutput is there
-        if (file_exists(sOutput)) {
-            CVMWA_LOG("Info", "File is in place" );
-            ::remove( sGZOutput.c_str() );
-        } else {
-            CVMWA_LOG("Info", "Could not find the extracted file!" );
-            if (t != NULL) { t->join(); delete t; }
-            return HVE_EXTERNAL_ERROR;
-        }
-    
-        // We got the filename
-        if (t != NULL) { t->join(); delete t; }
-        return HVE_OK;
-
-    }
-    CRASH_REPORT_END;
-}
 
 /**
  * Download the specified generic, compressed disk image
@@ -412,45 +439,37 @@ void Hypervisor::detectVersion() {
 };
 
 /**
- * Allocate a new hypervisor session
- */
-HVSession * Hypervisor::allocateSession ( std::string name, std::string key ) {
-    CRASH_REPORT_BEGIN;
-    HVSession * sess = new HVSession();
-    sess->name = name;
-    sess->key = key;
-    return sess;
-    CRASH_REPORT_END;
-}
-
-/**
- * Release the memory used by a hypervisor session
- */
-int Hypervisor::freeSession ( HVSession * session ) {
-    CRASH_REPORT_BEGIN;
-    delete session;
-    return 0;
-    CRASH_REPORT_END;
-}
-
-/**
  * Check the status of the session. It returns the following values:
  *  0 - Does not exist
  *  1 - Exist and has a valid key
  *  2 - Exists and has an invalid key
  */
-int Hypervisor::sessionValidate ( std::string name, std::string key ) {
+int Hypervisor::sessionValidate ( const std::string& name, const std::string& key ) {
     CRASH_REPORT_BEGIN;
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
-        if (sess->name.compare(name) == 0) {
-            if (sess->key.compare(key) == 0) { /* Check secret key */
+
+    /* Hash the specified key */
+    std::string keyHash;
+    sha256_buffer( key, &keyHash );
+
+    /* Search sessions for name/key match */
+    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSessionPtr sess = (*i).second;
+        if (sess->parameters->get("name","").compare(name) == 0) {
+            if (sess->parameters->get("key","").compare(keyHash) == 0) { /* Check secret key */
+
+                // Return "Found and correct password"
                 return 1;
+
             } else {
+
+                // Return "Found but wrong password"
                 return 2;
+
             }
         }
     }
+
+    // Return "Not found"
     return 0;
     CRASH_REPORT_END;
 }
@@ -458,10 +477,11 @@ int Hypervisor::sessionValidate ( std::string name, std::string key ) {
 /**
  * Get a session using it's unique ID
  */
+/*
 HVSession * Hypervisor::sessionLocate( std::string uuid ) {
     CRASH_REPORT_BEGIN;
     
-    /* Check for running sessions with the given uuid */
+    // Check for running sessions with the given uuid
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
         HVSession* sess = *i;
         if (sess->uuid.compare(uuid) == 0) {
@@ -469,47 +489,61 @@ HVSession * Hypervisor::sessionLocate( std::string uuid ) {
         }
     }
     
-    /* Not found */
+    // Not found
     return NULL;
     
     CRASH_REPORT_END;
 }
+*/
 
 /**
  * Open or reuse a hypervisor session
  */
-HVSession * Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
+HVSessionPtr Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
     CRASH_REPORT_BEGIN;
     
+    /* Unset pointer */
+    HVSessionPtr voidPtr;
+
+    /* Hash the specified key */
+    std::string keyHash;
+    sha256_buffer( key, &keyHash );
+
     /* Check for running sessions with the given credentials */
     CVMWA_LOG( "Info", "Checking sessions (" << this->sessions.size() << ")");
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
-        CVMWA_LOG( "Info", "Checking session name=" << sess->name << ", key=" << sess->key << ", uuid=" << sess->uuid << ", state=" << sess->state  );
+    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSessionPtr sess = (*i).second;
+        CVMWA_LOG( "Info", "Checking session name=" << sess->parameters->get("name","(missing)") << 
+                                           ", key=" << sess->parameters->get("key","(missing)") << 
+                                          ", uuid=" << sess->parameters->get("uuid","(missing)") << 
+                                         ", state=" << sess->parameters->get("state","(missing)")  );
         
-        if (sess->name.compare(name) == 0) {
-            if (sess->key.compare(key) == 0) { /* Check secret key */
+        if (sess->parameters->get("name","").compare(name) == 0) {
+            if (sess->parameters->get("key","").compare(keyHash) == 0) { /* Check secret key */
                 return sess;
             } else {
-                return NULL;
+                return voidPtr;
             }
         }
     }
     
-    /* Allocate and register a new session */
-    HVSession* sess = this->allocateSession( name, key );
-    if (sess == NULL) return NULL;
-    this->registerSession( sess );
+    /* Allocate a new session */
+    HVSessionPtr sess = this->allocateSession();
+    if (!sess) return voidPtr;
+
+    /* Populate parameters */
+    sess->parameters->set("name", name);
+    sess->parameters->set("key", keyHash);
     
     /* Return the handler */
     return sess;
-    
     CRASH_REPORT_END;
 }
 
 /**
  * Register a session to the session stack and allocate a new unique ID
  */
+/*
 int Hypervisor::registerSession( HVSession * sess ) {
     CRASH_REPORT_BEGIN;
     sess->internalID = this->sessionID++;
@@ -518,10 +552,12 @@ int Hypervisor::registerSession( HVSession * sess ) {
     return HVE_OK;
     CRASH_REPORT_END;
 }
+*/
 
 /**
  * Release a session using the given id
  */
+/*
 int Hypervisor::sessionFree( int id ) {
     CRASH_REPORT_BEGIN;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
@@ -535,10 +571,12 @@ int Hypervisor::sessionFree( int id ) {
     return HVE_NOT_FOUND;
     CRASH_REPORT_END;
 }
+*/
 
 /**
  * Return session for the given ID
  */
+/*
 HVSession * Hypervisor::sessionGet( int id ) {
     CRASH_REPORT_BEGIN;
     for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
@@ -548,6 +586,7 @@ HVSession * Hypervisor::sessionGet( int id ) {
     return NULL;
     CRASH_REPORT_END;
 }
+*/
 
 /* Check if we need to start or stop the daemon */
 int Hypervisor::checkDaemonNeed() {
@@ -563,8 +602,8 @@ int Hypervisor::checkDaemonNeed() {
     
     // Check if at least one session uses daemon
     bool daemonNeeded = false;
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
+    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSessionPtr sess = (*i).second;
         int daemonControlled = sess->parameters->getNum<int>("daemonControlled");
         CVMWA_LOG( "Info", "Session " << sess->uuid << ", daemonControlled=" << daemonControlled << ", state=" << sess->state );
         if ( daemonControlled && ((sess->state == STATE_OPEN) || (sess->state == STATE_STARTED) || (sess->state == STATE_PAUSED)) ) {
@@ -631,112 +670,6 @@ void freeHypervisor( Hypervisor * hv ) {
     CRASH_REPORT_END;
 };
 
-
-#if defined(__linux__)
-
-/**
- * Helper to traverse the /proc/<pid>/fd descriptors
- * in order to see what points to the fileName
- */
-bool _isLinkInDir( string fileName, const fs::path& path ) {
-    CRASH_REPORT_BEGIN;
-
-    // Start iterating /proc/<id>/fd
-    fs::directory_iterator end_iter;
-    for ( fs::directory_iterator dir_itr( path );
-          dir_itr != end_iter;
-          ++dir_itr ) {
-        
-        // Resolve symlink & Check if the filename is used
-        try {
-            fs::path resolved = fs::canonical( dir_itr->path() );
-            if (resolved.string().compare( fileName ) == 0)
-                return true;
-        }
-        catch ( const std::exception & ex ) {
-            // Ignore errors (They are usually access denied)
-        }
-
-    }
-
-    // Not found
-    return false;
-
-    CRASH_REPORT_END;
-};
-
-/**
- * Utility function to check if the file is oppened by another process
- */
-bool isFileOpen( string fileName ) {
-    CRASH_REPORT_BEGIN;
-    
-    // Get access to /proc
-    fs::path full_path( fs::initial_path<fs::path>() );
-    full_path = fs::system_complete( fs::path( "/proc" ) );
-
-    // Start iterating /proc
-    fs::directory_iterator end_iter;
-    for ( fs::directory_iterator dir_itr( full_path );
-          dir_itr != end_iter;
-          ++dir_itr ) {
-
-      // Ensure no error occurs
-      try {
-        if ( fs::is_directory( dir_itr->status() ) ) {
-
-            // Check the /fd directory
-            string sPath = dir_itr->path().string() + "/fd";
-            fs::path subPath = fs::system_complete( fs::path( sPath ) );
-
-            // Check if the subPath is directory
-            if ( fs::is_directory( subPath ) ) {
-
-                // Check if the filename is inside the /proc/<pid>/fd descriptors
-                if (_isLinkInDir( fileName, subPath ))
-                    return true;
-
-            }
-
-        }
-
-      }
-      catch ( const std::exception & ex ) {
-          // Ignore errors (They are usually access denied)
-      }
-    }
-
-    // Link was not found in the directory
-    return false;
-    CRASH_REPORT_END;
-}
-
-/**
- * Wait for a file to be oppened within a specific time range
- */
-bool waitFileOpen( string filename, bool forOpen, int waitMillis ) {
-    CRASH_REPORT_BEGIN;
-
-    // Wait for waitMillis
-    unsigned long sTime = getMillis() + waitMillis;
-    while (getMillis() < sTime ) {
-
-        // Wait until isFileOpen matches forOpen
-        if (isFileOpen(filename) == forOpen) return true;
-
-        // Wait a bit
-        boost::this_thread::sleep( boost::posix_time::millisec( 500 ) );
-
-    }
-
-    // Timeout occured
-    return false;
-
-    CRASH_REPORT_END;
-}
-
-#endif
-
 /**
  * Install hypervisor
  */
@@ -757,7 +690,7 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     for (int tries=0; tries<retries; tries++) {
         CVMWA_LOG( "Info", "Fetching data" );
         if (cbProgress) (cbProgress)(1, maxSteps, "Checking the appropriate hypervisor for your system");
-        res = downloadProvider->downloadText( "http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf );
+        res = downloadProvider->downloadText( URL_HYPERVISOR_CONFIG + versionID, &requestBuf );
         if ( res != HVE_OK ) {
             if (tries<retries) {
                 CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );

@@ -21,6 +21,8 @@
 #ifndef CRYPTO_H_41EFXAZS
 #define CRYPTO_H_41EFXAZS
 
+#include "CVMGlobals.h"
+ 
 #include "JSObject.h"
 #include "variant.h"
 #include "variant_list.h"
@@ -39,13 +41,6 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-
-
-#define CRYPTO_FREQUENT_THRESSHOLD  60  // Thresshold between consecutive requests (seconds)
-#define CRYPTO_STORE_VALIDITY    86400  // The validity of the keystore (seconds). After this time it will be reloaded
-
-#define CRYPTO_URL_STORE            "http://cernvm.cern.ch/releases/webapi/keystore/domainkeys.lst"
-#define CRYPTO_URL_SIGNATURE        "http://cernvm.cern.ch/releases/webapi/keystore/domainkeys.sig"
 
 /**
  * Cryptographic and validation routines for CernVM Web API

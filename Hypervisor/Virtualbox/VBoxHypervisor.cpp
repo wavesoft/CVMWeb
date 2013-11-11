@@ -243,8 +243,20 @@ std::string VBoxHypervisor::getProperty( std::string uuid, std::string name ) {
 /**
  * Return Virtualbox sessions instead of classic
  */
-HVSession * VBoxHypervisor::allocateSession( std::string name, std::string key ) {
+HVSessionPtr VBoxHypervisor::sessionAllocate() {
     CRASH_REPORT_BEGIN;
+    
+    // Allocate a new GUID for this session
+    std::string guid = newGUID();
+
+    // Fetch a config object
+    LocalConfigPtr cfg = LocalConfig::forRuntime( "session-" + guid );
+    cfg->set("uuid", guid);
+
+    // Return new session instance
+    VBoxSessionPtr session = boost::make_shared< VBoxSession >( cfg );
+    
+    /*
     VBoxSession * sess = new VBoxSession();
     sess->name = name;
     sess->key = key;
@@ -256,6 +268,12 @@ HVSession * VBoxHypervisor::allocateSession( std::string name, std::string key )
     sess->unsyncedProperties.clear();
     sess->updateLock = false;
     return sess;
+    */
+
+    // Store on session registry and return session object
+    this->sessions[ guid ] = session;
+    return static_cast<HVSessionPtr>(session);
+
     CRASH_REPORT_END;
 }
 
@@ -423,13 +441,6 @@ int __getPIDFromFile( std::string logPath ) {
     fIn.close();
     return pid;
 
-}
-
-/**
- * Update session information from VirtualBox
- */
-int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
-    return HVE_NOT_IMPLEMENTED;
 }
 
 /*
@@ -732,16 +743,15 @@ int VBoxHypervisor::loadSessions() {
         if (!secret.empty()) {
             
             /* Create a populate session object */
-            HVSession * session = this->allocateSession( name, secret );
-            session->uuid = "{" + uuid + "}";
-            session->key = secret;
+            HVSessionPtr session = this->sessionAllocate();
+            session->parameters->set("vboxid", uuid);
 
             /* Update session info */
-            updateSession( session, false );
+            //updateSession( session, false );
 
             /* Register this session */
             CVMWA_LOG( "Info", "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state  );
-            this->registerSession(session);
+            //this->registerSession(session);
 
         }
     }

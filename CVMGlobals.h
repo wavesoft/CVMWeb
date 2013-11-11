@@ -18,22 +18,139 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
+#ifndef CVMGLOBALS_H
+#define CVMGLOBALS_H
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+////
+//// Common URLs
+////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 
 /**
- * The URL that contains the list of the downloads the plugin can perform.
- *
- * Currently this is the hypervisor for the different platforms and the VirtualBox
- * extension pack.
- *
+ * The hypervisor configuration URL
  */
-#define		URL_DOWNLOAD_SOURCES			"http://labs.wavesoft.gr/lhcah"
+#define		URL_HYPERVISOR_CONFIG			"http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver="
 
 /**
- * The signature for the SRC_DOWNLOAD_SOURCES file
+ * The base URL where the releases tree is located
  */
-#define		URL_DOWNLOAD_SOURCES_SIG		"http://labs.wavesoft.gr/lhcah/downloads.sig"
+#define 	URL_CERNVM_RELEASES				"http://cernvm.cern.ch/releases"
+
+/**
+ * The URL of the trusted domain list
+ */
+#define 	URL_CRYPTO_STORE            	"http://cernvm.cern.ch/releases/webapi/keystore/domainkeys.lst"
+
+/**
+ * The URL of the signature of the trusted domain list
+ */
+#define 	URL_CRYPTO_SIGNATURE        	"http://cernvm.cern.ch/releases/webapi/keystore/domainkeys.sig"
 
 
-#endif
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+////
+//// Crash reporting
+////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+/**
+ * The URL where the crash-reporting script is located
+ */
+#define 	CRASH_REPORT_URL            	"http://labs.wavesoft.gr/report/crash-report.php"
+
+/**
+ * The header of the crash-report log
+ */
+#define 	CRASH_REPORT_HEAD				"An exception occured in a user's CVMWebAPI plugin. The following report is produced for troubleshooting:"
+
+/**
+ * The number of log lines to preserve on memory for creating
+ * crash reports.
+ */
+#define 	CRASH_LOG_SCROLLBACK			300
+
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+////
+//// Cryptographic parameters
+////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+/**
+ * Thresshold between consecutive requests (seconds)
+ */
+#define 	CRYPTO_FREQUENT_THRESSHOLD  	60
+
+/**
+ * The validity of the trusted domain list (seconds).
+ * After this time the store will be flushed and re-downloaded.
+ */
+#define 	CRYPTO_STORE_VALIDITY    		86400
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+////
+//// Default parameters for various places
+////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+/**
+ * Default CernVM Version 
+ */
+#define 	DEFAULT_CERNVM_VERSION  		"1.13-12"
+
+/**
+ * Default CernVM Flavor 
+ */
+#define 	DEFAULT_CERNVM_FLAVOR  			"prod"
+
+/**
+ * Default CernVM Architecture
+ */
+#define		DEFAULT_CERNVM_ARCH				"x86_64"
+
+/**
+ * Default API Port 
+ */
+#define 	DEFAULT_API_PORT        		80
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+////
+//// Misc configuration
+////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+/**
+ * The TCP Ports where the daemon listens for incoming connections
+ */
+#define		DAEMON_PORT         			58740
+
+/**
+ * The prefix separator used for sub-group definitions on ParameterMap
+ */
+#define 	PMAP_GROUP_SEPARATOR			"/"
+
+/**
+ * Delay between twon concecutive user denies after which his requests
+ * will be ignored (in milliseconds).
+ */
+#define 	THROTTLE_TIMESPAN       		5000 
+
+/** 
+ * After how many denies the plugin will be blocked for the session
+ */
+#define 	THROTTLE_TRIES          		2
+
+
+#endif /* End of include guard CVMGLOBALS_H */

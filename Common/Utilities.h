@@ -46,6 +46,7 @@
 #define BOOST_INTERPROCESS_WINDOWS
 #endif
 
+// BOOST Subset of functions
 #include <boost/function.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
@@ -53,6 +54,10 @@
 #include <boost/thread.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "CrashReport.h"
 
@@ -137,6 +142,11 @@ typedef boost::function< void (const std::string&) >                            
 typedef boost::function< void (const std::string&, const int, const std::string&) >  callbackError;
 typedef boost::function<void ( const boost::shared_array<uint8_t>&, const size_t)>   callbackData;
 typedef boost::function<void ( const size_t, const size_t, const std::string& )>     callbackProgress;
+
+/**
+ * Allocate a new GUID
+ */
+std::string                                         newGUID( );
 
 /**
  * Get the location of the application's AppData folder
@@ -345,7 +355,17 @@ typedef struct {
  * (Used by the hypervisor installation system in order to pick the appropriate binary)
  */
 void                                                getLinuxInfo    ( LINUX_INFO * info );
-    
+
+/**
+ * Utility function to check if the file is oppened by another process
+ */
+bool isFileOpen( string fileName );
+
+/**
+ * Wait for a file to be oppened within a specific time range
+ */
+bool waitFileOpen( string filename, bool forOpen, int waitMillis );
+
 #endif
 
 /**
