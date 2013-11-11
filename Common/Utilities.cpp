@@ -126,9 +126,9 @@ void flushNamedMutexes() {
  *
  * + CernVM/
  * +-- WebAPI/
- *   +-- cache/
- *   +-- config/
- *   +-- run/
+ *   +-- cache/     : Where the files are downloaded
+ *   +-- config/    : Where the configuration files are stored
+ *   +-- run/       : When run-time information are stored
  *
  */
 std::string prepareAppDataPath() {

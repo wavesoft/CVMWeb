@@ -23,12 +23,45 @@
 
 #include "Utilities.h"
 #include "CrashReport.h"
+#include "ParameterMap.h"
 
-class LocalConfig
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/make_shared.hpp>
+
+/**
+ * Shared pointer for the LocalConfig class
+ */
+class LocalConfig;
+typedef boost::shared_ptr< LocalConfig >                                LocalConfigPtr;
+
+/**
+ * LocalConfig is a subclass of ParameterMap that can be stored
+ * to the local configuration slot.
+ */
+class LocalConfig : public ParameterMap
 {
 public:
-    LocalConfig ();
-    
+
+    /**
+     * Private constructor that initializes the LocalConfig Class.
+     * THIS SHOULD NOT BE USED DIRECTLY
+     *
+     * If you want to create a new instance, you must use the LocalConfig::global() or the
+     * LocalConfig::forRuntime( "name" ) functions.
+     */
+    LocalConfig ( std::string configDir, std::string configName );
+
+    /**
+     * Return a LocalConfig Shared Pointer for the global config
+     */
+    static      LocalConfigPtr  global();
+
+    /**
+     * Return a LocalConfig Shared Pointer for the specified runtime config
+     */
+    static      LocalConfigPtr  forRuntime( std::string name );
+
+   
     bool                        loadLines       ( std::string file, std::vector<std::string> * lines );
     bool                        loadBuffer      ( std::string file, std::string * buffer );
     bool                        loadMap         ( std::string file, std::map<std::string, std::string> * map );
@@ -36,22 +69,34 @@ public:
     bool                        saveBuffer      ( std::string file, std::string * buffer );
     bool                        saveMap         ( std::string file, std::map<std::string, std::string> * map );
     
-    std::string                 get             ( std::string name );
-    std::string                 getDef          ( std::string name, std::string defaultValue );
-    void                        set             ( std::string name, std::string value );
-
-    template<typename T> T      getNum          ( std::string name );
-    template<typename T> T      getNumDef       ( std::string name, T defaultValue );
-    template<typename T> void   setNum          ( std::string name, T value );
-    
     time_t                      getLastModified ( std::string configFile );
     bool                        exists          ( std::string configFile );
     std::string                 getPath         ( std::string configFile );
 
 private:
-    std::string                         configDir;
-    std::map<std::string,std::string>   globalConfig;
+
+    /**
+     * The base directory where to do the operations
+     */
+    std::string                 configDir;
+
+    /**
+     * The file name where the config variables are stored from
+     */
+    std::string                 configName;
+
+    /**
+     * Used by the global() function to implement singleton template
+     */
+    static LocalConfigPtr       globalConfigSingleton;
+
+protected:
     
+    /**
+     * Overrided function from ParameterMap to commit changes to the file
+     */
+    virtual void                commitChanges   ( );
+
 };
 
 

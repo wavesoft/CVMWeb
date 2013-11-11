@@ -100,6 +100,7 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../Common/ThinIPC.cpp
 	${PROJECT_SOURCE_DIR}/../Common/contextiso.cpp
 	${PROJECT_SOURCE_DIR}/../Common/Utilities.cpp
+	${PROJECT_SOURCE_DIR}/../Common/ParameterMap.cpp
 	${PROJECT_SOURCE_DIR}/../Common/LocalConfig.cpp
 	${PROJECT_SOURCE_DIR}/../Common/floppyIO.cpp
 	${PROJECT_SOURCE_DIR}/../Common/DownloadProvider.cpp
@@ -107,6 +108,7 @@ add_executable( ${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxCommon.cpp
 	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxHypervisor.cpp
 	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxSession.cpp
+	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxStateStore.cpp
 	)
 
 # Libraries

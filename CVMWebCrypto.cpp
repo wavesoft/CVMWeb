@@ -142,6 +142,9 @@ CVMWebCrypto::CVMWebCrypto () {
     // Defaults to invalid
     valid = false;
     
+    // Get global config pointer
+    config = LocalConfig::global();
+
     // Reset timers
     lastUpdateTimestamp = 0;
     keystoreTimestamp = 0;
@@ -222,12 +225,12 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     valid = false;
 
     // Check if it has been some time since we last checked the keystore
-    std::string localKeystore = config.getPath("domainkeys.conf");
-    std::string localKeystoreSig = config.getPath("domainkeys.dat");
+    std::string localKeystore = config->getPath("domainkeys.conf");
+    std::string localKeystoreSig = config->getPath("domainkeys.dat");
     if ( file_exists(localKeystore) && file_exists(localKeystoreSig) ) {
         
         // Check for external modifications
-        time_t storeTime = config.getLastModified("domainkeys.conf");
+        time_t storeTime = config->getLastModified("domainkeys.conf");
 
         // Check if we are still within the  validity period
         if ((currTime - storeTime) < CRYPTO_STORE_VALIDITY) {
@@ -279,10 +282,10 @@ int CVMWebCrypto::updateAuthorizedKeystore( DownloadProviderPtr downloadProvider
     
     // Everything looks good, read the key map
     CVMWA_LOG( "Crypto", "Loading keystore map" );
-    config.loadMap( "domainkeys", &domainKeys );
+    config->loadMap( "domainkeys", &domainKeys );
 
     // Update the timestamp of the keystore
-    keystoreTimestamp = config.getLastModified("domainkeys.conf");
+    keystoreTimestamp = config->getLastModified("domainkeys.conf");
     
     // We are ready!
     valid = true;

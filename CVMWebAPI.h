@@ -94,6 +94,9 @@ public:
         this->throttleDenies = 0;
         this->throttleBlock = false;
         this->shuttingDown = false;
+
+        // Get global config pointer
+        config = LocalConfig::global();
         
     }
 
@@ -172,7 +175,7 @@ public:
     bool        unsafeConfirm( std::string msg );
     
     // Common configuration class
-    LocalConfig         config;    
+    LocalConfigPtr      config;
     
     // Event delegates
     void                onInstallProgress( const size_t step, const size_t total, const std::string& msg );

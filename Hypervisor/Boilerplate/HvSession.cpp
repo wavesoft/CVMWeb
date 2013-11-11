@@ -196,8 +196,7 @@ void VBoxSession::ResumeVM() {
  * Initialize a new session
  */
 int VBoxSession::open ( int cpus, int memory, int disk, std::string cvmVersion, int flags ) {
-    
-    return HVE_NOT_IMPLEMENTED;
+    return HVE_NOT_IMPLEMENTED;    
 }
 
 /**

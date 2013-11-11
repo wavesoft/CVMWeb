@@ -18,21 +18,18 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#ifndef VBOXCOMMON_H
-#define VBOXCOMMON_H
-
-#include "Common/Hypervisor.h"
 #include "VBoxStateStore.h"
 
-/* Forward-declare the classes */
-class VBoxSession;
-class VBoxHypervisor;
+/**
+ * Return a LocalConfig instance that points to the specified state file
+ */
+LocalConfigPtr VBoxStateStore::configFor( const std::string& uuid ) {
 
-/* Global function to try to instantiate a VirtualBox Hypervisor */
-Hypervisor * 	vboxDetect();
+	// Return a LocalConfig instance that points to the given
+	// map file in the run directory.
+	return boost::make_shared<LocalConfig>(
+			getAppDataPath() + "/run", 	// Configuration is stored on <appdata>/run
+			"vbox-state-" + uuid		// Filename is 'vbox-state-12345678901234567890.map'
+		);
 
-/* Global function to try to install a VirtualBox Hypervisor */
-bool 			vboxInstall();
-
-
-#endif /* end of include guard: VBOXCOMMON_H */
+}

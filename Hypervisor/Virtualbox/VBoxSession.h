@@ -39,7 +39,7 @@
 class VBoxSession : public SimpleFSM, public HVSession {
 public:
 
-    VBoxSession() {
+    VBoxSession() : SimpleFSM(), HVSession() {
 
         FSM_REGISTRY(1,             // Entry point is on '1'
         {

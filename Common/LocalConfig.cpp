@@ -20,15 +20,50 @@
 
 #include "LocalConfig.h"
 
+// Initialize global parameter
+LocalConfigPtr LocalConfig::globalConfigSingleton;
+
 /**
- * Create platform configuration file
+ * Return a LocalConfig Shared Pointer for the global config
  */
-LocalConfig::LocalConfig () {
+LocalConfigPtr LocalConfig::global() {
+
+    // Ensure we have signeton
+    if (!LocalConfig::globalConfigSingleton) {
+        LocalConfig::globalConfigSingleton = boost::make_shared< LocalConfig >( getAppDataPath() + "/config", "global" );
+    }
+
+    // Return reference
+    return LocalConfig::globalConfigSingleton;
+
+}
+
+/**
+ * Return a LocalConfig Shared Pointer for the specified runtime config
+ */
+LocalConfigPtr LocalConfig::forRuntime( std::string name ) {
+
+    // Return a shared pointer instance
+    return boost::make_shared< LocalConfig >( getAppDataPath() + "/run", name );
+    
+}
+
+/**
+ * Create custom configuration file from the given map file
+ */
+LocalConfig::LocalConfig ( std::string path, std::string name ) : ParameterMap() {
     CRASH_REPORT_BEGIN;
-    this->configDir = getAppDataPath() + "/config";
-    this->loadMap( "general", &globalConfig );
+
+    // Prepare names
+    this->configDir = path;
+    this->configName = name;
+
+    // Load parameters in the parameters map
+    this->loadMap( name, parameters.get() );
+
     CRASH_REPORT_END;
 }
+
 
 /**
  * Save all the lines to the given list file
@@ -220,56 +255,11 @@ time_t LocalConfig::getLastModified ( std::string configFile ) {
     CRASH_REPORT_END;
 }
 
-std::string LocalConfig::get ( std::string name ) {
+void LocalConfig::commitChanges ( ) {
     CRASH_REPORT_BEGIN;
-    if (globalConfig.find(name) == globalConfig.end())
-        return "";
-    return globalConfig[name];
+
+    // Save map to file
+    this->saveMap( configName, parameters.get() )
+
     CRASH_REPORT_END;
 }
-
-std::string LocalConfig::getDef  ( std::string name, std::string defaultValue ) {
-    CRASH_REPORT_BEGIN;
-    if (globalConfig.find(name) == globalConfig.end())
-        return defaultValue;
-    return globalConfig[name];
-    CRASH_REPORT_END;
-}
-
-template <typename T> T LocalConfig::getNum ( std::string name ) {
-    CRASH_REPORT_BEGIN;
-    if (globalConfig.find(name) == globalConfig.end())
-        return 0;
-    return ston<T>(globalConfig[name]);
-    CRASH_REPORT_END;
-}
-
-template <typename T> T LocalConfig::getNumDef ( std::string name, T defaultValue ) {
-    CRASH_REPORT_BEGIN;
-    if (globalConfig.find(name) == globalConfig.end())
-        return defaultValue;
-    return ston<T>(globalConfig[name]);
-    CRASH_REPORT_END;
-}
-
-void LocalConfig::set ( std::string name, std::string value ) {
-    CRASH_REPORT_BEGIN;
-    globalConfig[name] = value;
-    this->saveMap( "general", &globalConfig );
-    CRASH_REPORT_END;
-}
-
-template <typename T> void LocalConfig::setNum ( std::string name, T value ) {
-    CRASH_REPORT_BEGIN;
-    globalConfig[name] = ntos<T>( value );
-    this->saveMap( "general", &globalConfig );
-    CRASH_REPORT_END;
-}
-
-/* Expose template implementations */
-template int LocalConfig::getNum<int>( std::string );
-template long LocalConfig::getNum<long>( std::string );
-template int LocalConfig::getNumDef<int>( std::string, int );
-template long LocalConfig::getNumDef<long>( std::string, long );
-template void LocalConfig::setNum<int>( std::string, int value );
-template void LocalConfig::setNum<long>( std::string, long value );

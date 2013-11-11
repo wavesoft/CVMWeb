@@ -355,7 +355,12 @@ void CVMWebAPISession::thread_open( const FB::variant& oConfigHash  ){
 
         }
     }
-    
+
+    // Update session parameters
+    this->session->cpus = cpus;
+    this->Session->ram = ram;
+    this->Session->disk = disk;
+
     // Open session with the given flags
     ans = this->session->open( cpus, ram, disk, ver, flags );
     if (ans == 0) {

@@ -18,21 +18,23 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#ifndef VBOXCOMMON_H
-#define VBOXCOMMON_H
+#ifndef VBOXSTATESTORE_H
+#define VBOXSTATESTORE_H
 
-#include "Common/Hypervisor.h"
-#include "VBoxStateStore.h"
+#include "Common/Utilities.h"
+#include "Common/LocalConfig.h"
 
-/* Forward-declare the classes */
-class VBoxSession;
-class VBoxHypervisor;
+#include <string>
+#include <map>
 
-/* Global function to try to instantiate a VirtualBox Hypervisor */
-Hypervisor * 	vboxDetect();
+class VBoxStateStore {
+public:
 
-/* Global function to try to install a VirtualBox Hypervisor */
-bool 			vboxInstall();
+	/**
+	 * Return the record entry for the specified UUID
+	 */
+	static LocalConfigPtr	configFor( const std::string& uuid );
 
+};
 
-#endif /* end of include guard: VBOXCOMMON_H */
+#endif /* end of include guard: VBOXSTATESTORE_H */

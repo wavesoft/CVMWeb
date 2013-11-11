@@ -52,7 +52,7 @@ time_t                probeTimer;
 int                   idleTime;
 bool                  isIdle = false;
 bool                  isAlive = true;
-LocalConfig         * config;
+LocalConfigPtr        config;
 
 boost::mutex          sessionsMutex;
 boost::thread         reloadThread;
@@ -405,7 +405,7 @@ int main( int argc, char ** argv ) {
     platformInit();
 
     /* Initialize arguments */
-    config = new LocalConfig();
+    config = LocalConfig::global();
     idleTime = config->getNumDef<int>( "idle-time", 30 );
     config->setNum("idle-time", idleTime);
     cout << "[INFO] Using idle-time: " << idleTime << endl;

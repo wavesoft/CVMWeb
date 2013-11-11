@@ -111,10 +111,10 @@ std::string CVMWebAPI::calculateHostID( std::string& domain ) {
     if (p->hv == NULL) return "";
     
     /* Fetch/Generate user UUID */
-    string machineID = this->config.get("local-id");
+    string machineID = this->config->get("local-id");
     if (machineID.empty()) {
         machineID = p->crypto->generateSalt();
-        this->config.set("local-id", machineID);
+        this->config->set("local-id", machineID);
     }
 
     /* When we use the local-id, update the crash-reporting utility config */

@@ -109,7 +109,7 @@ private:
     /**
      * LocalConfig for accessing the key store
      */
-    LocalConfig config;
+    LocalConfigPtr config;
     
     /**
      * The last time we loaded the keystore

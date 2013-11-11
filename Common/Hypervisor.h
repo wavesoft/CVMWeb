@@ -24,6 +24,7 @@
 #include "DownloadProvider.h"
 #include "Utilities.h"
 #include "CrashReport.h"
+#include "ParameterMap.h"
 
 /* Hypervisor types */
 #define HV_NONE                 0
@@ -82,20 +83,34 @@
 class HVSession {
 public:
     
-    HVSession() : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress() {
+    HVSession() : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters() {
         
-        this->cpus = 1;
-        this->memory = 256;
-        this->disk = 1024;
-        this->executionCap = 100;
+        // Set default parameters
+        parameters.setNum("cpus",           1);
+        parameters.setNum("memory",         512);
+        parameters.setNum("disk",           1024);
+        parameters.setNum("executionCap",   100);
+        parameters.setNum("apiPort",        DEFAULT_API_PORT);
+        parameters.setNum("flags",          0);
+        parameters.set("uuid",              "");
+        parameters.set("ip",                "");
+        parameters.set("key",               "");
+        parameters.set("name",              "");
+        parameters.set("name",              "");
+
+
+        //this->cpus = 1;
+        //this->memory = 256;
+        //this->disk = 1024;
+        //this->executionCap = 100;
         this->state = 0;
         this->internalID = 0;
-        this->uuid = "";
-        this->ip = "";
-        this->key = "";
-        this->name = "";
-        this->apiPort = DEFAULT_API_PORT;
-        this->flags = 0;
+        //this->uuid = "";
+        //this->ip = "";
+        //this->key = "";
+        //this->name = "";
+        //this->apiPort = DEFAULT_API_PORT;
+        //this->flags = 0;
         this->userData = NULL;
         this->diskChecksum = "";
         this->pid = 0;
@@ -139,6 +154,8 @@ public:
     int                     daemonFlags;
 
     int                     internalID;
+
+    ParameterMap            parameters;
         
     virtual int             pause();
     virtual int             close( bool unmonitored = false );
