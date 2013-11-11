@@ -528,7 +528,7 @@ HVSessionPtr Hypervisor::sessionOpen( const std::string & name, const std::strin
     }
     
     /* Allocate a new session */
-    HVSessionPtr sess = this->allocateSession();
+    HVSessionPtr sess = this->sessionAllocate();
     if (!sess) return voidPtr;
 
     /* Populate parameters */
