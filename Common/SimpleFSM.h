@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef SIMPLEFSM_H
 #define SIMPLEFSM_H
 

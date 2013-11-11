@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef VBOXHYPERVISOR_H
 #define VBOXHYPERVISOR_H
 

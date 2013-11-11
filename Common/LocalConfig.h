@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef CONFIG_H_4GP6DIPT
 #define CONFIG_H_4GP6DIPT
 

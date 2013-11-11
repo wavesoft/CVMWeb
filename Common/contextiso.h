@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef CONTEXTISO_H
 #define CONTEXTISO_H
 

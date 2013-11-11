@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef PARAMETERMAP_H
 #define PARAMETERMAP_H
 

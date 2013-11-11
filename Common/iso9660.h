@@ -22,6 +22,9 @@
  * Default ISO file contents, as obtained by mkisofs(8) utility
  */
 
+// Include only once
+#pragma once
+
 // We are using 8-byte alignment everywhere
 #pragma pack(8)
 

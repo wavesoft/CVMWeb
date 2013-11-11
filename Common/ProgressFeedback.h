@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef PROGRESSFEEDBACK_H
 #define PROGRESSFEEDBACK_H
 

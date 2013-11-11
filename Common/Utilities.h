@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef UTILITIES_H_JA64LPSF
 #define UTILITIES_H_JA64LPSF
 

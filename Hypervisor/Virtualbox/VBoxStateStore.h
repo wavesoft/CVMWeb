@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef VBOXSTATESTORE_H
 #define VBOXSTATESTORE_H
 

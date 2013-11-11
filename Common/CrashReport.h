@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef CRASH_REPORT_H
 #define CRASH_REPORT_H
 

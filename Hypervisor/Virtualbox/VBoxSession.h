@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef VBOXSESSION_H
 #define VBOXSESSION_H
 

@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef DOWNLOADPROVIDERS_H
 #define DOWNLOADPROVIDERS_H
 

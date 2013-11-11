@@ -18,6 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#pragma once
 #ifndef THINIPC_H_MPQIX21W
 #define THINIPC_H_MPQIX21W
 

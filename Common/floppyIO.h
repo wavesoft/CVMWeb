@@ -19,6 +19,7 @@
 //  
 //  Created on November 24, 2011, 12:30 PM
 
+#pragma once
 #ifndef FLOPPYIO_H
 #define	FLOPPYIO_H
 
