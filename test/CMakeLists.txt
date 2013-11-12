@@ -7,6 +7,9 @@ set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
 set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
 set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
 
+# The hypervisor implementations to include
+set( HV_NAMES Virtualbox )
+
 # External libraries
 set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
 include_directories( ${EXTERN_ZLIB} )
@@ -95,8 +98,18 @@ IF("${BOOST_LIBRARIES}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 ENDIF()
 
+# Locate the common sources
+file ( GLOB COMMON_SOURCES ${PROJECT_SOURCE_DIR}/../Common/*.cpp  )
+
+# Collect the hypervisor sources
+set( HYPERVISOR_SOURCES "" )
+FOREACH(HV ${HV_NAMES}) 
+	file ( GLOB HV_CPP ${PROJECT_SOURCE_DIR}/../Hypervisor/${HV}/*.cpp  )
+	set( HYPERVISOR_SOURCES ${HV_SOURCES} ${HV_CPP} )
+ENDFOREACH(HV)
+
 # Add custom definitions
-ADD_DEFINITIONS(-DLOGGING)   
+ADD_DEFINITIONS(-DLOGGING)
 
 # Windows additional definitions
 if (WIN32)
@@ -112,20 +125,8 @@ set( LIBZ_LIBRARIES zlibstatic )
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/test.cpp 
 	${PLATFORM_SOURCES}
-	${PROJECT_SOURCE_DIR}/../Common/DaemonCtl.cpp
-	${PROJECT_SOURCE_DIR}/../Common/Hypervisor.cpp
-	${PROJECT_SOURCE_DIR}/../Common/ThinIPC.cpp
-	${PROJECT_SOURCE_DIR}/../Common/contextiso.cpp
-	${PROJECT_SOURCE_DIR}/../Common/Utilities.cpp
-	${PROJECT_SOURCE_DIR}/../Common/ParameterMap.cpp
-	${PROJECT_SOURCE_DIR}/../Common/LocalConfig.cpp
-	${PROJECT_SOURCE_DIR}/../Common/floppyIO.cpp
-	${PROJECT_SOURCE_DIR}/../Common/DownloadProvider.cpp
-	${PROJECT_SOURCE_DIR}/../Common/SimpleFSM.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxCommon.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxHypervisor.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxSession.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxStateStore.cpp
+	${COMMON_SOURCES}
+	${HYPERVISOR_SOURCES}
 	)
 
 # Libraries

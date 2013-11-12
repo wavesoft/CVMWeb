@@ -7,8 +7,12 @@ set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
 set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
 set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
 
+# The hypervisor implementations to include
+set( HV_NAMES Virtualbox )
+
 # External libraries
 set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
+include_directories( ${EXTERN_ZLIB} )
 
 # Static build
 SET(BUILD_SHARED_LIBS OFF)
@@ -67,21 +71,30 @@ ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
 INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
 if (WIN32)
 	file ( GLOB BOOST_LIBRARIES 
-		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* 
-		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/* )
+		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*.lib
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*.lib
+		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*.lib )
 elseif(APPLE)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/* 
+		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
 		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/* )
+
+	# Check if the user is using Make instead of XCodeBuild
+	IF("${BOOST_LIBRARIES}" STREQUAL "")
+		file ( GLOB BOOST_LIBRARIES 
+			${FB_BOOST_LIB_DIR}/thread/*.a
+			${FB_BOOST_LIB_DIR}/system/*.a
+			${FB_BOOST_LIB_DIR}/filesystem/*.a )
+	ENDIF()
+
 elseif(UNIX)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/*.a
-		${FB_BOOST_LIB_DIR}/system/*.a 
+		${FB_BOOST_LIB_DIR}/system/*.a
 		${FB_BOOST_LIB_DIR}/filesystem/*.a )
 ENDIF(WIN32)
-IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
+IF("${BOOST_LIBRARIES}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 ENDIF()
 
@@ -97,26 +110,30 @@ elseif(UNIX)
 	include ( ${PROJECT_SOURCE_DIR}/Linux/platform.cmake )
 ENDIF(WIN32)
 
+# Locate the common sources
+file ( GLOB COMMON_SOURCES ${PROJECT_SOURCE_DIR}/../Common/*.cpp  )
+
+# Collect the hypervisor sources
+set( HYPERVISOR_SOURCES "" )
+FOREACH(HV ${HV_NAMES}) 
+	file ( GLOB HV_CPP ${PROJECT_SOURCE_DIR}/../Hypervisor/${HV}/*.cpp  )
+	set( HYPERVISOR_SOURCES ${HV_SOURCES} ${HV_CPP} )
+ENDFOREACH(HV)
+
 # Build zlib statically from the resources
 add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
 include_directories( ${CMAKE_BINARY_DIR}/extern/zlib ${EXTERN_ZLIB} )
 set( LIBZ_LIBRARIES zlibstatic )
 
+# Enable logging
+ADD_DEFINITIONS(-DLOGGING)
+
 # Sources
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/daemon.cpp 
 	${PLATFORM_SOURCES}
-	${PROJECT_SOURCE_DIR}/../Common/DaemonCtl.cpp
-	${PROJECT_SOURCE_DIR}/../Common/Hypervisor.cpp
-	${PROJECT_SOURCE_DIR}/../Common/ThinIPC.cpp
-	${PROJECT_SOURCE_DIR}/../Common/contextiso.cpp
-	${PROJECT_SOURCE_DIR}/../Common/Utilities.cpp
-	${PROJECT_SOURCE_DIR}/../Common/LocalConfig.cpp
-	${PROJECT_SOURCE_DIR}/../Common/floppyIO.cpp
-	${PROJECT_SOURCE_DIR}/../Common/DownloadProvider.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxCommon.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxHypervisor.cpp
-	${PROJECT_SOURCE_DIR}/../Hypervisor/Virtualbox/VBoxSession.cpp
+	${COMMON_SOURCES}
+	${HYPERVISOR_SOURCES}
 	)
 
 # Platform-specific link details

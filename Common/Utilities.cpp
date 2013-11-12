@@ -1391,24 +1391,28 @@ char * getTimestamp () {
 /**
  * Dump a map structure
  */
-void mapDump(map<string, string> m) {
+void mapDump(const map<string, string>& m) {
     CRASH_REPORT_BEGIN;
-    for (std::map<string, string>::iterator it=m.begin(); it!=m.end(); ++it) {
+    cout << "--[ Dumping map at " << (void*) &m << "] ----" << endl;
+    for (std::map<string, string>::const_iterator it=m.begin(); it!=m.end(); ++it) {
         string k = (*it).first;
         string v = (*it).second;
         cout << k << " => " << v << "\n";
     }
+    cout << "--------------------------------" << endl;
     CRASH_REPORT_END;
 };
 
 /**
  * Dump a vector structure
  */
-void vectorDump ( std::vector< std::string > v ) {
+void vectorDump ( const std::vector< std::string >& v ) {
     CRASH_REPORT_BEGIN;
-    for (std::vector<string>::iterator it=v.begin(); it!=v.end(); ++it) {
-        cout << "- " << *it << "\n";
+    cout << "--[ Dumping vector at " << (void*) &v << "] ----" << endl;
+    for (std::vector<string>::const_iterator it=v.begin(); it!=v.end(); ++it) {
+        cout << "- " << *it << endl;
     }
+    cout << "--------------------------------" << endl;
     CRASH_REPORT_END;
 }
 

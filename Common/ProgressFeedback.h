@@ -36,7 +36,7 @@ class ProgressTask;
 class FiniteTask;
 class VariableTask;
 class BooleanTask;
-typedef boost::shared_ptr< BaseProgressTask >       ProgressTaskPtr;
+typedef boost::shared_ptr< ProgressTask >           ProgressTaskPtr;
 typedef boost::shared_ptr< FiniteTask >       		FiniteTaskPtr;
 typedef boost::shared_ptr< VariableTask >       	VariableTaskPtr;
 typedef boost::shared_ptr< BooleanTask >       		BooleanTaskPtr;
@@ -46,12 +46,12 @@ typedef boost::shared_ptr< BooleanTask >       		BooleanTaskPtr;
 typedef boost::function<void ( const std::string& message )>    						cbStarted;
 typedef boost::function<void ( const std::string& message )>    						cbCompleted;
 typedef boost::function<void ( const std::string& message, const int errorCode )> 		cbError;
-typedef boost::function<void ( const double progress, const std::string& message )> 	cbProgress;
+typedef boost::function<void ( const std::string& message, const double progress )> 	cbProgress;
 
 /**
  * Base class to monitor progress events
  */
-class ProgressTask: public boost::enable_shared_from_this<BaseProgressTask> {
+class ProgressTask: public boost::enable_shared_from_this<ProgressTask> {
 public:
 
 	//////////////////////
@@ -70,37 +70,39 @@ public:
 	 * Register a callback that will be fired when the very first task has
 	 * started progressing.
 	 */
-	void 				onStarted		( cbStarted & cb );
+	void 				onStarted		( const cbStarted & cb );
 
 	/**
 	 * Register a callback that will be fired when the last task has completed
 	 * progress.
 	 */
-	void 				onCompleted		( cbCompleted & cb );
+	void 				onCompleted		( const cbCompleted & cb );
 
 	/**
 	 * Register a callback that will be fired when an error has occured.
 	 */
-	void 				onError			( cbError & cb );
+	void 				onError			( const cbError & cb );
 
 	/**
 	 * Register a callback event that will be fired when a progress
 	 * event is updated.
 	 */
-	void 				onProgress		( cbProgress & cb );
+	void 				onProgress		( const cbProgress & cb );
 
 	/**
-	 * Override the complete function
+	 * Mark the task as completed, overriding any active progress
 	 */
-	void 				complete 		( const std::message& message );
+	void 				complete 		( const std::string& message = "" );
 
-
-protected:
+	/**
+	 * Fire a progress update without any change, just change message
+	 */
+	void				doing			( const std::string& message );
 
 	//////////////////////////
 	// Overridable callbacks
 	//////////////////////////
-
+    
 	/**
 	 * Get the percentage of the completed tasks
 	 */
@@ -111,15 +113,23 @@ protected:
 	 */
 	virtual bool 		isCompleted		( ) = 0;
 
-private:
+    //////////////////////
+	// State variables
+	//////////////////////
+
+    /**
+     * The parent object
+     */
+    ProgressTaskPtr 					parent;
+
+protected:
 
 	//////////////////////
 	// State variables
 	//////////////////////
 	bool				 				started;
 	bool 								completed;
-	ProgressTaskPtr 					parent;
-	std::message 						lastMessage;
+	std::string 						lastMessage;
 
 	//////////////////////
 	// Event registry
@@ -137,18 +147,27 @@ private:
 	/**
 	 * [Internal] Callback to let listeners know that we started progress
 	 */
-	void				_notifyStarted();
+	void				_notifyStarted( const std::string& message );
 
 	/**
 	 * [Internal] Callback to let listeners know that a progress change has occured.
 	 */
-	void 				_notifyProgressUpdate();
+	void 				_notifyUpdate( const std::string& message );
 
 	/**
 	 * [Internal] Callback to let listeners know that we are done
 	 */
-	void 				_notifyCompleted();
+	void 				_notifyCompleted( const std::string& message );
 
+    /**
+     * [Internal] Propagate an error event to the callbacks and parent
+     */
+    void                _forwardError( const std::string& message, const int errorCode );
+
+    /**
+     * [Internal] Propagate a progress event to the callbacks and parent
+     */
+    void                _forwardProgress( const std::string& message );
 
 };
 
@@ -163,7 +182,7 @@ public:
 	// Constructor
 	//////////////////////
 
-	ProgressTask() : ProgressTask(), tasks(), taskObjects(), taskIndex(0) { };
+	FiniteTask() : ProgressTask(), tasks(), taskObjects(), taskIndex(0) { };
 
 	/**
 	 * Define the maximum number of tasks
@@ -173,13 +192,13 @@ public:
 	/**
 	 * Mark one of the sub-tasks as completed
 	 */
-	void 						done( const std::message& message );
+	void 						done( const std::string& message );
 
 	/**
 	 * Create a sub-task
 	 */
 	template <typename T>
-	 	boost::shared_ptr<T> 	begin( const std::message& message );
+	 	boost::shared_ptr<T> 	begin( const std::string& message );
 
 
 protected:
@@ -214,7 +233,7 @@ private:
 	/**
 	 * The sub-tasks that can 
 	 */
-	std::vector< ProgressTask >		taskObjects;
+	std::vector< ProgressTaskPtr >  taskObjects;
 
 	/**
 	 * Position index
@@ -281,7 +300,7 @@ private:
 class BooleanTask: public ProgressTask {
 public:
 
-	BooleanTask() : ProgressTask(), max(0), current(0) { };
+	BooleanTask() : ProgressTask() { };
 
 	/**
 	 * Reset to non-completed state

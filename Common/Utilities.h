@@ -321,12 +321,12 @@ void                                                flushNamedMutexes ();
 /**
  * Visualize the dump of a string:string hash map
  */
-void                                                mapDump         ( std::map< std::string, std::string> m );
+void                                                mapDump         ( const std::map< std::string, std::string>& m );
 
 /**
  * Visualize the dump of a string:vector
  */
-void                                                vectorDump      ( std::vector< std::string > v );
+void                                                vectorDump      ( const std::vector< std::string >& v );
 
 
 /* ======================================================== */

@@ -27,28 +27,28 @@
 /**
  * Register a callback that handles the 'started' event
  */
-void ProgressTask::onStarted ( cbStarted & cb ) {
+void ProgressTask::onStarted ( const cbStarted & cb ) {
 	startedCallbacks.push_back(cb);
 }
 
 /**
  * Register a callback that handles the 'completed' event
  */
-void ProgressTask::onCompleted ( cbCompleted & cb ) {
+void ProgressTask::onCompleted ( const cbCompleted & cb ) {
 	completedCallbacks.push_back(cb);
 }
 
 /**
  * Register a callback that handles the 'failed' event
  */
-void ProgressTask::onError	( cbError & cb ) {
+void ProgressTask::onError	( const cbError & cb ) {
 	errorCallbacks.push_back(cb);
 }
 
 /**
  * Register a callback that handles the 'progress' event
  */
-void ProgressTask::onProgress ( cbProgress & cb ) {
+void ProgressTask::onProgress ( const cbProgress & cb ) {
 	progressCallbacks.push_back(cb);
 }
 
@@ -56,22 +56,39 @@ void ProgressTask::onProgress ( cbProgress & cb ) {
  * Mark the task as completed
  */
 void ProgressTask::complete ( const std::string& message ) {
+    std::string msg = message;
 
-	// Notify as completed
+	// Build empty message
+	if (message.empty()) {
+		if (!lastMessage.empty()) {
+			msg = "Completed " + lastMessage;
+        }
+	}
+
+	// Notify update
 	_notifyCompleted(message);
 
 }
 
+/**
+ * Forward a message without any progress update
+ */
+void ProgressTask::doing ( const std::string& message ) {
+
+	// Notify update
+	_notifyUpdate(message);
+
+}
 
 /**
  * Let listeners know that we are completed
  */
 void ProgressTask::_notifyCompleted ( const std::string& message ) {
 
-	// Don't do anything if we are already completed
+	// If we are alrady completed, do nothing
 	if (completed) return;
 
-	// Mark us as completed
+	// Mark as completed
 	completed = true;
 
 	// Store the last message
@@ -85,7 +102,7 @@ void ProgressTask::_notifyCompleted ( const std::string& message ) {
 
 	// Propagate event
 	if (parent) {
-		parent._notifyUpdate( message );
+		parent->_notifyUpdate( message );
 	}
 }
 
@@ -108,12 +125,12 @@ void ProgressTask::_notifyUpdate ( const std::string& message ) {
 		// Call all the progress callbacks
 		for (std::vector< cbProgress >::iterator it = progressCallbacks.begin(); it != progressCallbacks.end(); ++it) {
 			cbProgress cb = *it;
-			if (cb) cb( getProgress(), message );
+			if (cb) cb( message, getProgress() );
 		}
 
 		// Propagate event
 		if (parent) {
-			parent._notifyUpdate( message );
+			parent->_notifyUpdate( message );
 		}
 
 	}
@@ -141,7 +158,7 @@ void ProgressTask::_notifyStarted ( const std::string& message ) {
 
 	// Propagate event
 	if (parent) {
-		parent._notifyStarted( message );
+		parent->_notifyStarted( message );
 	}
 
 }
@@ -158,12 +175,12 @@ void ProgressTask::_forwardProgress( const std::string& message ) {
 	// Call all the progress callbacks
 	for (std::vector< cbProgress >::iterator it = progressCallbacks.begin(); it != progressCallbacks.end(); ++it) {
 		cbProgress cb = *it;
-		cb( getProgress(), message );
+		cb( message, getProgress() );
 	}
 
 	// Forward event to the parent elements
 	if (parent)
-		parent._forwardProgress( message );
+		parent->_forwardProgress( message );
 
 }
 
@@ -176,14 +193,14 @@ void ProgressTask::_forwardError( const std::string& message, const int errorCod
 	lastMessage = message;
 
 	// Call all the progress callbacks
-	for (std::vector< cbProgress >::iterator it = errorCallbacks.begin(); it != errorCallbacks.end(); ++it) {
-		cbFailed cb = *it;
+	for (std::vector< cbError >::iterator it = errorCallbacks.begin(); it != errorCallbacks.end(); ++it) {
+		cbError cb = *it;
 		cb( message, errorCode );
 	}
 
 	// Forward event to the parent elements
 	if (parent)
-		parent._forwardError( message, errorCode );
+		parent->_forwardError( message, errorCode );
 
 }
 
@@ -214,7 +231,7 @@ bool FiniteTask::isCompleted ( ) {
 
 		} else if (tasks[i] == 2) {
 			// If we have a sub-task, and it's not finished, return false
-			if (!taskObjects[i].isCompleted())
+			if (!taskObjects[i]->isCompleted())
 				return false;
 
 		}
@@ -253,7 +270,7 @@ double FiniteTask::getProgress ( ) {
 
 		} else if (tasks[i] == 2) {
 			// If we have a sub-task, calculate the sub-progress
-			value += stepSize * taskObjects[i].getProgress();
+			value += stepSize * taskObjects[i]->getProgress();
 
 		}
 
@@ -284,15 +301,18 @@ void FiniteTask::setMax ( size_t maxTasks ) {
 
 	}
 
-	// Notify update events
-	_notifyUpdate( lastMessage );
+	// Notify update events if we are in the middle of something
+	if (started) _notifyUpdate( lastMessage );
 
 }
 
 /**
  * Mark the task as completed
  */
-void FiniteTask::done( const std::message& message ) {
+void FiniteTask::done( const std::string& message ) {
+
+	// Notify started
+	_notifyStarted( message );
 
 	// Get the size of the array
 	size_t len = tasks.size();
@@ -318,10 +338,17 @@ void FiniteTask::done( const std::message& message ) {
  * Allocate a new child task
  */
 template <typename T> boost::shared_ptr<T> 
-FiniteTask::begin( const std::message& message ) {
+FiniteTask::begin( const std::string& message ) {
+
+	// Notify started
+	_notifyStarted( message );
 
 	// Get the size of the array
 	size_t len = tasks.size();
+
+    // Create a new object instance
+    boost::shared_ptr<T> newPtr = boost::make_shared<T>();
+    newPtr->parent = shared_from_this();
 
 	// Allocate task only if we have enough slots
 	if (taskIndex < len) {
@@ -330,7 +357,7 @@ FiniteTask::begin( const std::message& message ) {
 		tasks[taskIndex] = 2;
 
 		// Make a new shared object of the given kind
-		taskObjects[taskIndex] = make_shared<T>();
+		taskObjects[taskIndex] = newPtr;
 
 		// Go to next step
 		taskIndex += 1;
@@ -339,6 +366,9 @@ FiniteTask::begin( const std::message& message ) {
 
 	// Forward update
 	_notifyUpdate( message );
+
+    // Return object
+    return newPtr;
 
 }
 
@@ -384,23 +414,26 @@ double VariableTask::getProgress ( ) {
 /**
  * Set max value
  */
-void FiniteTask::setMax ( size_t maxValue ) {
+void VariableTask::setMax ( size_t maxValue ) {
 
 	// Update max value
 	max = maxValue;
 
-	// Trigger update
-	_notifyUpdate( lastMessage );
+	// Trigger update if we were in the middle of something
+	if (started) _notifyUpdate( lastMessage );
 
 }
 
 /**
  * Update value
  */
-void FiniteTask::update ( size_t value ) {
+void VariableTask::update ( size_t value ) {
+
+	// Notify started
+	_notifyStarted( lastMessage );
 
 	// Update value
-	max = value;
+	current = value;
 
 	// Trigger update
 	_notifyUpdate( lastMessage );
@@ -410,7 +443,7 @@ void FiniteTask::update ( size_t value ) {
 /**
  * Update the default value
  */
-void FiniteTask::setMessage ( const std::string& message ) {
+void VariableTask::setMessage ( const std::string& message ) {
 	lastMessage = message;
 }
 
@@ -456,3 +489,10 @@ double BooleanTask::getProgress ( ) {
 void BooleanTask::reset ( ) {
 	completed = false;
 }
+
+/**
+ * Implement some known templates
+ */
+template FiniteTaskPtr      FiniteTask::begin<FiniteTask>( const std::string& message );
+template VariableTaskPtr    FiniteTask::begin<VariableTask>( const std::string& message );
+template BooleanTaskPtr     FiniteTask::begin<BooleanTask>( const std::string& message );
