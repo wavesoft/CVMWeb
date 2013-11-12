@@ -41,8 +41,8 @@ void ProgressTask::onCompleted ( const cbCompleted & cb ) {
 /**
  * Register a callback that handles the 'failed' event
  */
-void ProgressTask::onError	( const cbError & cb ) {
-	errorCallbacks.push_back(cb);
+void ProgressTask::onFailure ( const cbFailure & cb ) {
+	failedCallbacks.push_back(cb);
 }
 
 /**
@@ -66,9 +66,28 @@ void ProgressTask::complete ( const std::string& message ) {
 	}
 
 	// Notify update
-	_notifyCompleted(message);
+	_notifyCompleted(msg);
 
 }
+
+/**
+ * Mark the task as failed
+ */
+void ProgressTask::fail ( const std::string& message, const int errorCode ) {
+    std::string msg = message;
+
+	// Build empty message
+	if (message.empty()) {
+		if (!lastMessage.empty()) {
+			msg = "Failed " + lastMessage;
+        }
+	}
+
+	// Notify update
+	_notifyFailed(msg, errorCode);
+
+}
+
 
 /**
  * Forward a message without any progress update
@@ -104,6 +123,32 @@ void ProgressTask::_notifyCompleted ( const std::string& message ) {
 	if (parent) {
 		parent->_notifyUpdate( message );
 	}
+}
+
+/**
+ * Let listeners know that we have failed
+ */
+void ProgressTask::_notifyFailed( const std::string& message, const int errorCode ) {
+
+	// If we are alrady completed, do nothing
+	if (completed) return;
+
+	// Mark as completed
+	completed = true;
+
+	// Store the last message
+	lastMessage = message;
+
+	// Fire events
+	for (std::vector< cbFailure >::iterator it = failedCallbacks.begin(); it != failedCallbacks.end(); ++it) {
+		cbFailure cb = *it;
+		cb( message, errorCode );
+	}
+
+	// Forward event to the parent elements
+	if (parent)
+		parent->_notifyUpdate( message );
+
 }
 
 /**
@@ -184,26 +229,6 @@ void ProgressTask::_forwardProgress( const std::string& message ) {
 
 }
 
-/**
- * Forward error event
- */
-void ProgressTask::_forwardError( const std::string& message, const int errorCode ) {
-
-	// Store the last message
-	lastMessage = message;
-
-	// Call all the progress callbacks
-	for (std::vector< cbError >::iterator it = errorCallbacks.begin(); it != errorCallbacks.end(); ++it) {
-		cbError cb = *it;
-		cb( message, errorCode );
-	}
-
-	// Forward event to the parent elements
-	if (parent)
-		parent->_forwardError( message, errorCode );
-
-}
-
 /** #####################################################################################
  *  # FiniteTask Implementation - Finite Task Set
  ** ##################################################################################### */
@@ -223,7 +248,7 @@ bool FiniteTask::isCompleted ( ) {
 	size_t len = tasks.size();
 
 	// Loop over tasks
-	for (int i=0; i<len; i++) {
+	for (size_t i=0; i<len; i++) {
 
 		if (tasks[i] == 0) {
 			// If task is not completed, just return false
@@ -262,7 +287,7 @@ double FiniteTask::getProgress ( ) {
 	double value = 0.0;
 
 	// Loop over tasks
-	for (int i=0; i<len; i++) {
+	for (size_t i=0; i<len; i++) {
 
 		if (tasks[i] == 1) {
 			// If task is completed, add a step
@@ -284,7 +309,7 @@ double FiniteTask::getProgress ( ) {
 /**
  * Set maximum number of tasks
  */
-void FiniteTask::setMax ( size_t maxTasks ) {
+void FiniteTask::setMax ( size_t maxTasks, bool triggerUpdate ) {
 
 	// Get the size of the array
 	size_t len = tasks.size();
@@ -302,7 +327,7 @@ void FiniteTask::setMax ( size_t maxTasks ) {
 	}
 
 	// Notify update events if we are in the middle of something
-	if (started) _notifyUpdate( lastMessage );
+	if (started && triggerUpdate) _notifyUpdate( lastMessage );
 
 }
 
@@ -349,6 +374,7 @@ FiniteTask::begin( const std::string& message ) {
     // Create a new object instance
     boost::shared_ptr<T> newPtr = boost::make_shared<T>();
     newPtr->parent = shared_from_this();
+    newPtr->lastMessage = message;
 
 	// Allocate task only if we have enough slots
 	if (taskIndex < len) {
@@ -369,6 +395,38 @@ FiniteTask::begin( const std::string& message ) {
 
     // Return object
     return newPtr;
+
+}
+
+/**
+ * Reset state and restart
+ */
+void FiniteTask::restart ( const std::string& message, bool triggerUpdate ) {
+
+    // Reset state
+    completed = false;
+    taskIndex = 0;
+
+	// Get the size of the array
+	size_t len = tasks.size();
+
+	// Loop over tasks
+	for (size_t i=0; i<len; i++) {
+
+		if (tasks[i] == 1) {
+			// If task is completed, mark it as not completed
+			tasks[i] = 0;
+
+		} else if (tasks[i] == 2) {
+			// If we have a sub-task, fire restart on them too
+            taskObjects[i]->restart( message, false );
+
+		}
+
+	}
+
+    // Fire update
+    if (triggerUpdate) _notifyUpdate( message );
 
 }
 
@@ -414,13 +472,13 @@ double VariableTask::getProgress ( ) {
 /**
  * Set max value
  */
-void VariableTask::setMax ( size_t maxValue ) {
+void VariableTask::setMax ( size_t maxValue, bool triggerUpdate ) {
 
 	// Update max value
 	max = maxValue;
 
 	// Trigger update if we were in the middle of something
-	if (started) _notifyUpdate( lastMessage );
+	if (started && triggerUpdate) _notifyUpdate( lastMessage );
 
 }
 
@@ -447,6 +505,21 @@ void VariableTask::setMessage ( const std::string& message ) {
 	lastMessage = message;
 }
 
+/**
+ * Reset state and restart
+ */
+void VariableTask::restart ( const std::string& message, bool triggerUpdate ) {
+
+    // Reset state
+    completed = false;
+
+    // Reset progress
+    current = 0;
+
+    // Fire update
+    if (triggerUpdate) _notifyUpdate( message );
+
+}
 
 /** #####################################################################################
  *  # BooleanTask Implementation - Variable Task Set
@@ -486,8 +559,11 @@ double BooleanTask::getProgress ( ) {
 /**
  * Reset the state to non-completed
  */
-void BooleanTask::reset ( ) {
+void BooleanTask::restart ( const std::string& message, bool triggerUpdate ) {
 	completed = false;
+
+    // Notify update
+    if (triggerUpdate) _notifyUpdate( message );
 }
 
 /**

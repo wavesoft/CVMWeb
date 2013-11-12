@@ -29,6 +29,7 @@
 
 #include "Common/Utilities.h"
 #include "Common/Hypervisor.h"
+#include "Common/ProgressFeedback.h"
 #include "Common/CrashReport.h"
 
 #include <boost/regex.hpp>
@@ -46,7 +47,7 @@ public:
     std::string             hvGuestAdditions;
 
     bool                    hasExtPack          ();
-    int                     installExtPack      ( std::string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
+    int                     installExtPack      ( std::string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
 
     /* Internal parameters */
     int                     prepareSession      ( VBoxSession * session );
@@ -58,9 +59,9 @@ public:
 
     /* Overloads */
     virtual int             loadSessions        ( );
-    virtual HVSessionPtr    sessionAllocate     ( );
+    virtual HVSessionPtr    allocateSession     ( );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
-    virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
+    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
 
 private:
     bool                    sessionLoaded;

@@ -23,6 +23,7 @@
 #define DOWNLOADPROVIDERS_H
 
 #include "Utilities.h"
+#include "ProgressFeedback.h"
 #include "CrashReport.h"
 
 #include <ostream>
@@ -42,7 +43,7 @@
 #include <curl/easy.h>
 
 /**
- * Throttle timer delay
+ * Throttle timer delay which defines how frequetly the progress events will be fired
  */
 #define DP_THROTTLE_TIMER   250
 
@@ -55,25 +56,6 @@ typedef boost::shared_ptr< DownloadProvider >       DownloadProviderPtr;
 typedef boost::shared_ptr< CURLProvider >           CURLProviderPtr;
 
 /**
- * Progress feedback structure
- */
-typedef struct {
-    
-    // Progress calculation information
-    size_t              min;
-    size_t              max;
-    size_t              total;
-    std::string         message;
-    
-    // Progress callback to fire
-    callbackProgress    callback;
-
-    // Used internally to throttle the event rate
-    unsigned long       __lastEventTime;
-    
-} ProgressFeedback;
-
-/**
  * Base class of the download provider
  */
 class DownloadProvider {
@@ -84,16 +66,16 @@ public:
     virtual ~DownloadProvider() { };
     
     // Public interface
-    virtual int                 downloadFile( const std::string &URL, const std::string &destination, ProgressFeedback * feedback = NULL   ) = 0;
-    virtual int                 downloadText( const std::string &URL, std::string *buffer, ProgressFeedback * feedback = NULL ) = 0;
+    virtual int                 downloadFile( const std::string &URL, const std::string &destination, const VariableTaskPtr& pf = VariableTaskPtr() ) = 0;
+    virtual int                 downloadText( const std::string &URL, std::string *buffer, const VariableTaskPtr& pf = VariableTaskPtr() ) = 0;
     
     // Get/set system default download provider
     static DownloadProviderPtr  Default();
     static void                 setDefault( const DownloadProviderPtr& provider );
 
     // Helper functions
-    static void                 fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max );
-    static void                 writeToStream( std::ostream * stream, ProgressFeedback * feedbackPtr, long max_size, const char * ptr, size_t data );
+    static void                 fireProgressEvent( const VariableTaskPtr& pf, size_t pos, size_t max );
+    static void                 writeToStream( std::ostream * stream, const VariableTaskPtr& pf, long max_size, const char * ptr, size_t data );
 
 };
 
@@ -104,7 +86,7 @@ class CURLProvider : public DownloadProvider {
 public:
 
     // Constructor & Destructor
-    CURLProvider() : DownloadProvider(), feedbackPtr(), fStream(), sStream() {
+    CURLProvider() : DownloadProvider(), pf(), fStream(), sStream() {
         
         // Initialize curl
         curl = curl_easy_init();
@@ -124,12 +106,12 @@ public:
     };
 
     // Curl I/O
-    virtual int                 downloadFile( const std::string &URL, const std::string &destination, ProgressFeedback * feedback = NULL  ) ;
-    virtual int                 downloadText( const std::string &URL, std::string *buffer, ProgressFeedback * feedback = NULL );
+    virtual int                 downloadFile( const std::string &URL, const std::string &destination, const VariableTaskPtr& pf = VariableTaskPtr()  ) ;
+    virtual int                 downloadText( const std::string &URL, std::string *buffer, const VariableTaskPtr& pf = VariableTaskPtr() );
 
     // Private functions
     CURL                        * curl;
-    ProgressFeedback            * feedbackPtr;
+    VariableTaskPtr             pf;
     long                        maxStreamSize;
     std::ofstream               fStream;
     std::ostringstream          sStream;

@@ -26,7 +26,9 @@
  * Allocate a new shared pointer
  */
 ParameterMapPtr ParameterMap::instance ( ) {
+    CRASH_REPORT_BEGIN;
     return boost::make_shared< ParameterMap >();
+    CRASH_REPORT_END;
 }
 
 /**
@@ -204,6 +206,35 @@ std::vector< std::string > ParameterMap::enumKeys ( ) {
     CRASH_REPORT_END;
 }
 
+/**
+ * Update all the parameters from the specified map
+ */
+void ParameterMap::fromParameters ( const ParameterMapPtr& ptr, bool clearBefore ) {
+    CRASH_REPORT_BEGIN;
+
+    // Check if we have to clean the keys first
+    if (clearBefore) clear();
+
+    // Get parameter keys
+    std::vector< std::string > ptrKeys = ptr->enumKeys();
+
+    // Store values
+    for (std::vector< std::string >::iterator it = ptrKeys.begin(); it != ptrKeys.end(); ++it) {
+        parameters->insert(std::pair< std::string, std::string >(
+                *it, ptr->parameters->at(*it)
+            ));
+    }
+
+    // If we are not locked, sync changes.
+    // Oherwise mark us as dirty
+    if (!locked) {
+        commitChanges();
+    } else {
+        changed = true;
+    }
+
+    CRASH_REPORT_END;
+}
 
 /**
  * Update all the parameters from the specified map
@@ -219,6 +250,14 @@ void ParameterMap::fromMap ( std::map< std::string, std::string> * map, bool cle
         parameters->insert(std::pair< std::string, std::string >(
                 (*it).first, (*it).second
             ));
+    }
+
+    // If we are not locked, sync changes.
+    // Oherwise mark us as dirty
+    if (!locked) {
+        commitChanges();
+    } else {
+        changed = true;
     }
 
     CRASH_REPORT_END;

@@ -46,34 +46,19 @@ void DownloadProvider::setDefault( const DownloadProviderPtr& provider ) {
 /**
  * Local function to fire the progress event accordingly
  */
-void DownloadProvider::fireProgressEvent( ProgressFeedback * fb, size_t pos, size_t max ) {
+void DownloadProvider::fireProgressEvent( const VariableTaskPtr& fb, size_t pos, size_t max ) {
     CRASH_REPORT_BEGIN;
-    if (fb != NULL) {
+    if (fb) {
         
         // Throttle events on 2 per second, unless that's the last one
         if ((pos != max) && ((getMillis() - fb->__lastEventTime) < DP_THROTTLE_TIMER)) return;
         fb->__lastEventTime = getMillis();
 
-        CVMWA_LOG("Debug", "Calculating progress in range " << pos << "/" << max );
+        // Update task's progress
+        CVMWA_LOG("Debug", "Updating progress to " << pos << "/" << max );
+        fb->setMax(max);
+        fb->update(pos);
 
-        // Calculate percentage
-        size_t ipos = fb->min;
-        if (max != 0) {
-            
-            double dMax = static_cast<double>(fb->max);
-            double dMin = static_cast<double>(fb->min);
-            double dPos = static_cast<double>(pos);
-            double dTotal = static_cast<double>(max);
-            double v1 = ((dMax - dMin) * dPos);
-            double v2 = v1 / dTotal;
-            
-            ipos += static_cast<size_t>(v2);
-        }
-        CVMWA_LOG("Debug", "Calling progress function with " << ipos << " in (" << fb->min << "-" << fb->max << "/" << fb->total << ")" );
-        
-        // Fire callback
-        fb->callback( ipos, fb->total, fb->message );
-        
     }
     CRASH_REPORT_END;
 }
@@ -81,7 +66,7 @@ void DownloadProvider::fireProgressEvent( ProgressFeedback * fb, size_t pos, siz
 /**
  * Local function to write data to osstream
  */
-void DownloadProvider::writeToStream( std::ostream * stream, ProgressFeedback * feedbackPtr, long max_size, const char * ptr, size_t data ) {
+void DownloadProvider::writeToStream( std::ostream * stream, const VariableTaskPtr& fb, long max_size, const char * ptr, size_t data ) {
     CRASH_REPORT_BEGIN;
     
     // Write data to the file
@@ -94,8 +79,8 @@ void DownloadProvider::writeToStream( std::ostream * stream, ProgressFeedback * 
         size_t cur_size = stream->tellp();
         
         // Fire progress update
-        if (feedbackPtr != NULL)
-            DownloadProvider::fireProgressEvent( feedbackPtr, cur_size, max_size );
+        if (fb)
+            DownloadProvider::fireProgressEvent( fb, cur_size, max_size );
     }
 
     CRASH_REPORT_END;
@@ -130,7 +115,7 @@ size_t __curl_datacb_file(void *ptr, size_t size, size_t nmemb, CURLProvider * s
     //CVMWA_LOG("Debug", "cURL File callback (size=" << dataLen << ")");
 
     // Write to file stream
-    DownloadProvider::writeToStream( &(self->fStream), self->feedbackPtr, self->maxStreamSize, (const char *) ptr, dataLen );
+    DownloadProvider::writeToStream( &(self->fStream), self->pf, self->maxStreamSize, (const char *) ptr, dataLen );
     
     // Return data len
     return dataLen;
@@ -147,7 +132,7 @@ size_t __curl_datacb_string(void *ptr, size_t size, size_t nmemb, CURLProvider *
     CVMWA_LOG("Debug", "cURL String callback (size=" << dataLen << ")");
 
     // Write to string stream
-    DownloadProvider::writeToStream( &(self->sStream), self->feedbackPtr, self->maxStreamSize, (const char *) ptr, dataLen );
+    DownloadProvider::writeToStream( &(self->sStream), self->pf, self->maxStreamSize, (const char *) ptr, dataLen );
 
     // Return data len
     return dataLen;
@@ -157,20 +142,19 @@ size_t __curl_datacb_string(void *ptr, size_t size, size_t nmemb, CURLProvider *
 /**
  * Download a file using CURL
  */
-int CURLProvider::downloadFile( const std::string& url, const std::string& destination, ProgressFeedback * feedback ) {
+int CURLProvider::downloadFile( const std::string& url, const std::string& destination, const VariableTaskPtr& pf ) {
     CRASH_REPORT_BEGIN;
-    
+
     // Setup CURL url
     CVMWA_LOG("Debug", "Downloading file from '" << url << "'");
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     
     // Store a local pointer
-    this->feedbackPtr = feedback;
+    this->pf = pf;
     this->maxStreamSize = 0;
 
-    // Reset timestamp on feedback
-    if (feedback != NULL)
-        feedback->__lastEventTime = getMillis();
+    // Reset timestamp
+    if (pf) pf->__lastEventTime = getMillis();
     
     // Setup callbacks
     //CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
@@ -196,6 +180,9 @@ int CURLProvider::downloadFile( const std::string& url, const std::string& desti
     } else {
         CVMWA_LOG("Info", "cURL Download completed" );
     }
+
+    // Notify completion
+    if (pf) pf->complete("Download completed");
     
     // Close stream
     fStream.close();
@@ -207,7 +194,7 @@ int CURLProvider::downloadFile( const std::string& url, const std::string& desti
 /**
  * Download a file using CURL
  */
-int CURLProvider::downloadText( const std::string& url, std::string * destination, ProgressFeedback * feedback ) {
+int CURLProvider::downloadText( const std::string& url, std::string * destination, const VariableTaskPtr& pf ) {
     CRASH_REPORT_BEGIN;
     
     // Setup CURL url
@@ -215,12 +202,11 @@ int CURLProvider::downloadText( const std::string& url, std::string * destinatio
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     
     // Store a local pointer
-    this->feedbackPtr = feedback;
+    this->pf = pf;
     this->maxStreamSize = 0;
     
-    // Reset timestamp on feedback
-    if (feedback != NULL)
-        feedback->__lastEventTime = getMillis();
+    // Reset timestamp
+    if (pf) pf->__lastEventTime = getMillis();
     
     // Setup callbacks
     //CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
@@ -245,6 +231,9 @@ int CURLProvider::downloadText( const std::string& url, std::string * destinatio
     // Copy to output and clear buffer
     *destination = sStream.str();
     sStream.str("");
+
+    // Notify completion
+    if (pf) pf->complete("Download completed");
 
     CVMWA_LOG("Info", "cURL Download completed" );
     return HVE_OK;

@@ -41,15 +41,18 @@ void cb_progress( const std::string& message, const double progress ) {
     cout << "[-----] : " << message << " (" << (progress * 100) << " %)" << endl;
 }
 
-
-int main( int argc, char ** argv ) {
-
-    FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>( );
+void doProgress( const ProgressTaskPtr & pTaskPtr = ProgressTaskPtr() );
+void doProgress( const ProgressTaskPtr & pTaskPtr) {
+    if (!pTaskPtr) {
+        cout << "-- NULL PASSED --" << endl;
+        return;
+    }
+    FiniteTaskPtr pTasks = boost::static_pointer_cast<FiniteTask>(pTaskPtr);
 
     // Setup callbacks
     pTasks->onStarted( boost::bind(&cb_started, _1) );
     pTasks->onCompleted(boost::bind(&cb_completed, _1));
-    pTasks->onError(boost::bind(&cb_error, _1, _2));
+    pTasks->onFailure(boost::bind(&cb_error, _1, _2));
     pTasks->onProgress(boost::bind(&cb_progress, _1, _2));
 
     // Set max
@@ -106,6 +109,15 @@ int main( int argc, char ** argv ) {
     _wait(1000);
     pTasks->done("Completed finalization");
     pTasks->complete("Done");
+
+}
+
+int main( int argc, char ** argv ) {
+
+    FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>( );    
+
+    doProgress();
+    doProgress(pTasks);
 
     /*
     std::vector< std::string > keys = LocalConfig::runtime()->enumFiles( "session-" );

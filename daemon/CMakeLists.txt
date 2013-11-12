@@ -6,6 +6,7 @@ include_directories( .. )
 set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
 set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
 set( FB_BOOST_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../build/boost/libs" )
+set( FB_GEN_DIR "${PROJECT_SOURCE_DIR}/../../../build/projects/CVMWeb/gen" )
 
 # The hypervisor implementations to include
 set( HV_NAMES Virtualbox )
@@ -16,6 +17,9 @@ include_directories( ${EXTERN_ZLIB} )
 
 # Static build
 SET(BUILD_SHARED_LIBS OFF)
+
+# Include generated files directory
+include_directories( ${FB_GEN_DIR} )
 
 # Add definitions depending on build type
 if (WIN32)
@@ -73,26 +77,30 @@ if (WIN32)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*.lib
 		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*.lib
-		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*.lib )
+		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*.lib
+		${FB_BOOST_LIB_DIR}/regex/${CMAKE_BUILD_TYPE}/*.lib )
 elseif(APPLE)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
 		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/* )
+		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*
+		${FB_BOOST_LIB_DIR}/regex/${CMAKE_BUILD_TYPE}/* )
 
 	# Check if the user is using Make instead of XCodeBuild
 	IF("${BOOST_LIBRARIES}" STREQUAL "")
 		file ( GLOB BOOST_LIBRARIES 
 			${FB_BOOST_LIB_DIR}/thread/*.a
 			${FB_BOOST_LIB_DIR}/system/*.a
-			${FB_BOOST_LIB_DIR}/filesystem/*.a )
+			${FB_BOOST_LIB_DIR}/filesystem/*.a
+			${FB_BOOST_LIB_DIR}/regex/*.a )
 	ENDIF()
 
 elseif(UNIX)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/*.a
 		${FB_BOOST_LIB_DIR}/system/*.a
-		${FB_BOOST_LIB_DIR}/filesystem/*.a )
+		${FB_BOOST_LIB_DIR}/filesystem/*.a
+		${FB_BOOST_LIB_DIR}/regex/*.a )
 ENDIF(WIN32)
 IF("${BOOST_LIBRARIES}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )

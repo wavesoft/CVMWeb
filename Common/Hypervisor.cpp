@@ -46,6 +46,66 @@ namespace fs = boost::filesystem;
 /////////////////////////////////////
 /////////////////////////////////////
 ////
+//// Automatic version class
+////
+/////////////////////////////////////
+/////////////////////////////////////
+
+/**
+ * Prepare regular expression for version parsing
+ *
+ * Identifies version strings in the following format:
+ *
+ *  <major>.<minor>[.revision>][-other]
+ *
+ */
+boost::regex reVersionParse("(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?:[\\.\\-\\w](\\d+))?(?:[\\.\\-\\w]([\\w\\.\\-]+))?"); 
+
+/**
+ * Constructor of version class
+ */
+HypervisorVersion::HypervisorVersion( const std::string& verString ) {
+
+    // Reset values
+    this->major = 0;
+    this->minor = 0;
+    this->build = 0;
+    this->revision = 0;
+    this->misc = "";
+    this->verString = "";
+
+    // Try to match the expression
+    boost::smatch matches;
+    if (boost::regex_match(verString, matches, reVersionParse, boost::match_extra)) {
+        if (matches.size() > 1) {
+
+            // Get the entire matched string
+            string stringMatch(matches[1].first, matches[1].second);
+            this->verString = stringMatch;
+
+            // 
+
+        }
+
+        // matches[0] contains the original string.  matches[n]
+        // contains a sub_match object for each matching
+        // subexpression
+
+         for (int i = 1; i < matches.size(); i++)
+         {
+            // sub_match::first and sub_match::second are iterators that
+            // refer to the first and one past the last chars of the
+            // matching subexpression
+            string match(matches[i].first, matches[i].second);
+            cout << "\tmatches[" << i << "] = " << match << endl;
+         }
+      }
+}
+
+
+/////////////////////////////////////
+/////////////////////////////////////
+////
 //// Tool Functions
 ////
 /////////////////////////////////////
@@ -76,11 +136,17 @@ std::string hypervisorErrorStr( int error ) {
     CRASH_REPORT_END;
 };
 
+/**
+ * Utility function to forward decompression event from another thread
+ */
+void __notifyDecompressStart( const VariableTaskPtr & pf ) {
+    pf->doing("Extracting compressed disk");
+}
 
 /**
  * Decompress phase
  */
-int __diskExtract( const std::string& sGZOutput, const std::string& checksum, const std::string& sOutput, ProgressFeedback * fb ) {
+int __diskExtract( const std::string& sGZOutput, const std::string& checksum, const std::string& sOutput, const VariableTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
     std::string sChecksum;
     int res;
@@ -93,35 +159,56 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
         CVMWA_LOG("Info", "Invalid local checksum (" << sChecksum << ")");
         ::remove( sGZOutput.c_str() );
         
+        // Mark the progress as completed (this is not a failure. We are going to retry)
+        if (pf) pf->complete("Going to re-download");
+
         // (Let the next block re-download the file)
         return HVE_NOT_VALIDATED;
         
     } else {
         
-        // Notify progress (from another thread)
+        // Notify progress (from another thread, because we are going to be blocking soon)
         boost::thread * t = NULL;
-        if ((fb != NULL) && (fb)) t = new boost::thread( boost::bind( fb->callback, fb->max, fb->total, "Extracting compressed disk" ) );
+        if (pf) {
+            pf->setMax(1);
+            t = new boost::thread( boost::bind( &__notifyDecompressStart, pf ) );
+        }
 
         // Decompress the file
         CVMWA_LOG("Info", "File exists and checksum valid, decompressing " << sGZOutput << " to " << sOutput );
         res = decompressFile( sGZOutput, sOutput );
         if (res != HVE_OK) {
-            if (t != NULL) { t->join(); delete t; }
+
+            // Notify error and reap notification thrad
+            if (t != NULL) { 
+                pf->fail( "Unable to decompress the disk image", res );
+                t->join(); 
+                delete t; 
+            }
+
+            // Return error code
             return res;
+
         }
     
         // Delete sGZOutput if sOutput is there
         if (file_exists(sOutput)) {
-            CVMWA_LOG("Info", "File is in place" );
+            CVMWA_LOG("Info", "File is in place. Removing original" );
             ::remove( sGZOutput.c_str() );
+
         } else {
             CVMWA_LOG("Info", "Could not find the extracted file!" );
-            if (t != NULL) { t->join(); delete t; }
+            if (t != NULL) { 
+                pf->fail( "Could not find the extracted file", res );
+                t->join(); 
+                delete t; 
+            }
             return HVE_EXTERNAL_ERROR;
         }
     
         // We got the filename
         if (t != NULL) { t->join(); delete t; }
+        if (pf) pf->complete("Disk extracted");        
         return HVE_OK;
 
     }
@@ -177,7 +264,7 @@ bool HVSession::isAPIAlive( unsigned char handshake ) {
 /////////////////////////////////////
 
 /* Incomplete type placeholders */
-bool Hypervisor::waitTillReady(string,callbackProgress,int,int,int)  { return false; }
+bool Hypervisor::waitTillReady(const FiniteTaskPtr & pf)  { return false; }
 
 /**
  * Measure the resources from the sessions
@@ -273,7 +360,7 @@ int Hypervisor::cernVMCached( std::string version, std::string * filename ) {
 /**
  * Download the specified CernVM version
  */
-int Hypervisor::cernVMDownload( std::string version, std::string * filename, ProgressFeedback * fb, std::string flavor, std::string arch ) {
+int Hypervisor::cernVMDownload( std::string version, std::string * filename, const FiniteTaskPtr & pf, std::string flavor, std::string arch ) {
     CRASH_REPORT_BEGIN;
     string sURL = URL_CERNVM_RELEASES "/ucernvm-images." + version + ".cernvm." + arch + "/ucernvm-" + flavor + "." + version + ".cernvm." + arch + ".iso";
     string sOutput = this->dirDataCache + "/ucernvm-" + version + ".iso";
@@ -281,12 +368,23 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, Pro
     string sChecksumURL = sURL + ".sha256";
     string sChecksumOutput = sOutput + ".sha256";
 
+    // Create a variable task for the download process
+    VariableTaskPtr downloadPf;
+    if (pf) {
+        downloadPf = pf->begin<VariableTask>( "Downloading CernVM" );
+    }
+
+    // Start downloading
     *filename = sOutput;
     if (file_exists(sOutput)) {
+        if (downloadPf) {
+            downloadPf->complete("File already exists");
+        }
         return 0;
     } else {
-        return downloadProvider->downloadFile(sURL, sOutput, fb);
+        return downloadProvider->downloadFile(sURL, sOutput, downloadPf);
     }
+
     CRASH_REPORT_END;
 };
 
@@ -294,23 +392,17 @@ int Hypervisor::cernVMDownload( std::string version, std::string * filename, Pro
 /**
  * Download the specified generic, compressed disk image
  */
-int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb ) {
+int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::string * filename, const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
     string sURL = url;
     int res;
     
     CVMWA_LOG("Info", "Downloading disk image from " << url);
-    
-    // Create a custom ProgressFeedback in order to 
-    // use the higher part for the extracting.
-    ProgressFeedback nfb;
-    if (fb != NULL) {
-        nfb.min = fb->min;
-        nfb.max = fb->max - 1;
-        nfb.total = fb->total;
-        nfb.message = fb->message;
-        nfb.callback = fb->callback;
-        nfb.__lastEventTime = fb->__lastEventTime;
+
+    // Set maximum number of tasks to perform
+    if (pf) {
+        pf->doing("Downloading disk image");
+        pf->setMax(2);
     }
     
     // Calculate the SHA256 checksum of the URL
@@ -326,28 +418,42 @@ int Hypervisor::diskImageDownload( std::string url, std::string checksum, std::s
     *filename = sOutput;
     if (file_exists(sOutput) && !file_exists(sGZOutput)) {
         CVMWA_LOG("Info", "Uncompressed file already exists");
+        if (pf) pf->complete("Uncompressed file already in place");
         return HVE_ALREADY_EXISTS;
 
     }
     
     // Try again if we failed/aborted the image decompression
     if (file_exists(sGZOutput)) {
+
+        // Prepare the decompress sub-task if for some reason we already have the disk file in place
+        VariableTaskPtr compressPf;
+        if (pf) compressPf = pf->begin<VariableTask>("Extracting disk file");
         
         // Check decompressing file
-        res = __diskExtract( sGZOutput, checksum, sOutput, fb );
+        res = __diskExtract( sGZOutput, checksum, sOutput, compressPf );
 
-        // If checksum is invalid, re-download the file
+        // If checksum is invalid, re-download the file.
+        // Otherwise we are good to exit.
         if (res != HVE_NOT_VALIDATED) return res;
 
     }
     
+    // Prepare the download sub-task
+    VariableTaskPtr downloadPf;
+    if (pf) downloadPf = pf->begin<VariableTask>("Downloading disk file");
+
     // Download the file to sGZOutput
     CVMWA_LOG("Info", "Performing download from '" << sURL << "' to '" << sGZOutput << "'" );
-    res = downloadProvider->downloadFile(sURL, sGZOutput, &nfb);
+    res = downloadProvider->downloadFile(sURL, sGZOutput, downloadPf);
     if (res != HVE_OK) return res;
     
+    // Prepare the decompress sub-task
+    VariableTaskPtr compressPf;
+    if (pf) compressPf = pf->begin<VariableTask>("Extracting disk file");
+
     // Validate & Decompress
-    return __diskExtract( sGZOutput, checksum, sOutput, fb );
+    return __diskExtract( sGZOutput, checksum, sOutput, compressPf );
     CRASH_REPORT_END;
 };
 
@@ -441,12 +547,25 @@ void Hypervisor::detectVersion() {
 
 /**
  * Check the status of the session. It returns the following values:
- *  0 - Does not exist
- *  1 - Exist and has a valid key
- *  2 - Exists and has an invalid key
+ *  0  - Does not exist
+ *  1  - Exist and has a valid key
+ *  2  - Exists and has an invalid key
+ *  <0 - An error occured
  */
-int Hypervisor::sessionValidate ( const std::string& name, const std::string& key ) {
+int Hypervisor::sessionValidate ( const ParameterMapPtr& parameters ) {
     CRASH_REPORT_BEGIN;
+
+    // Extract name and key
+    std::string name = parameters->get("name");
+    if (name.empty()) {
+        CVMWA_LOG("Error", "Missing 'name' parameter on sessionOpen" );
+        return HVE_NOT_VALIDATED;
+    }
+    std::string key = parameters->get("key");
+    if (name.empty()) {
+        CVMWA_LOG("Error", "Missing 'key' parameter on sessionOpen" );
+        return HVE_NOT_VALIDATED;
+    }
 
     // Calculate the SHA256 checksum of the key, salted with a pre-defined salt
     std::string keyHash;
@@ -499,11 +618,23 @@ HVSession * Hypervisor::sessionLocate( std::string uuid ) {
 /**
  * Open or reuse a hypervisor session
  */
-HVSessionPtr Hypervisor::sessionOpen( const std::string & name, const std::string & key ) { 
+HVSessionPtr Hypervisor::sessionOpen( const ParameterMapPtr& parameters ) { 
     CRASH_REPORT_BEGIN;
     
     // Default unsetted pointer used for invalid responses
     HVSessionPtr voidPtr;
+
+    // Extract name and key
+    std::string name = parameters->get("name");
+    if (name.empty()) {
+        CVMWA_LOG("Error", "Missing 'name' parameter on sessionOpen" );
+        return voidPtr;
+    }
+    std::string key = parameters->get("key");
+    if (name.empty()) {
+        CVMWA_LOG("Error", "Missing 'key' parameter on sessionOpen" );
+        return voidPtr;
+    }
 
     // Calculate the SHA256 checksum of the key, salted with a pre-defined salt
     std::string keyHash;
@@ -516,8 +647,13 @@ HVSessionPtr Hypervisor::sessionOpen( const std::string & name, const std::strin
     if (sess) {
         // Validate secret key
         if (sess->parameters->get("key","").compare(keyHash) == 0) {
-            // Exists and it's valid
+
+            // Exists and it's valid. Update parameters
+            sess->parameters->fromParameters( parameters );
+
+            // And return instance
             return sess;
+
         } else {
             // Exists but the password is invalid
             return voidPtr;
@@ -525,12 +661,11 @@ HVSessionPtr Hypervisor::sessionOpen( const std::string & name, const std::strin
     }
 
     // Otherwise, allocate one
-    sess = this->sessionAllocate();
+    sess = this->allocateSession();
     if (!sess) return voidPtr;
 
     // Populate parameters
-    sess->parameters->set("name", name);
-    sess->parameters->set("key", keyHash);
+    sess->parameters->fromParameters( parameters );
     
     // Return the handler
     return sess;
@@ -694,7 +829,7 @@ void freeHypervisor( Hypervisor * hv ) {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, callbackProgress cbProgress, DownloadProviderPtr downloadProvider, int retries ) {
+int installHypervisor( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf, int retries ) {
     CRASH_REPORT_BEGIN;
     const int maxSteps = 200;
     Hypervisor * hv = NULL;
@@ -702,40 +837,62 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     string tmpHypervisorInstall;
     string checksum;
 
-    /**
-     * Contact the information point
-     */
+    // Initialize progress feedback
+    if (pf) {
+        pf->setMax(3);
+    }
+
+    ////////////////////////////////////
+    // Contact the information point
+    ////////////////////////////////////
     string requestBuf;
-    
-    /* Download trials */
+
+    // Download trials
     for (int tries=0; tries<retries; tries++) {
         CVMWA_LOG( "Info", "Fetching data" );
-        if (cbProgress) (cbProgress)(1, maxSteps, "Checking the appropriate hypervisor for your system");
+
+        // Send progress feedback
+        if (pf) pf->doing("Downloading hypervisor configuration");
+
+        // Try to download the configuration URL
         res = downloadProvider->downloadText( URL_HYPERVISOR_CONFIG + versionID, &requestBuf );
         if ( res != HVE_OK ) {
             if (tries<retries) {
                 CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
-        		if (cbProgress) (cbProgress)(1, maxSteps, "Retrying download");
+
+                // Send progress feedback
+                if (pf) pf->doing("Re-downloading hypervisor configuration");
+
                 sleepMs(1000);
                 continue;
             }
+
+            // Send progress fedback
+            if (pf) pf->fail("Too many retries while downloading hypervisor configuration");
+
             return res;
+
         } else {
+
+            // Send progress feedback
+            if (pf) pf->done("Downloaded hypervisor configuration");
+
             /* Reached this point, we are good to continue */
             break;            
         }
+
     }
     
-    /**
-     * Extract information
-     */
+    ////////////////////////////////////
+    // Extract information
+    ////////////////////////////////////
+
+    // Prepare variables
     vector<string> lines;
     splitLines( requestBuf, &lines );
     map<string, string> data = tokenize( &lines, '=' );
     
-    /**
-     * Pick the URLs to download from
-     */
+    // Pick the URLs to download from
     #ifdef _WIN32
     const string kDownloadUrl = "win32";
     const string kChecksum = "win32-sha256";
@@ -771,19 +928,33 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
 	
     #endif
     
-    /**
-     * Verify that the keys we are looking for exist
-     */
+    ////////////////////////////////////
+    // Verify information
+    ////////////////////////////////////
+
+    // Verify that the keys we are looking for exist
     if (data.find( kDownloadUrl ) == data.end()) {
         CVMWA_LOG( "Error", "ERROR: No download URL data found" );
+
+        // Send progress fedback
+        if (pf) pf->fail("No hypervisor download URL data found");
+
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( kChecksum ) == data.end()) {
         CVMWA_LOG( "Error", "ERROR: No checksum data found" );
+
+        // Send progress fedback
+        if (pf) pf->fail("No setup checksum data found");
+
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( kInstallerName ) == data.end()) {
         CVMWA_LOG( "Error", "ERROR: No installer program data found" );
+
+        // Send progress fedback
+        if (pf) pf->fail("No installer program data found");
+
         return HVE_EXTERNAL_ERROR;
     }
     
@@ -800,113 +971,152 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     	kFileExt = ".rpm";
     }
     #endif
-    
-    /**
-     * Prepare download feedback
-     */
-    ProgressFeedback feedback;
-    feedback.total = maxSteps;
-    feedback.min = 2;
-    feedback.max = 90;
-    feedback.callback = cbProgress;
-    feedback.message = "Downloading hypervisor";
 
-    /* Download trials */
+    ////////////////////////////////////
+    // Download hypervisor installer
+    ////////////////////////////////////
+
+    // Prepare feedback pointers
+    VariableTaskPtr downloadPf;
+    if (pf) {
+        downloadPf = pf->begin<VariableTask>("Downloading hypervisor installer");
+    }
+
+    // Download trials loop
     for (int tries=0; tries<retries; tries++) {
-        
-        /**
-         * Download
-         */
+
+        // Download installer
         tmpHypervisorInstall = getTmpFile( kFileExt );
-        if (cbProgress) (cbProgress)(2, maxSteps, "Downloading hypervisor");
         CVMWA_LOG( "Info", "Downloading " << data[kDownloadUrl] << " to " << tmpHypervisorInstall  );
-        res = downloadProvider->downloadFile( data[kDownloadUrl], tmpHypervisorInstall, &feedback );
+        res = downloadProvider->downloadFile( data[kDownloadUrl], tmpHypervisorInstall, downloadPf );
         CVMWA_LOG( "Info", "    : Got " << res  );
         if ( res != HVE_OK ) {
             if (tries<retries) {
                 CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
-        		if (cbProgress) (cbProgress)(2, maxSteps, "Retrying download");
+                if (downloadPf) downloadPf->restart("Re-downloading hypervisor installer");
                 sleepMs(1000);
                 continue;
             }
+
+            // Send progress fedback
+            if (pf) pf->done("Unable to download hypervisor installer");
             return res;
         }
         
-        /**
-         * Validate checksum
-         */
+        // Validate checksum
+        if (pf) pf->doing("Validating download");
         sha256_file( tmpHypervisorInstall, &checksum );
-        if (cbProgress) (cbProgress)(90, maxSteps, "Validating download");
+
         CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kChecksum]  );
         if (checksum.compare( data[kChecksum] ) != 0) {
             if (tries<retries) {
                 CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
-        		if (cbProgress) (cbProgress)(2, maxSteps, "Retrying download");
+                if (downloadPf) downloadPf->restart("Re-downloading hypervisor installer");
                 sleepMs(1000);
                 continue;
             }
-			::remove( tmpHypervisorInstall.c_str() );
+
+            // Celeanup
+            ::remove( tmpHypervisorInstall.c_str() );
+
+            // Send progress fedback
+            if (pf) pf->fail("Unable to validate hypervisor installer");
             return HVE_NOT_VALIDATED;
         }
 
-        /* Reached this point, we are good to continue */
+        // Send progress feedback
+        if (pf) pf->done("Hypervisor installer downloaded");
+
+        // ( Reached this point, we are good to continue )
         break;
 
     }
     
-    /**
-     * OS-Dependant installation process
-     */
+    ////////////////////////////////////
+    // OS-Dependant installation process
+    ////////////////////////////////////
+    
+    // Prepare feedback pointers
+    FiniteTaskPtr installerPf;
+    if (pf) {
+        installerPf = pf->begin<FiniteTask>("Installing hypervisor");
+    }
+
+    // Start installer with retries
     string errorMsg;
     for (int tries=0; tries<retries; tries++) {
         #if defined(__APPLE__) && defined(__MACH__)
+            if (installerPf) installerPf->setMax(3, false);
 
     		CVMWA_LOG( "Info", "Attaching" << tmpHypervisorInstall );
-    		if (cbProgress) (cbProgress)(94, maxSteps, "Mounting hypervisor DMG disk");
+            if (installerPf) installerPf->doing("Mouting hypervisor DMG disk");
     		res = sysExec("/usr/bin/hdiutil", "attach " + tmpHypervisorInstall, &lines, &errorMsg);
     		if (res != 0) {
                 if (tries<retries) {
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
-            		if (cbProgress) (cbProgress)(94, maxSteps, "Retrying installation");
+            		if (installerPf) installerPf->doing("Retrying installation");
                     sleepMs(1000);
                     continue;
                 }
+
+                // Cleanup
     			::remove( tmpHypervisorInstall.c_str() );
-    			return HVE_EXTERNAL_ERROR;
+
+                // Send progress fedback
+                if (pf) pf->fail("Unable to use hdiutil to mount DMG");
+
+                return HVE_EXTERNAL_ERROR;
     		}
+            if (installerPf) installerPf->done("Mounted DMG disk");
+
     		string infoLine = lines.back();
     		string dskDev, dskVolume, extra;
     		getKV( infoLine, &dskDev, &extra, ' ', 0);
     		getKV( extra, &extra, &dskVolume, ' ', dskDev.size()+1);
     		CVMWA_LOG( "Info", "Got disk '" << dskDev << "', volume: '" << dskVolume  );
     
-    		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
+    		if (installerPf) installerPf->doing("Starting installer");
     		CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
     		res = sysExec("/usr/bin/open", "-W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
     		if (res != 0) {
-    			CVMWA_LOG( "Info", "Detaching" );
+
+                CVMWA_LOG( "Info", "Detaching" );
+        		if (installerPf) installerPf->doing("Unmounting DMG");
     			res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
                 if (tries<retries) {
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
-            		if (cbProgress) (cbProgress)(94, maxSteps, "Retrying installation");
+            		if (installerPf) installerPf->doing("Restarting installer");
                     sleepMs(1000);
                     continue;
                 }
+
+                // Cleanup
     			::remove( tmpHypervisorInstall.c_str() );
-    			return HVE_EXTERNAL_ERROR;
+
+                // Send progress fedback
+                if (pf) pf->fail("Unable to launch hypervisor installer");
+
+                return HVE_EXTERNAL_ERROR;
     		}
+            if (installerPf) installerPf->done("Installed hypervisor");
+
     		CVMWA_LOG( "Info", "Detaching" );
-    		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+            if (installerPf) installerPf->doing("Cleaning-up");
     		res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
+            if (installerPf) {
+                installerPf->done("Cleaning-up completed");
+                installerPf->complete("Installed hypervisor"):
+            }
 
     	#elif defined(_WIN32)
+            if (installerPf) installerPf->setMax(1, false);
 
-    		/* Start installer */
-    		if (cbProgress) (cbProgress)(97, maxSteps, "Starting installer");
+    		// Start installer
+            if (installerPf) installerPf->doing("Starting installer");
     		CVMWA_LOG( "Info", "Starting installer" );
 
-    		/* CreateProcess does not work because we need elevated permissions,
-    		 * use the classic ShellExecute to run the installer... */
+    		// CreateProcess does not work because we need elevated permissions,
+    		// use the classic ShellExecute to run the installer...
     		SHELLEXECUTEINFOA shExecInfo = {0};
     		shExecInfo.cbSize = sizeof( SHELLEXECUTEINFO );
     		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -918,105 +1128,152 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     		shExecInfo.nShow = SW_SHOW;
     		shExecInfo.hInstApp = NULL;
 
-    		/* Validate handle */
+    		// Validate handle
     		if ( !ShellExecuteExA( &shExecInfo ) ) {
     			cout << "ERROR: Installation could not start! Error = " << res << endl;
                 if (tries<retries) {
-            		if (cbProgress) (cbProgress)(97, maxSteps, "Retrying installation");
+                    if (installerPf) installerPf->doing("Restarting installer");
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                     sleepMs(1000);
                     continue;
                 }
+
+                // Cleanup
     			::remove( tmpHypervisorInstall.c_str() );
-    			return HVE_EXTERNAL_ERROR;
+
+                // Send progress fedback
+                if (pf) pf->fail("Unable to launch hypervisor installer");
+
+                return HVE_EXTERNAL_ERROR;
     		}
 
-            /* Validate hProcess */
+            // Validate hProcess
             if (shExecInfo.hProcess == 0) {
     			cout << "ERROR: Installation could not start! Error = " << res << endl;
                 if (tries<retries) {
-            		if (cbProgress) (cbProgress)(97, maxSteps, "Retrying installation");
+                    if (installerPf) installerPf->doing("Restarting installer");
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                     sleepMs(1000);
                     continue;
                 }
+
+                // Cleanup
     			::remove( tmpHypervisorInstall.c_str() );
-    			return HVE_EXTERNAL_ERROR;
+
+                // Send progress fedback
+                if (pf) pf->fail("Unable to launch hypervisor installer");
+
+                return HVE_EXTERNAL_ERROR;
             }
 
-    		/* Wait for termination */
+    		// Wait for termination
     		WaitForSingleObject( shExecInfo.hProcess, INFINITE );
+            if (installerPf) installerPf->done("Installer completed");
 
-    		/* Cleanup */
-    		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+    		// Complete
+            if (installerPf) installerPf->complete("Installed hypervisor");
 
     	#elif defined(__linux__)
+            if (installerPf) installerPf->setMax(4, false);
 
-            /* Check if our environment has what the installer needs */
-    		if (cbProgress) (cbProgress)(92, maxSteps, "Validating OS environment");
+            // Check if our environment has what the installer needs
+            if (installerPf) installerPf->doing("Probing environment");
             if ((installerType != PMAN_NONE) && (installerType != linuxInfo.osPackageManager )) {
                 cout << "ERROR: OS does not have the required package manager (type=" << installerType << ")" << endl;
                 if (tries<retries) {
-            		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                    if (installerPf) installerPf->doing("Re-probing environment");
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                     sleepMs(1000);
                     continue;
                 }
+
+                // Cleanup
     			::remove( tmpHypervisorInstall.c_str() );
+
+                // Send progress fedback
+                if (pf) pf->fail("Unable to probe the environment");
+
                 return HVE_NOT_FOUND;
             }
+            if (installerPf) installerPf->done("Probed environment");
 
-            /* (1) If we have xdg-open, use it to prompt the user using the system's default GUI */
-    		if (cbProgress) (cbProgress)(94, maxSteps, "Installing hypervisor");
+            // (1) If we have xdg-open, use it to prompt the user using the system's default GUI
+            // ----------------------------------------------------------------------------------
             if (linuxInfo.hasXDGOpen) {
+
+                if (installerPf) installerPf->doing("Starting hypervisor installer");
                 string cmdline = "/usr/bin/xdg-open \"" + tmpHypervisorInstall + "\"";
                 res = system( cmdline.c_str() );
         		if (res < 0) {
         			cout << "ERROR: Could not start. Return code: " << res << endl;
                     if (tries<retries) {
-                		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                        if (installerPf) installerPf->doing("Re-starting hypervisor installer");
                         CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                        if (installerPf) installerPf->doing("Re-starting hypervisor installer");
                         sleepMs(1000);
                         continue;
                     }
-        			::remove( tmpHypervisorInstall.c_str() );
+
+                    // Cleanup
+    			    ::remove( tmpHypervisorInstall.c_str() );
+
+                    // Send progress fedback
+                    if (pf) pf->fail("Unable to start the hypervisor installer");
+
         			return HVE_EXTERNAL_ERROR;
         		}
+                if (installerPf) installerPf->done("Installer started");
             
-                /* At some point the process that xdg-open launches is
-                 * going to open the file in order to read it's contnets. 
-                 * Wait for 10 sec for it to happen */
-        		if (cbProgress) (cbProgress)(95, maxSteps, "Waiting for the installation to begin");
+                // At some point the process that xdg-open launches is
+                // going to open the file in order to read it's contnets. 
+                // Wait for 10 sec for it to happen
+                if (installerPf) installerPf->doing("Waiting for the installation to begin");
                 if (!waitFileOpen( tmpHypervisorInstall, true, 60000 )) { // 1 min until it's captured
         			cout << "ERROR: Could not wait for file handler capture: " << res << endl;
                     if (tries<retries) {
-                		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                        if (installerPf) installerPf->doing("Waiting again for the installation to begin");
                         CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                         sleepMs(1000);
                         continue;
                     }
-        			::remove( tmpHypervisorInstall.c_str() );
-        			return HVE_STILL_WORKING;
-                }
 
-                /* Wait for it to be released */
-        		if (cbProgress) (cbProgress)(96, maxSteps, "Waiting for the installation to complete");
-                if (!waitFileOpen( tmpHypervisorInstall, false, 900000 )) { // 15 mins until it's released
-                if (tries<retries) {
-            		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
-                    CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
-                    sleepMs(1000);
-                    continue;
+                    // Cleanup
+    			    ::remove( tmpHypervisorInstall.c_str() );
+
+                    // Send progress fedback
+                    if (pf) pf->fail("Unable to check the status of the installation");
+                    
+                    return HVE_STILL_WORKING;
                 }
-        			cout << "ERROR: Could not wait for file handler release: " << res << endl;
+                if (installerPf) installerPf->done("Installation started");
+
+                // Wait for it to be released
+                if (installerPf) installerPf->doing("Waiting for the installation to complete");
+                if (!waitFileOpen( tmpHypervisorInstall, false, 900000 )) { // 15 mins until it's released
+                    if (tries<retries) {
+                        if (installerPf) installerPf->doing("Waiting again for the installation to complete");
+                        CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
+                        sleepMs(1000);
+                        continue;
+                    }
+
                     // We can't remove the file, it's in use :(
+                    CVMWA_LOG("Error", "ERROR: Could not wait for file handler release: " << res );
+
+                    // Send progress fedback
+                    if (pf) pf->fail("Unable to check the status of the installation");
+
         			return HVE_STILL_WORKING;
                 }
 
                 // Done
-         		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+                if (installerPf) installerPf->done("Installation completed");
         
-            /* (2) If we have GKSudo, do directly dpkg/yum install */
+    		    // Complete
+                if (installerPf) installerPf->complete("Installed hypervisor");
+
+            // (2) If we have GKSudo, do directly dpkg/yum install
+            // ------------------------------------------------------
             } else if (linuxInfo.hasGKSudo) {
                 string cmdline = "/bin/sh '" + tmpHypervisorInstall + "'";
                 if ( installerType == PMAN_YUM ) {
@@ -1024,24 +1281,32 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
                 } else if ( installerType == PMAN_DPKG ) {
                     cmdline = "/usr/bin/dpkg -i '" + tmpHypervisorInstall + "'";
                 }
-            
-                /* Use GKSudo to invoke the cmdline */
+
+                // Use GKSudo to invoke the cmdline
+                if (installerPf) installerPf->doing("Starting installer");
         		cmdline = "/usr/bin/gksudo \"" + cmdline + "\"";
         		res = system( cmdline.c_str() );
         		if (res < 0) {
         			cout << "ERROR: Could not start. Return code: " << res << endl;
                     if (tries<retries) {
-                		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                        if (installerPf) installerPf->doing("Re-starting installer");
                         CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                         sleepMs(1000);
                         continue;
                     }
-        			::remove( tmpHypervisorInstall.c_str() );
-        			return HVE_EXTERNAL_ERROR;
-        		}
 
-                /* Cleanup */
-        		if (cbProgress) (cbProgress)(100, maxSteps, "Cleaning-up");
+                    // Cleanup
+    			    ::remove( tmpHypervisorInstall.c_str() );
+
+                    // Send progress fedback
+                    if (pf) pf->fail("Unable to start the hypervisor installer");
+
+                    return HVE_EXTERNAL_ERROR;
+        		}
+                if (installerPf) installerPf->done("Installer completed");
+
+    		    // Complete
+                if (installerPf) installerPf->complete("Installed hypervisor");
     	
             /* (3) Otherwise create a bash script and prompt the user */
             } else {
@@ -1053,23 +1318,23 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
         
         #endif
     
-        /**
-         * Give 5 seconds as a cool-down delay
-         */
+        // Give 5 seconds as a cool-down delay
         sleepMs(5000);
 
-        /**
-         * Check if it was successful
-         */
+        // Check if it was successful
         hv = detectHypervisor();
         if (hv == NULL) {
             CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
             if (tries<retries) {
-        		if (cbProgress) (cbProgress)(92, maxSteps, "Retrying installation");
+                if (installerPf) installerPf->restart("Re-trying hypervisor installation");
                 CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                 sleepMs(1000);
                 continue;
             }
+
+            // Send progress fedback
+            if (pf) pf->fail("Hypervisor installation seems not feasible");
+
             return HVE_NOT_VALIDATED;
         } else {
 
@@ -1098,14 +1363,11 @@ int installHypervisor( string versionID, callbackProgress cbProgress, DownloadPr
     }
     */
 
-    /**
-     * Release hypervisor
-     */
+    // Release hypervisor
     freeHypervisor(hv);
 
-    /**
-     * Completed
-     */
+    // Completed
+    if (pf) pf->complete("Hypervisor installed successfully");
     return HVE_OK;
     
     CRASH_REPORT_END;

@@ -147,6 +147,11 @@ public:
     void						fromMap			( std::map< std::string, std::string> * map, bool clearBefore = false );
 
     /**
+     * Update all the parameters from the specified parameter map
+     */
+    void						fromParameters	( const ParameterMapPtr& ptr, bool clearBefore = false );
+
+    /**
      * Store all the parameters to the specified map
      */
     void						toMap			( std::map< std::string, std::string> * map, bool clearBefore = false );

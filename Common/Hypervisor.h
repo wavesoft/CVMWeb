@@ -23,9 +23,11 @@
 #define HVENV_H
 
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/regex.hpp> 
 
 #include "CVMGlobals.h"
 
+#include "ProgressFeedback.h"
 #include "DownloadProvider.h"
 #include "Utilities.h"
 #include "CrashReport.h"
@@ -267,6 +269,42 @@ typedef struct {
 } HVINFO_CAPS;
 
 /**
+ * Version info
+ */
+class HypervisorVersion {
+
+    /**
+     * The revision information
+     */
+    int                     major;
+    int                     minor;
+    int                     build;
+    int                     revision;
+    std::string             misc;
+
+    /**
+     * The version string as extracted from input
+     */
+    std::string             verString;
+
+    /**
+     * Construct from string and automatically populate all the fields
+     */
+    HypervisorVersion       ( const std::string& verString );
+
+    /**
+     * Compare to the given revision
+     */
+    int                     compare( const HypervisorVersion& version );
+
+    /**
+     * Compare to the given string
+     */
+    int                     compareVersion( const std::string& version );
+
+};
+
+/**
  * Overloadable base hypervisor class
  */
 class Hypervisor {
@@ -289,25 +327,26 @@ public:
         HVSessionPtr >      sessions;
     HVSessionPtr            sessionByGUID       ( const std::string& uuid );
     HVSessionPtr            sessionByName       ( const std::string& name );
-    HVSessionPtr            sessionOpen         ( const std::string& name, const std::string& key );
-    int                     sessionValidate     ( const std::string& name, const std::string& key );
-    virtual HVSessionPtr    sessionAllocate     ( ) = 0;
+    HVSessionPtr            sessionOpen         ( const ParameterMapPtr& parameters );
+    int                     sessionValidate     ( const ParameterMapPtr& parameters );
 
     /* Overridable functions */
     virtual int             loadSessions        ( ) = 0;
+    virtual HVSessionPtr    allocateSession     ( ) = 0;
+
     virtual int             getCapabilities     ( HVINFO_CAPS * caps ) = 0;
-    virtual bool            waitTillReady       ( std::string pluginVersion, callbackProgress progress = 0, int progressMin = 0, int progressMax = 100, int progressTotal = 100 );
+    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
     virtual int             getUsage            ( HVINFO_RES * usage);
     
     /* Tool functions (used internally or from session objects) */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT );
-    void                    detectVersion       ( );
-    int                     cernVMDownload      ( std::string version, std::string * filename, ProgressFeedback * feedback, std::string flavor = DEFAULT_CERNVM_FLAVOR, std::string arch = DEFAULT_CERNVM_ARCH );
+    int                     cernVMDownload      ( std::string version, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), std::string flavor = DEFAULT_CERNVM_FLAVOR, std::string arch = DEFAULT_CERNVM_ARCH );
+    int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr() );
     int                     cernVMCached        ( std::string version, std::string * filename );
     std::string             cernVMVersion       ( std::string filename );
-    int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, ProgressFeedback * fb );
     int                     buildContextISO     ( std::string userData, std::string * filename );
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
+    void                    detectVersion       ( );
     
     /* Control functions (called externally) */
     int                     checkDaemonNeed ();
@@ -328,7 +367,7 @@ protected:
  */
 Hypervisor *                    detectHypervisor    ( );
 void                            freeHypervisor      ( Hypervisor * );
-int                             installHypervisor   ( std::string clientVersion, callbackProgress progress, DownloadProviderPtr downloadProvider, int retries = 4 );
+int                             installHypervisor   ( std::string clientVersion, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 4 );
 std::string                     hypervisorErrorStr  ( int error );
 
 

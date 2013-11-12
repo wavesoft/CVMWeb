@@ -35,8 +35,8 @@ void CVMBrowserProvider::httpDataArrived ( const void * ptr, size_t length ) {
 void CVMBrowserProvider::httpProgress ( size_t current, size_t total ) {
     CRASH_REPORT_BEGIN;
     this->maxStreamSize = total;
-    if (this->feedbackPtr != NULL)
-        DownloadProvider::fireProgressEvent( this->feedbackPtr, current, total);
+    if (this->pf)
+        DownloadProvider::fireProgressEvent( this->pf, current, total);
            
     CRASH_REPORT_END;
 }
@@ -56,16 +56,15 @@ void CVMBrowserProvider::httpCompleted ( bool status, const FB::HeaderMap& heade
 /**
  * Download a string using BrowserStreams
  */
-int CVMBrowserProvider::downloadText( const std::string& url, std::string * destination, ProgressFeedback * feedback ) {
+int CVMBrowserProvider::downloadText( const std::string& url, std::string * destination, const VariableTaskPtr& pf ) {
     CRASH_REPORT_BEGIN;
     
     // Store a local pointer
-    this->feedbackPtr = feedback;
+    this->pf = pf;
     this->maxStreamSize = 0;
     
-    // Reset timestamp on feedback
-    if (feedback != NULL)
-        feedback->__lastEventTime = getMillis();
+    // Reset timestamp
+    if (pf) pf->__lastEventTime = getMillis();
         
     // Reset string stream
     CVMWA_LOG("Debug", "Resetting string stream");
@@ -112,8 +111,8 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
     *destination = sStream.str();
     sStream.str("");
 
-    // Release feedback
-    this->feedbackPtr = NULL;
+    // Notify completion
+    if (pf) pf->complete("Download completed");
 
     CVMWA_LOG("Info", "BrowserStreams download completed" );
     return HVE_OK;
@@ -125,16 +124,15 @@ int CVMBrowserProvider::downloadText( const std::string& url, std::string * dest
 /**
  * Download a file using BrowserStreams
  */
-int CVMBrowserProvider::downloadFile( const std::string& url, const std::string& destination, ProgressFeedback * feedback ) {
+int CVMBrowserProvider::downloadFile( const std::string& url, const std::string& destination, const VariableTaskPtr& pf ) {
     CRASH_REPORT_BEGIN;
     
     // Store a local pointer
-    this->feedbackPtr = feedback;
+    this->pf = pf;
     this->maxStreamSize = 0;
 
-    // Reset timestamp on feedback
-    if (feedback != NULL)
-        feedback->__lastEventTime = getMillis();
+    // Reset timestamp
+    if (pf) pf->__lastEventTime = getMillis();
 
     // Open local file
     CVMWA_LOG("Debug", "Oppening local output stream '" << destination << "'");
@@ -174,9 +172,9 @@ int CVMBrowserProvider::downloadFile( const std::string& url, const std::string&
 
     }
 
-    // Release feedback
-    this->feedbackPtr = NULL;
-    
+    // Notify completion
+    if (pf) pf->complete("Download completed");
+
     // Close stream
     fStream.close();
     return HVE_OK;

@@ -45,7 +45,7 @@ typedef boost::shared_ptr< BooleanTask >       		BooleanTaskPtr;
 /* Callback functions reference */
 typedef boost::function<void ( const std::string& message )>    						cbStarted;
 typedef boost::function<void ( const std::string& message )>    						cbCompleted;
-typedef boost::function<void ( const std::string& message, const int errorCode )> 		cbError;
+typedef boost::function<void ( const std::string& message, const int errorCode )> 		cbFailure;
 typedef boost::function<void ( const std::string& message, const double progress )> 	cbProgress;
 
 /**
@@ -59,7 +59,7 @@ public:
 	//////////////////////
 	ProgressTask() 
 		: started(false), completed(false), startedCallbacks(), parent(), lastMessage(""),
-		  completedCallbacks(), errorCallbacks(), progressCallbacks() { };
+		  completedCallbacks(), failedCallbacks(), progressCallbacks(), __lastEventTime(0) { };
 
 
 	//////////////////////
@@ -81,7 +81,7 @@ public:
 	/**
 	 * Register a callback that will be fired when an error has occured.
 	 */
-	void 				onError			( const cbError & cb );
+	void 				onFailure		( const cbFailure & cb );
 
 	/**
 	 * Register a callback event that will be fired when a progress
@@ -95,9 +95,19 @@ public:
 	void 				complete 		( const std::string& message = "" );
 
 	/**
+	 * Mark the task as failed, overriding any active progress
+	 */
+	void 				fail 			( const std::string& message = "", const int errorCode = -1 );
+
+	/**
 	 * Fire a progress update without any change, just change message
 	 */
 	void				doing			( const std::string& message );
+
+    /**
+     * Used for throttling
+     */
+    unsigned long                       __lastEventTime;
 
 	//////////////////////////
 	// Overridable callbacks
@@ -113,6 +123,12 @@ public:
 	 */
 	virtual bool 		isCompleted		( ) = 0;
 
+    /**
+     * Reset state and restart
+     */
+    virtual void        restart         ( const std::string& message, bool triggerUpdate = true ) = 0;
+
+
     //////////////////////
 	// State variables
 	//////////////////////
@@ -122,6 +138,12 @@ public:
      */
     ProgressTaskPtr 					parent;
 
+    /**
+     * The default progress message to use when the user has not
+     * specified a string in the progress update functions.
+     */
+    std::string 						lastMessage;
+
 protected:
 
 	//////////////////////
@@ -129,7 +151,6 @@ protected:
 	//////////////////////
 	bool				 				started;
 	bool 								completed;
-	std::string 						lastMessage;
 
 	//////////////////////
 	// Event registry
@@ -137,7 +158,7 @@ protected:
 
 	std::vector< cbStarted >			startedCallbacks;
 	std::vector< cbCompleted >			completedCallbacks;
-	std::vector< cbError >				errorCallbacks;
+	std::vector< cbFailure >			failedCallbacks;
 	std::vector< cbProgress >			progressCallbacks;
 
 	//////////////////////
@@ -159,10 +180,10 @@ protected:
 	 */
 	void 				_notifyCompleted( const std::string& message );
 
-    /**
-     * [Internal] Propagate an error event to the callbacks and parent
-     */
-    void                _forwardError( const std::string& message, const int errorCode );
+	/**
+	 * [Internal] Callback to let listeners know that we have failed
+	 */
+	void 				_notifyFailed( const std::string& message, const int errorCode );
 
     /**
      * [Internal] Propagate a progress event to the callbacks and parent
@@ -187,12 +208,22 @@ public:
 	/**
 	 * Define the maximum number of tasks
 	 */
-	void 						setMax ( size_t maxTasks );
+	void 						setMax ( size_t maxTasks, bool triggerUpdate = true );
 
 	/**
 	 * Mark one of the sub-tasks as completed
 	 */
 	void 						done( const std::string& message );
+
+    /**
+     * Reset state and restart
+     */
+    virtual void                restart( const std::string& message, bool triggerUpdate = true );
+
+	/**
+	 * Rollback an action that was previsusly 'done'
+	 */
+	void 						rollback( const std::string& reason );
 
 	/**
 	 * Create a sub-task
@@ -259,12 +290,17 @@ public:
 	/**
 	 * Set maximum value
 	 */
-	void 				setMax			( size_t maxValue );
+	void 				setMax			( size_t maxValue, bool triggerUpdate = false );
 
 	/**
 	 * Update value
 	 */
 	void 				update 			( size_t value );
+
+    /**
+     * Reset state and restart
+     */
+    virtual void        restart         ( const std::string& message, bool triggerUpdate = true );
 
 protected:
 
@@ -302,10 +338,10 @@ public:
 
 	BooleanTask() : ProgressTask() { };
 
-	/**
-	 * Reset to non-completed state
-	 */
-	void 				reset 			( );
+    /**
+     * Reset state and restart
+     */
+    virtual void        restart         ( const std::string& message, bool triggerUpdate = true );
 
 protected:
 

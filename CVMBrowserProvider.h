@@ -27,6 +27,7 @@
 #include "BrowserStreamRequest.h"
 #include "DefaultBrowserStreamHandler.h"
 
+#include "Common/ProgressFeedback.h"
 #include "Common/Hypervisor.h"
 #include "Common/DownloadProvider.h"
 #include "Common/Utilities.h"
@@ -42,7 +43,7 @@ public:
      * Constructor
      */
     CVMBrowserProvider( const FB::BrowserHostPtr& host ) : 
-        DownloadProvider(), m_host(host), feedbackPtr()
+        DownloadProvider(), m_host(host), pf()
     {
         CVMWA_LOG("Debug", "Initializing browser provider");
     };
@@ -65,8 +66,8 @@ public:
     /**
      * DownloadProvider Implementation
      */
-    virtual int downloadFile        ( const std::string &URL, const std::string &destination, ProgressFeedback * feedback = NULL  ) ;
-    virtual int downloadText        ( const std::string &URL, std::string *buffer, ProgressFeedback * feedback = NULL );
+    virtual int downloadFile        ( const std::string &URL, const std::string &destination, const VariableTaskPtr& pf = VariableTaskPtr()  ) ;
+    virtual int downloadText        ( const std::string &URL, std::string *buffer, const VariableTaskPtr& pf = VariableTaskPtr() );
 
 private:
     
@@ -83,7 +84,7 @@ private:
     /**
      * Progress feedback information
      */
-    ProgressFeedback                * feedbackPtr;
+    VariableTaskPtr                 pf;
     long                            maxStreamSize;
     std::ofstream                   fStream;
     std::ostringstream              sStream;

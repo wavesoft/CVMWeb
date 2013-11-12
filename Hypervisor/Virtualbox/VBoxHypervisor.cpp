@@ -26,6 +26,8 @@
 #include <map>
 #include <algorithm>
 
+#include "global/config.h"
+
 #include "VBoxHypervisor.h"
 #include "Common/Hypervisor.h"
 #include "Common/Utilities.h"
@@ -182,7 +184,7 @@ map<string, string> VBoxHypervisor::getAllProperties( string uuid ) {
 /**
  * Load sessions if they are not yet loaded
  */
-bool VBoxHypervisor::waitTillReady( std::string pluginVersion, callbackProgress cbProgress, int progressMin , int progressMax, int progressTotal ) {
+bool VBoxHypervisor::waitTillReady( const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
     
     /**
@@ -199,9 +201,9 @@ bool VBoxHypervisor::waitTillReady( std::string pluginVersion, callbackProgress 
      */
     if (!this->hasExtPack()) {
         this->installExtPack(
-            pluginVersion,
+            FBSTRING_PLUGIN_VERSION,
             this->downloadProvider,
-            cbProgress, progressMin, progressMax, progressTotal
+            pf
             );
     }
 
@@ -243,7 +245,7 @@ std::string VBoxHypervisor::getProperty( std::string uuid, std::string name ) {
 /**
  * Return Virtualbox sessions instead of classic
  */
-HVSessionPtr VBoxHypervisor::sessionAllocate() {
+HVSessionPtr VBoxHypervisor::allocateSession() {
     CRASH_REPORT_BEGIN;
     
     // Allocate a new GUID for this session
@@ -743,7 +745,7 @@ int VBoxHypervisor::loadSessions() {
         if (!secret.empty()) {
             
             /* Create a populate session object */
-            HVSessionPtr session = this->sessionAllocate();
+            HVSessionPtr session = this->allocateSession();
             session->parameters->set("vboxid", uuid);
 
             /* Update session info */
@@ -792,87 +794,101 @@ bool VBoxHypervisor::hasExtPack() {
  * on it's own.
  *
  */
-int VBoxHypervisor::installExtPack( string versionID, DownloadProviderPtr downloadProvider, callbackProgress cbProgress, int progressMin, int progressMax, int progressTotal ) {
+int VBoxHypervisor::installExtPack( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
-
-    /* Notify extension pack installation */
-    int currProgress = progressMin;
-    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Downloading extension pack configuration");
-    
-    /* Contact the information point */
     string requestBuf;
     string checksum;
     string err;
-    CVMWA_LOG( "Info", "Fetching data" );
-    int res = downloadProvider->downloadText( "http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf );
-    if ( res != HVE_OK ) return res;
+
+    // Notify extension pack installation
+    if (pf) {
+        pf->setMax(3, false);
+        pf->doing("Installing extension pack");
+    }
+
+    // Begin a download task
+    VariableTaskPtr downloadPf;
+    if (pf) downloadPf = pf->begin<VariableTask>("Downloading hypervisor configuration");
     
-    /* Extract information */
+    /* Contact the information point */
+    CVMWA_LOG( "Info", "Fetching data" );
+    int res = downloadProvider->downloadText( "http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf, downloadPf );
+    if ( res != HVE_OK ) {
+        if (pf) pf->fail("Unable to fetch hypervisor configuration", res);
+        return res;
+    }
+    
+    // Extract information
     vector<string> lines;
     splitLines( requestBuf, &lines );
     map<string, string> data = tokenize( &lines, '=' );
     
-    /* Get the version of Virtualbox currently installed */
+    // Get the version of Virtualbox currently installed
     size_t verPart = this->verString.find(" ");
     if (verPart == string::npos) verPart = this->verString.length();
     size_t revPart = this->verString.find("r");
     if (revPart == string::npos) revPart = verPart;
 
-    /* Build version string (it will be something like "vbox-2.4.12") */
+    // Build version string (it will be something like "vbox-2.4.12")
     string verstring = "vbox-" + this->verString.substr(0, revPart);
 
-    /* Prepare name constants to be looked up on the configuration url */
+    // Prepare name constants to be looked up on the configuration url
     string kExtpackUrl = verstring      + "-extpack";
     string kExtpackChecksum = verstring + "-extpackChecksum";
     string kExtpackExt = ".vbox-extpack";
 
-    /* Verify integrity of the data */
+    // Verify integrity of the data
     if (data.find( kExtpackUrl ) == data.end()) {
         CVMWA_LOG( "Error", "ERROR: No extensions package URL found" );
+        if (pf) pf->fail("No extensions package URL found", HVE_EXTERNAL_ERROR);
         return HVE_EXTERNAL_ERROR;
     }
     if (data.find( kExtpackChecksum ) == data.end()) {
         CVMWA_LOG( "Error", "ERROR: No extensions package checksum found" );
+        if (pf) pf->fail("No extensions package checksum found", HVE_EXTERNAL_ERROR);
         return HVE_EXTERNAL_ERROR;
     }
 
-    /* Divide progress in 5 steps */
-    int progressStep = (int)( ((float) progressMax - (float)progressMin) / 5.0f );
+    // Begin download
+    if (pf) downloadPf = pf->begin<VariableTask>("Downloading hypervisor configuration");
 
-    /* Update progres */
-    ProgressFeedback feedback;
-    feedback.total = progressTotal;
-    feedback.min = currProgress;
-    feedback.max = currProgress + 2*progressStep;
-    feedback.callback = cbProgress;
-    feedback.message = "Downloading extension pack";
-
-    /* Download extension pack */
+    // Download extension pack
     string tmpExtpackFile = getTmpDir() + "/" + getFilename( data[kExtpackUrl] );
-    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Downloading extension pack");
     CVMWA_LOG( "Info", "Downloading " << data[kExtpackUrl] << " to " << tmpExtpackFile  );
-    res = downloadProvider->downloadFile( data[kExtpackUrl], tmpExtpackFile, &feedback );
+    res = downloadProvider->downloadFile( data[kExtpackUrl], tmpExtpackFile, downloadPf );
     CVMWA_LOG( "Info", "    : Got " << res  );
-    if ( res != HVE_OK ) return res;
+    if ( res != HVE_OK ) {
+        if (pf) pf->fail("Unable to download extension pack", res);
+        return res;
+    }
     
-    /* Validate checksum */
-    currProgress += 3*progressStep;
-    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Validating extension integrity");
+    // Validate checksum
+    if (pf) pf->doing("Validating extension pack integrity");
     sha256_file( tmpExtpackFile, &checksum );
     CVMWA_LOG( "Info", "File checksum " << checksum << " <-> " << data[kExtpackChecksum]  );
-    if (checksum.compare( data[kExtpackChecksum] ) != 0) return HVE_NOT_VALIDATED;
+    if (checksum.compare( data[kExtpackChecksum] ) != 0) {
+        if (pf) pf->fail("Extension pack integrity was not validated", HVE_NOT_VALIDATED);
+        return HVE_NOT_VALIDATED;
+    }
+    if (pf) pf->done("Extension pack integrity validated");
 
-    /* Install extpack on virtualbox */
-    currProgress += progressStep;
-    if (cbProgress) (cbProgress)(currProgress, progressTotal, "Installing extension pack");
+    // Install extpack on virtualbox
+    if (pf) pf->doing("Installing extension pack");
     NAMED_MUTEX_LOCK("generic");
     res = this->exec("extpack install \"" + tmpExtpackFile + "\"", NULL, &err, 2);
     NAMED_MUTEX_UNLOCK;
-    if (res != HVE_OK) return HVE_EXTERNAL_ERROR;
+    if (res != HVE_OK) {
+        return HVE_EXTERNAL_ERROR;
+    }
+    if (pf) pf->done("Installed extension pack");
 
-    /* Cleanup */
-    if (cbProgress) (cbProgress)(progressMax, progressTotal, "Cleaning up extension");
+    // Cleanup
+    if (pf) pf->doing("Cleaning-up");
     remove( tmpExtpackFile.c_str() );
+    if (pf) pf->done("Cleaned-up");
+
+    // Complete
+    if (pf) pf->complete("Extension pack installed successfully");
     return HVE_OK;
 
     CRASH_REPORT_END;
