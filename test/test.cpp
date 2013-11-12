@@ -28,6 +28,13 @@ int main( int argc, char ** argv ) {
     //SessionState    state;
     LocalConfigPtr      config = LocalConfig::forRuntime("session-509a8252-add2-4c2e-a4d1-a00fbbd8e5e5");
     VBoxSession         fsm(config);
+
+    vectorDump(config->enumKeys());
+    cout << "----" << endl;
+    vectorDump(fsm.userData->enumKeys());
+    fsm.userData->clear();
+    cout << "Username: " << fsm.userData->get("Name", "(Undefined)") << endl;
+    fsm.userData->set("Name", "john");
     config->save();
 
     // Run
@@ -36,12 +43,12 @@ int main( int argc, char ** argv ) {
 
     fsm.FSMThreadStart();
 
-    Sleep(4000);
+    boost::this_thread::sleep(boost::posix_time::milliseconds(4000));
 
     // Destroy
     cout << "* DESTROY!" << endl;
     fsm.FSMGoto(3);
-    Sleep(7000);
+    boost::this_thread::sleep(boost::posix_time::milliseconds(7000));
 
     fsm.FSMThreadStop();
 

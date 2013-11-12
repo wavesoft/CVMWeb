@@ -112,7 +112,7 @@ void  ParameterMap::clear( ) {
 
     // Delete keys
     for (std::vector<std::string>::iterator it = myKeys.begin(); it != myKeys.end(); ++it) {
-        parameters->erase( *it );
+        parameters->erase( prefix + *it );
     }
 
     CRASH_REPORT_END;

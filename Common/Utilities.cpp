@@ -1402,6 +1402,17 @@ void mapDump(map<string, string> m) {
 };
 
 /**
+ * Dump a vector structure
+ */
+void vectorDump ( std::vector< std::string > v ) {
+    CRASH_REPORT_BEGIN;
+    for (std::vector<string>::iterator it=v.begin(); it!=v.end(); ++it) {
+        cout << "- " << *it << "\n";
+    }
+    CRASH_REPORT_END;
+}
+
+/**
  * Hex dump of the given buffer
  */
 void hexDump (const char *desc, void *addr, int len) {

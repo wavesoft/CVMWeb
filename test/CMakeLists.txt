@@ -76,13 +76,22 @@ elseif(APPLE)
 		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
 		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
 		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/* )
+
+	# Check if the user is using Make instead of XCodeBuild
+	IF("${BOOST_LIBRARIES}" STREQUAL "")
+		file ( GLOB BOOST_LIBRARIES 
+			${FB_BOOST_LIB_DIR}/thread/*.a
+			${FB_BOOST_LIB_DIR}/system/*.a
+			${FB_BOOST_LIB_DIR}/filesystem/*.a )
+	ENDIF()
+
 elseif(UNIX)
 	file ( GLOB BOOST_LIBRARIES 
 		${FB_BOOST_LIB_DIR}/thread/*.a
 		${FB_BOOST_LIB_DIR}/system/*.a
 		${FB_BOOST_LIB_DIR}/filesystem/*.a )
 ENDIF(WIN32)
-IF("${FB_BOOST_LIB_DIR}" STREQUAL "")
+IF("${BOOST_LIBRARIES}" STREQUAL "")
 	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 ENDIF()
 

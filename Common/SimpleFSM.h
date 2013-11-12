@@ -111,7 +111,7 @@ protected:
 	void 							FSMThreadLoop();
 
 	// Private variables
-    std::map<int,std::vector<int>>  fsmTmpRouteLinks;
+    std::map<int,std::vector<int> > fsmTmpRouteLinks;
 	std::map<int,FSMNode>	        fsmNodes;
 	FSMNode	*						fsmRootNode;
 	FSMNode *						fsmCurrentNode;

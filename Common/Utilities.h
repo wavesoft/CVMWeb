@@ -275,11 +275,6 @@ int                                                 splitArguments  ( std::strin
 bool                                                isPortOpen      ( const char * host, int port, unsigned char handshake = HSK_NONE );
 
 /**
- * Visualize the dump of a string:string hash map
- */
-void                                                mapDump         ( std::map< std::string, std::string> m );
-
-/**
  * Display a hexdump of the given buffer
  */
 void                                                hexDump         (const char *desc, void *addr, int len);
@@ -322,6 +317,16 @@ std::string                                         compactID       ( std::strin
  * Release memory from the named mutexes already acquired by the named mutex locks
  */
 void                                                flushNamedMutexes ();
+
+/**
+ * Visualize the dump of a string:string hash map
+ */
+void                                                mapDump         ( std::map< std::string, std::string> m );
+
+/**
+ * Visualize the dump of a string:vector
+ */
+void                                                vectorDump      ( std::vector< std::string > v );
 
 
 /* ======================================================== */
