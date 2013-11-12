@@ -27,6 +27,7 @@
 #include <vector>
 #include <cmath>
 
+#include <boost/regex.hpp>
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 
@@ -77,29 +78,30 @@ HypervisorVersion::HypervisorVersion( const std::string& verString ) {
     // Try to match the expression
     boost::smatch matches;
     if (boost::regex_match(verString, matches, reVersionParse, boost::match_extra)) {
-        if (matches.size() > 1) {
 
-            // Get the entire matched string
-            string stringMatch(matches[1].first, matches[1].second);
-            this->verString = stringMatch;
+        // Get the entire matched string
+        string stringMatch(matches[0].first, matches[0].second);
+        this->verString = stringMatch;
 
-            // 
+        // Get major/minor
+        string strMajor(matches[1].first, matches[1].second);
+        this->major = ston<int>( strMajor );
+        string strMinor(matches[2].first, matches[2].second);
+        this->minor = ston<int>( strMinor );
 
-        }
+        // Get build
+        string strBuild(matches[3].first, matches[3].second);
+        this->build = ston<int>( strBuild );
 
-        // matches[0] contains the original string.  matches[n]
-        // contains a sub_match object for each matching
-        // subexpression
+        // Get revision
+        string strRevision(matches[4].first, matches[4].second);
+        this->revision = ston<int>( strRevision );
 
-         for (int i = 1; i < matches.size(); i++)
-         {
-            // sub_match::first and sub_match::second are iterators that
-            // refer to the first and one past the last chars of the
-            // matching subexpression
-            string match(matches[i].first, matches[i].second);
-            cout << "\tmatches[" << i << "] = " << match << endl;
-         }
-      }
+        // Get misc
+        string strMisc(matches[5].first, matches[5].second);
+        this->misc = strMisc;
+
+    }
 }
 
 

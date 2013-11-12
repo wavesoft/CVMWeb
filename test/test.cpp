@@ -114,10 +114,20 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
 
 int main( int argc, char ** argv ) {
 
+    /*
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>( );    
 
     doProgress();
     doProgress(pTasks);
+    */
+
+    HypervisorVersion hvv("1.3.4r10031");
+    cout << "Major=" << hvv.major << endl;
+    cout << "Minor=" << hvv.minor << endl;
+    cout << "Build=" << hvv.build << endl;
+    cout << "Revision=" << hvv.revision << endl;
+    cout << "Misc=" << hvv.misc << endl;
+    cout << "All=" << hvv.verString << endl;
 
     /*
     std::vector< std::string > keys = LocalConfig::runtime()->enumFiles( "session-" );

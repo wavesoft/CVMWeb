@@ -272,6 +272,7 @@ typedef struct {
  * Version info
  */
 class HypervisorVersion {
+public:
 
     /**
      * The revision information
