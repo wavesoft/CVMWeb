@@ -129,6 +129,10 @@ int main( int argc, char ** argv ) {
     cout << "Misc=" << hvv.misc << endl;
     cout << "All=" << hvv.verString << endl;
 
+    cout << endl;
+
+    cout << "Comparison=" << hvv.compareStr("1.3.4r10030") << endl;
+
     /*
     std::vector< std::string > keys = LocalConfig::runtime()->enumFiles( "session-" );
 

@@ -301,7 +301,7 @@ public:
     /**
      * Compare to the given string
      */
-    int                     compareVersion( const std::string& version );
+    int                     compareStr( const std::string& version );
 
 };
 

@@ -66,6 +66,7 @@ boost::regex reVersionParse("(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?:[\\.\\-\\w](\\d+))?
  * Constructor of version class
  */
 HypervisorVersion::HypervisorVersion( const std::string& verString ) {
+    CRASH_REPORT_BEGIN;
 
     // Reset values
     this->major = 0;
@@ -102,8 +103,80 @@ HypervisorVersion::HypervisorVersion( const std::string& verString ) {
         this->misc = strMisc;
 
     }
+
+    CRASH_REPORT_END;
 }
 
+/**
+ * Compare to the given revision
+ */
+int HypervisorVersion::compare( const HypervisorVersion& version ) {
+    CRASH_REPORT_BEGIN;
+
+    if ( (version.minor == minor) && (version.major == major)) {
+        
+        // The rest the same?
+        if ((version.revision == revision) && (version.build == build)) {
+            return 0;
+        }
+
+        // Do first-level comparison on build numbers only if we have them both
+        // (Build wins over revision because 'build' refers to a built sofware, while 'revision' to
+        //  the repository version)
+        if ((version.build != 0) && (build != 0)) {
+            if (version.build > build) {
+                return 1;
+            } else if (version.build < build) {
+                return -1;
+            }
+        }
+
+        // Do second-level comparison on revision numbers only if we have them both
+        if ((version.revision != 0) && (revision != 0)) {
+            if (version.revision > revision) {
+                return 1;
+            } else if (version.revision < revision) {
+                return -1;
+            }
+        }
+
+        // Otherwise they are the same
+        return 0;
+
+    } else {
+
+        if (version.major == major) {
+            // Major same -> Bigger minor always wins
+            if (version.minor > minor) {
+                return 1;
+            } else {
+                return -1;
+            }
+        } else {
+            // Bigger major always wins
+            if (version.major > major) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+    }
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Compare to the given string
+ */
+int HypervisorVersion::compareStr( const std::string& version ) {
+    CRASH_REPORT_BEGIN;
+
+    // Create a version object and compare
+    HypervisorVersion compareVer(version);
+    return compare( compareVer );
+
+    CRASH_REPORT_END;
+}
 
 /////////////////////////////////////
 /////////////////////////////////////
