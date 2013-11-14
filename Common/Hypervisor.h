@@ -85,143 +85,6 @@
 class HVSession;
 typedef boost::shared_ptr< HVSession >                  HVSessionPtr;
 
-/**
- * A hypervisor session is actually a VM instance.
- * This is where the actual I/O happens
- */
-class HVSession : public boost::enable_shared_from_this<HVSession> {
-public:
-
-
-    /**
-     * Session constructor
-     * THIS IS A PRIVATE METHOD, YOU SHOULD CALL THE STATIC HVSession::alloc() or HVSession::resume( uuid ) functions!
-     *
-     * A required parameter is the parameter map of the session.
-     */
-    HVSession( ParameterMapPtr param ) : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
-
-        // Prepare configurable parameters
-        parameters->setDefault("cpus",                  "1");
-        parameters->setDefault("memory",                "512");
-        parameters->setDefault("disk",                  "1024");
-        parameters->setDefault("executionCap",          "100");
-        parameters->setDefault("apiPort",               BOOST_PP_STRINGIZE( DEFAULT_API_PORT ) );
-        parameters->setDefault("flags",                 "0");
-        parameters->setDefault("daemonControlled",      "0");
-        parameters->setDefault("daemonMinCap",          "0");
-        parameters->setDefault("daemonMaxCap",          "0");
-        parameters->setDefault("daemonFlags",           "0");
-
-        // Set default string parameters
-        parameters->setDefault("uuid",                  "");
-        parameters->setDefault("ip",                    "");
-        parameters->setDefault("key",                   "");
-        parameters->setDefault("name",                  "");
-        parameters->setDefault("diskURL",               "");
-        parameters->setDefault("diskChecksum",          "");
-        parameters->setDefault("cernvmVersion",         DEFAULT_CERNVM_VERSION);
-
-        // Set default userdata
-        userData = parameters->subgroup("user-data");
-        
-        // Local non-volatile parameters used for speed-up
-        this->uuid = parameters->get("uuid");
-
-        // Local volatile parameters
-        this->internalID = 0;
-
-        // Dynamic, discoverable parameters
-        this->editable = false;
-        this->state = 0;
-        this->pid = 0;
-        this->ip = "";
-
-
-        //this->cpus = 1;
-        //this->memory = 256;
-        //this->disk = 1024;
-        //this->executionCap = 100;
-        //this->uuid = "";
-        //this->key = "";
-        //this->name = "";
-        //this->apiPort = DEFAULT_API_PORT;
-        //this->flags = 0;
-        //this->userData = NULL;
-        //this->diskChecksum = "";
-        
-        //this->daemonControlled = false;
-        //this->daemonMinCap = 0;
-        //this->daemonMaxCap = 100;
-        //this->daemonFlags = 0;
-        
-        
-    };
-    
-    std::string             uuid;
-    std::string             ip;
-    std::string             key;
-    std::string             name;
-
-    /* Currently active user-data */
-    //std::map<std::string,
-    //    std::string> *      userData;
-
-    std::vector<std::string> overridableVars;
-    
-    //int                     cpus;
-    //int                     memory;
-    //int                     disk;
-    //int                     executionCap;
-    int                     state;
-    //int                     apiPort;
-    std::string             version;
-    std::string             diskChecksum;
-    
-    //int                     flags;
-    int                     pid;
-    bool                    editable;
-    
-    //bool                    daemonControlled;
-    //int                     daemonMinCap;
-    //int                     daemonMaxCap;
-    //int                     daemonFlags;
-
-    int                     internalID;
-
-    ParameterMapPtr         userData;
-    ParameterMapPtr         parameters;
-        
-    virtual int             pause();
-    virtual int             close( bool unmonitored = false );
-    virtual int             resume();
-    virtual int             reset();
-    virtual int             stop();
-    virtual int             hibernate();
-    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
-    virtual int             start( std::map<std::string,std::string> *userData );
-    virtual int             setExecutionCap(int cap);
-    virtual int             setProperty( std::string name, std::string key );
-    virtual std::string     getProperty( std::string name );
-    virtual std::string     getRDPHost();
-    virtual std::string     getAPIHost();
-    virtual int             getAPIPort();
-    virtual bool            isAPIAlive( unsigned char handshake = HSK_HTTP );
-
-    virtual std::string     getExtraInfo( int extraInfo );
-
-    virtual int             update();
-    virtual int             updateFast();
-
-    callbackDebug           onDebug;
-    callbackVoid            onOpen;
-    callbackVoid            onStart;
-    callbackVoid            onStop;
-    callbackVoid            onClose;
-    callbackError           onError;
-    callbackProgress        onProgress;
-
-};
 
 /**
  * Resource information structure
@@ -304,6 +167,113 @@ public:
     int                     compareStr( const std::string& version );
 
 };
+
+/**
+ * A hypervisor session is actually a VM instance.
+ * This is where the actual I/O happens
+ */
+class HVSession : public boost::enable_shared_from_this<HVSession> {
+public:
+
+
+    /**
+     * Session constructor
+     * THIS IS A PRIVATE METHOD, YOU SHOULD CALL THE STATIC HVSession::alloc() or HVSession::resume( uuid ) functions!
+     *
+     * A required parameter is the parameter map of the session.
+     */
+    HVSession( ParameterMapPtr param ) : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
+
+        // Prepare default parameter values
+        parameters->setDefault("cpus",                  "1");
+        parameters->setDefault("memory",                "512");
+        parameters->setDefault("disk",                  "1024");
+        parameters->setDefault("executionCap",          "100");
+        parameters->setDefault("apiPort",               BOOST_PP_STRINGIZE( DEFAULT_API_PORT ) );
+        parameters->setDefault("flags",                 "0");
+        parameters->setDefault("daemonControlled",      "0");
+        parameters->setDefault("daemonMinCap",          "0");
+        parameters->setDefault("daemonMaxCap",          "0");
+        parameters->setDefault("daemonFlags",           "0");
+        parameters->setDefault("uuid",                  "");
+        parameters->setDefault("ip",                    "");
+        parameters->setDefault("key",                   "");
+        parameters->setDefault("name",                  "");
+        parameters->setDefault("diskURL",               "");
+        parameters->setDefault("diskChecksum",          "");
+        parameters->setDefault("cernvmVersion",         DEFAULT_CERNVM_VERSION);
+
+        // Open UserData subgroup
+        userData = parameters->subgroup("user-data");
+        
+        // Indexing variable
+        this->uuid = parameters->get("uuid");
+        
+        
+    };
+    
+    std::string             uuid;
+
+    /* Currently active user-data */
+    //std::map<std::string,
+    //    std::string> *      userData;
+
+    std::vector<std::string> overridableVars;
+    
+    //int                     cpus;
+    //int                     memory;
+    //int                     disk;
+    //int                     executionCap;
+    int                     state;
+    //int                     apiPort;
+    std::string             version;
+    std::string             diskChecksum;
+    
+    //int                     flags;
+    int                     pid;
+    bool                    editable;
+    
+    //bool                    daemonControlled;
+    //int                     daemonMinCap;
+    //int                     daemonMaxCap;
+    //int                     daemonFlags;
+
+    int                     internalID;
+
+    ParameterMapPtr         userData;
+    ParameterMapPtr         parameters;
+        
+    virtual int             pause();
+    virtual int             close( bool unmonitored = false );
+    virtual int             resume();
+    virtual int             reset();
+    virtual int             stop();
+    virtual int             hibernate();
+    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
+    virtual int             start( std::map<std::string,std::string> *userData );
+    virtual int             setExecutionCap(int cap);
+    virtual int             setProperty( std::string name, std::string key );
+    virtual std::string     getProperty( std::string name );
+    virtual std::string     getRDPHost();
+    virtual std::string     getAPIHost();
+    virtual int             getAPIPort();
+    virtual bool            isAPIAlive( unsigned char handshake = HSK_HTTP );
+
+    virtual std::string     getExtraInfo( int extraInfo );
+
+    virtual int             update();
+    virtual int             updateFast();
+
+    callbackDebug           onDebug;
+    callbackVoid            onOpen;
+    callbackVoid            onStart;
+    callbackVoid            onStop;
+    callbackVoid            onClose;
+    callbackError           onError;
+    callbackProgress        onProgress;
+
+};
+
 
 /**
  * Overloadable base hypervisor class

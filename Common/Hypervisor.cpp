@@ -54,8 +54,7 @@ namespace fs = boost::filesystem;
 
 /**
  * Prepare regular expression for version parsing
- *
- * Identifies version strings in the following format:
+ * Parses version strings in the following format:
  *
  *  <major>.<minor>[.revision>][-other]
  *
@@ -215,7 +214,9 @@ std::string hypervisorErrorStr( int error ) {
  * Utility function to forward decompression event from another thread
  */
 void __notifyDecompressStart( const VariableTaskPtr & pf ) {
+    CRASH_REPORT_BEGIN;
     pf->doing("Extracting compressed disk");
+    CRASH_REPORT_END;
 }
 
 /**
