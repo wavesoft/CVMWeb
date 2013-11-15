@@ -227,6 +227,9 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
     std::string sChecksum;
     int res;
     
+    // Start pf
+    if (pf) pf->doing("Extracting disk");
+
     // Validate file integrity
     sha256_file( sGZOutput, &sChecksum );
     if (sChecksum.compare( checksum ) != 0) {
@@ -1181,7 +1184,7 @@ int installHypervisor( string versionID, DownloadProviderPtr downloadProvider, c
     		res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
             if (installerPf) {
                 installerPf->done("Cleaning-up completed");
-                installerPf->complete("Installed hypervisor"):
+                installerPf->complete("Installed hypervisor");
             }
 
     	#elif defined(_WIN32)

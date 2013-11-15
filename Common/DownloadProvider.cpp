@@ -209,11 +209,10 @@ int CURLProvider::downloadText( const std::string& url, std::string * destinatio
     if (pf) pf->__lastEventTime = getMillis();
     
     // Setup callbacks
-    //CURLProviderPtr sharedPtr = boost::dynamic_pointer_cast< CURLProvider >( shared_from_this() );
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, __curl_headerfunc);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, __curl_datacb_string);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, this); //sharedPtr.get() );
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, this); //sharedPtr.get() );
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
     
     // Reset string stream
     CVMWA_LOG("Debug", "Resetting string stream");
