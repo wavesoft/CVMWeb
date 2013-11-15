@@ -103,8 +103,8 @@ void SimpleFSM::FSMRegistryEnd( int rootID ) {
  * Complete FSM registry decleration and build FSM tree
  */
 bool SimpleFSM::FSMContinue() {
-	if (fsmInsideHandler) return;
-	if (fsmCurrentPath.empty()) return;
+	if (fsmInsideHandler) return false;
+	if (fsmCurrentPath.empty()) return false;
 	fsmInsideHandler = true;
 
 	// Get next action in the path
@@ -133,6 +133,7 @@ bool SimpleFSM::FSMContinue() {
 	// We are now outside the handler
 	fsmInsideHandler = false;
 
+    return true;
 }
 
 /**
