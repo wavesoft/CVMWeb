@@ -752,7 +752,7 @@ int VBoxHypervisor::loadSessions() {
             //updateSession( session, false );
 
             /* Register this session */
-            CVMWA_LOG( "Info", "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state  );
+            //CVMWA_LOG( "Info", "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state  );
             //this->registerSession(session);
 
         }

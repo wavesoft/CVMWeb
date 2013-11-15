@@ -88,13 +88,13 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
     // Do "diff"
     pProgressTask = pSubTasks->begin<VariableTask>( "Diffing stuff" );
     pProgressTask->setMessage("Diffing CernVM");
-    pProgressTask->setMax(10);
+    pProgressTask->setMax(11);
     srand (time(NULL));
     for (int i=0; i<10; i++) {
         pProgressTask->update(i);
         _wait(rand() % 100);
     }
-    pProgressTask->complete("Done diffing");
+    pProgressTask->fail("Done diffing");
 
     // Do last task
     pSubTasks->done("Doing my job");
@@ -114,13 +114,12 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
 
 int main( int argc, char ** argv ) {
 
-    /*
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>( );    
 
     doProgress();
     doProgress(pTasks);
-    */
 
+    /*
     HypervisorVersion hvv("1.3.4r10031");
     cout << "Major=" << hvv.major << endl;
     cout << "Minor=" << hvv.minor << endl;
@@ -132,6 +131,7 @@ int main( int argc, char ** argv ) {
     cout << endl;
 
     cout << "Comparison=" << hvv.compareStr("1.3.4r10030") << endl;
+    */
 
     /*
     std::vector< std::string > keys = LocalConfig::runtime()->enumFiles( "session-" );

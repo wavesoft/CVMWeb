@@ -83,8 +83,15 @@ void ProgressTask::fail ( const std::string& message, const int errorCode ) {
         }
 	}
 
-	// Notify update
+    // Mark us as completed
+    completed = true;
+
+	// Notify failure
 	_notifyFailed(msg, errorCode);
+
+    // Notify update
+    if (parent)
+        parent->_notifyUpdate(message);
 
 }
 
@@ -130,16 +137,10 @@ void ProgressTask::_notifyCompleted ( const std::string& message ) {
  */
 void ProgressTask::_notifyFailed( const std::string& message, const int errorCode ) {
 
-	// If we are alrady completed, do nothing
-	if (completed) return;
-
-	// Mark as completed
-	completed = true;
-
 	// Store the last message
 	lastMessage = message;
 
-	// Fire events
+    // Fire the failure event
 	for (std::vector< cbFailure >::iterator it = failedCallbacks.begin(); it != failedCallbacks.end(); ++it) {
 		cbFailure cb = *it;
 		cb( message, errorCode );
@@ -147,7 +148,7 @@ void ProgressTask::_notifyFailed( const std::string& message, const int errorCod
 
 	// Forward event to the parent elements
 	if (parent)
-		parent->_notifyUpdate( message );
+		parent->_notifyFailed( message, errorCode );
 
 }
 
