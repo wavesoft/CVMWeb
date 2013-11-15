@@ -310,7 +310,8 @@ function callError( userCallback, message, code ) {
         if ((lastError != undefined) && (lastError != ""))
             lastError = " ("+lastError+")";
     }
-    console.error("[CernVM Web API] Error #" + code + ": " + message + lastError);
+    if (!lastError) lastError="";
+    console.error("[CernVM Web API] Error #" + code + ": " + message + " " + lastError);
 
     // Handle user's callback first
     if (userCallback)
@@ -367,41 +368,6 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
     // status and trigger the appropriate user callbacks
     var cb_check = function() { 
         
-        // Singleton access to the plugin
-        if (__pluginSingleton == null) {
-
-            // Check if we already have an embed element
-            __pluginSingleton = document.getElementById('cvmweb-api');
-
-            // Nope, create new instance
-            if (!__pluginSingleton) {
-                __pluginSingleton = document.createElement('embed');
-
-                // Still problems?
-                if (__pluginSingleton == null) {
-                    callError( cbFail, "Your browser does not support the <embed /> tag!", -101 );
-                    return;
-                }
-
-                // Initialize
-                __pluginSingleton.type = "application/x-cvmweb";
-                __pluginSingleton.id = "cvmweb-api";
-                __pluginSingleton.style.width = "1px";
-                __pluginSingleton.style.height = "1px";
-                document.body.appendChild( __pluginSingleton );
-            }
-            
-            // Banner of the webAPI 
-            if (__pluginSingleton.version == undefined) {
-                console.log("CernVM WebAPI not installed");
-            } else if (__pluginSingleton.hypervisorVersion == "") {
-                console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with no hypervisor installed");
-            } else {
-                console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with " + __pluginSingleton.hypervisorName + " version " + __pluginSingleton.hypervisorVersion);
-            }
-
-        }
-        
         // Next steop of construction process, stored in a function as a reusable approach
         var continue_init = function() {
             // Request daemon access in order to be able to do status probing
@@ -414,6 +380,7 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
             );
         }
         
+        // Try to install a missing plugin
         var install_plugin = function() {
             
             // For chrome, we must add a link on head in advance
@@ -462,142 +429,238 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, setupEnvironment ) {
             );
             
         } 
-        
-        // Validate plugin status
-        if (__pluginSingleton.version == undefined) {
+
+        // Function to validate plug-in status and continue
+        var validate_plugin = function() {
             
-            // Check if we are told to take care of setting up the environment for the user
-            if (setupEnvironment) {
-            
-                // Canclling timeout
-                var cTimeout = 0;
-            
-                // Make sure it's not a VS Runtime error:
-                var s = document.createElement('script');
-                s.type = 'text/javascript';
-                if (BrowserDetect.browser == "Firefox") {
-                    s.href = "resource://cvmwebapi/detector.js";
-                } else if (BrowserDetect.browser == "Chrome") {
-                    s.href = "chrome-extension://nkboedinkpfjfdlaplmgjdiohgabopkn/files/detector.js";
-                }
+            // Banner of the webAPI 
+            if (__pluginSingleton.version == undefined) {
+                console.log("CernVM WebAPI not installed");
+            } else if (__pluginSingleton.hypervisorVersion == "") {
+                console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with no hypervisor installed");
+            } else {
+                console.log("Using CernVM WebAPI " + __pluginSingleton.version + " with " + __pluginSingleton.hypervisorName + " version " + __pluginSingleton.hypervisorVersion);
+            }
+
+            // Validate plugin status
+            if (__pluginSingleton.version == undefined) {
                 
-                // Detector exists. Which means the extension is installed, but the
-                // binary component was not able to load. If we are on windows, 
-                s.onload = function() {
-                    clearTimeout(cTimeout);
-                    if (__pluginSingleton.version != window.__CVMDetector.version)
-                        console.warn("Incompatible versions between the plug-in extension and the binary component!");
-                    
-                    if (BrowserDetect.OS == "Windows") {
-                        confirmFunction(
-                            "It seems you are missing the Microsoft Visual C++ 2010 Redistributable Package which is required in order to run the plug-in.\n" +
-                            "Do you want to go to the microsoft website to download it?",
-                            function(confirm) {
-                                if (confirm)
-                                    window.location = 'http://www.microsoft.com/en-us/download/details.aspx?id=5555';
-                            });
-                            
-                    } else if (BrowserDetect.OS == "Linux") {
-                        alertFunction(
-                            "Unfortunately, your linux distribution is not supported by this version of the plug-in.\n" +
-                            "Currently only Ubuntu 12.04 (or newer) and simmilar distributions are supported."
-                            );
-                        
-                    } else {
-                        alertFunction(
-                            "It seems that you have installed the CernVM WebAPI Extension, but the plugin was not unable to load.\n" +
-                            "Please try restarting the browser and re-installing the extension."
-                            );
+                // Check if we are told to take care of setting up the environment for the user
+                if (setupEnvironment) {
+                
+                    // Canclling timeout
+                    var cTimeout = 0;
+                
+                    // Make sure it's not a VS Runtime error:
+                    var s = document.createElement('script');
+                    s.type = 'text/javascript';
+                    if (BrowserDetect.browser == "Firefox") {
+                        s.href = "resource://cvmwebapi/detector.js";
+                    } else if (BrowserDetect.browser == "Chrome") {
+                        s.href = "chrome-extension://nkboedinkpfjfdlaplmgjdiohgabopkn/files/detector.js";
                     }
+                    
+                    // Detector exists. Which means the extension is installed, but the
+                    // binary component was not able to load. If we are on windows, 
+                    s.onload = function() {
+                        clearTimeout(cTimeout);
+                        if (__pluginSingleton.version != window.__CVMDetector.version)
+                            console.warn("Incompatible versions between the plug-in extension and the binary component!");
+                        
+                        if (BrowserDetect.OS == "Windows") {
+                            confirmFunction(
+                                "It seems you are missing the Microsoft Visual C++ 2010 Redistributable Package which is required in order to run the plug-in.\n" +
+                                "Do you want to go to the microsoft website to download it?",
+                                function(confirm) {
+                                    if (confirm)
+                                        window.location = 'http://www.microsoft.com/en-us/download/details.aspx?id=5555';
+                                });
+                                
+                        } else if (BrowserDetect.OS == "Linux") {
+                            alertFunction(
+                                "Unfortunately, your linux distribution is not supported by this version of the plug-in.\n" +
+                                "Currently only Ubuntu 12.04 (or newer) and simmilar distributions are supported."
+                                );
+                            
+                        } else {
+                            alertFunction(
+                                "It seems that you have installed the CernVM WebAPI Extension, but the plugin was not unable to load.\n" +
+                                "Please try restarting the browser and re-installing the extension."
+                                );
+                        }
+                    }
+                    
+                    var installStarted = false;
+                    s.onerror = function() {
+                        // Detector does not exist. This menans
+                        if (installStarted) return;
+                        installStarted = true;
+                        install_plugin();
+                    }
+                    cTimeout = setTimeout(function() {
+                        // Operation timed out. Assume that the extension is not loaded
+                        if (installStarted) return;
+                        installStarted = true;
+                        install_plugin();
+                    }, 1000);
+                    document.head.appendChild(s)
+                    
+                } else {
+                    // Could not do anything, fire the error callback
+                    callError( cbFail, "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
                 }
-                
-                var installStarted = false;
-                s.onerror = function() {
-                    // Detector does not exist. This menans
-                    if (installStarted) return;
-                    installStarted = true;
-                    install_plugin();
-                }
-                cTimeout = setTimeout(function() {
-                    // Operation timed out. Assume that the extension is not loaded
-                    if (installStarted) return;
-                    installStarted = true;
-                    install_plugin();
-                }, 1000);
-                document.head.appendChild(s)
                 
             } else {
-                // Could not do anything, fire the error callback
-                callError( cbFail, "Unable to load CernVM WebAPI Plugin. Make sure it's installed!", -100 );
-            }
-            
-        } else {
-            
-            // If we are told to check the environment, check if we have hypervisor
-            if (setupEnvironment) {
-                if (__pluginSingleton.hypervisorName == "") {
+                
+                // If we are told to check the environment, check if we have hypervisor
+                if (setupEnvironment) {
+                    if (__pluginSingleton.hypervisorName == "") {
 
-                    // Prompt the user for plugin installation
-                    // (We are using the overridable, asynchronous confirm function)
-                    confirmFunction(
-                        "You are going to need a hypervisor before you can use this website. Do you allow the CernVM Web API extension to install Oracle VirtualBox for you?",
-                        function(confirmed) {
-                            if (confirmed) {
+                        // Prompt the user for plugin installation
+                        // (We are using the overridable, asynchronous confirm function)
+                        confirmFunction(
+                            "You are going to need a hypervisor before you can use this website. Do you allow the CernVM Web API extension to install Oracle VirtualBox for you?",
+                            function(confirmed) {
+                                if (confirmed) {
 
-                                // The user has accepted the oracle license
-                                var confirmInstall = function() {
+                                    // The user has accepted the oracle license
+                                    var confirmInstall = function() {
 
-                                    var once=true;
-                                    var cb_ok = function() {
-                                        if (once) { once=false } else { return };
-                                        __pluginSingleton.removeEventListener('install', cb_ok);
+                                        var once=true;
+                                        var cb_ok = function() {
+                                            if (once) { once=false } else { return };
+                                            __pluginSingleton.removeEventListener('install', cb_ok);
 
-                                        // Hypervisor is now in place, continue
-                                        continue_init();
+                                            // Hypervisor is now in place, continue
+                                            continue_init();
 
-                                    };
-                                    var cb_error = function(code) {
-                                        if (once) { once=false } else { return };
-                                        __pluginSingleton.removeEventListener('installError', cb_error);
-                                        callError( cbFail, "Unable to install hypervisor!", -103 );
-                                    };
+                                        };
+                                        var cb_error = function(code) {
+                                            if (once) { once=false } else { return };
+                                            __pluginSingleton.removeEventListener('installError', cb_error);
+                                            callError( cbFail, "Unable to install hypervisor!", -103 );
+                                        };
 
-                                    // Setup callbacks and install hypervisor
-                                    __pluginSingleton.addEventListener('install', cb_ok);
-                                    __pluginSingleton.addEventListener('installError', cb_error);
-                                    __pluginSingleton.addEventListener('installProgress', cb_progress);
-                                    __pluginSingleton.installHypervisor();
-                                }
+                                        // Setup callbacks and install hypervisor
+                                        __pluginSingleton.addEventListener('install', cb_ok);
+                                        __pluginSingleton.addEventListener('installError', cb_error);
+                                        __pluginSingleton.addEventListener('installProgress', cb_progress);
+                                        __pluginSingleton.installHypervisor();
+                                    }
 
-                                // The user has declined the oracle license
-                                var abortInstall = function() {
+                                    // The user has declined the oracle license
+                                    var abortInstall = function() {
+                                        callError( cbFail, "User denied hypervisor installation!", -102 );
+                                    }
+
+                                    // Present oracle license
+                                    presentOracleLicense( confirmInstall, abortInstall );
+
+                                } else {
                                     callError( cbFail, "User denied hypervisor installation!", -102 );
                                 }
 
-                                // Present oracle license
-                                presentOracleLicense( confirmInstall, abortInstall );
-
-                            } else {
-                                callError( cbFail, "User denied hypervisor installation!", -102 );
                             }
-
-                        }
-                    );
-                    
+                        );
+                        
+                    } else {
+                        
+                        // Hypervisor is there, continue...
+                        continue_init();
+                        
+                    }
+                
+                // Otherwise, that's the user's responsibility
                 } else {
-                    
-                    // Hypervisor is there, continue...
                     continue_init();
-                    
                 }
-            
-            // Otherwise, that's the user's responsibility
-            } else {
-                continue_init();
+                
             }
-            
+
         }
-        
+
+        // Callback for IE-initialized plug-in
+        var ieTimeoutTimer, ieConfirmTimer,
+            ieLoadCallback = window.__cvmwebapi_ieobject_loadcb = function() {
+                // This is called when an IE object is loaded
+                clearTimeout(ieTimeoutTimer);
+                clearTimeout(ieConfirmTimer);
+                validate_plugin();
+            },
+            ieErrorCallback = window.__cvmwebapi_ieobject_errorcb = function(sMsg) {
+                // This is either called by IE when an installation failed, or by the timeout function
+                clearTimeout(ieTimeoutTimer);
+                clearTimeout(ieConfirmTimer);
+                callError( cbFail, "Unable to install/initialize the CernVM Web API!", -101 );
+                return;
+            };
+
+        // Singleton access to the plugin
+        if (__pluginSingleton == null) {
+
+            // Check if we already have an embed element
+            __pluginSingleton = document.getElementById('cvmweb-api');
+
+            // Nope, create new instance
+            if (!__pluginSingleton) {
+
+                // Use 'object' on IE
+                if (BrowserDetect.browser == "Explorer") {
+
+                    // Allocate element
+                    var eHost = document.createElement('div');
+
+                    // Create an object inside it
+                    eHost.innerHTML = "<object id=\"cvmweb-api\" classid=\"CLSID:3300d921-2cce-5903-85aa-947fda74fb46\" codebase=\"http://cernvm.cern.ch/releases/webapi/plugin/cvmwebapi-1.3.3.cab#version=1,3,3\" width=\"1\" height=\"1\"><param name=\"onload\" value=\"__cvmwebapi_ieobject_loadcb\" /></object>";
+                    document.body.appendChild(eHost);
+
+                    // Fetch plugin singleton
+                    __pluginSingleton = document.getElementById('cvmweb-api');
+
+                    // Still problems?
+                    if (__pluginSingleton == null) {
+                        callError( cbFail, "Your browser does not support the <object /> tag!", -101 );
+                        return;
+                    }
+
+                    // Start the timeout for waiting for plug-in to set-up (Allow 30 sec)
+                    ieTimeoutTimer = setTimeout(function() {
+                        ieErrorCallback("Timed out");
+                    }, 30000);
+
+                    // Unless we immediately get the plug-in up and running (within 1 sec)
+                    // inform user that he has to install it manually.
+                    ieConfirmTimer = setTimeout(function() {
+                        alertFunction(
+                                "Follow the on-screen instructions and allow the installation of CernVM WebAPI"
+                            );
+                    }, 1000);
+
+                } else {
+
+                    __pluginSingleton = document.createElement('embed');
+
+                    // Still problems?
+                    if (__pluginSingleton == null) {
+                        callError( cbFail, "Your browser does not support the <embed /> tag!", -101 );
+                        return;
+                    }
+
+                    // Initialize
+                    __pluginSingleton.type = "application/x-cvmweb";
+                    __pluginSingleton.id = "cvmweb-api";
+                    __pluginSingleton.style.width = "1px";
+                    __pluginSingleton.style.height = "1px";
+                    document.body.appendChild( __pluginSingleton );
+
+                    // Continue with plug-in validation
+                    validate_plugin();
+                }
+            }
+
+        }
+
+
     };
     
     // If the page is still loading, request an onload hook,
