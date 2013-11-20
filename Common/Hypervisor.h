@@ -83,8 +83,9 @@
  * Shared Pointer Definition
  */
 class HVSession;
+class HVInstance;
 typedef boost::shared_ptr< HVSession >                  HVSessionPtr;
-
+typedef boost::shared_ptr< HVInstance >                 HVInstancePtr;
 
 /**
  * Resource information structure
@@ -278,10 +279,10 @@ public:
 /**
  * Overloadable base hypervisor class
  */
-class Hypervisor {
+class HVInstance : public boost::enable_shared_from_this<HVInstance> {
 public:
     
-    Hypervisor();
+    HVInstance();
     int                     type;
     
     int                     verMajor;
@@ -336,8 +337,7 @@ protected:
 /**
  * Exposed functions
  */
-Hypervisor *                    detectHypervisor    ( );
-void                            freeHypervisor      ( Hypervisor * );
+HVInstancePtr                   detectHypervisor    ( );
 int                             installHypervisor   ( std::string clientVersion, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 4 );
 std::string                     hypervisorErrorStr  ( int error );
 

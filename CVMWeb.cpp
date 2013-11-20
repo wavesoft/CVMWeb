@@ -125,10 +125,8 @@ void CVMWeb::onPluginReady()
     // Enable sysExec()
     initSysExec();
 
-    // Allocate a download provider that uses browser for I/O
-    browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
-
-    // Get details about our current domain
+    // Get details about our current domain and browser
+    std::string strBrowser = "";
     crashReportAddInfo( "URL", m_host->getDOMWindow()->getLocation() );
     try {
         FB::DOM::WindowPtr window = m_host->getDOMWindow();
@@ -137,7 +135,6 @@ void CVMWeb::onPluginReady()
             FB::JSObjectPtr jsNav = window->getProperty<FB::JSObjectPtr>("navigator");
             
             // Pile up info
-            std::string strBrowser = "";
             FB::variant f;
             if (jsNav->HasProperty("userAgent")) {
                 f = jsNav->GetProperty("userAgent");
@@ -150,7 +147,15 @@ void CVMWeb::onPluginReady()
         }
     } catch (...) {
     }
-    
+
+    // Detect browser
+    if (strBrowser.find("MSIE ") != string::npos) {
+        // For Non-IE Browsers, allocate a download provider that uses browser for I/O 
+        browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
+    } else {
+
+    }
+
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {
         this->hv->daemonBinPath = this->getDaemonBin();

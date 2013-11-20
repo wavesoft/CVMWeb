@@ -114,10 +114,12 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
 
 int main( int argc, char ** argv ) {
 
+    /*
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>( );    
 
     doProgress();
     doProgress(pTasks);
+    */
 
     /*
     HypervisorVersion hvv("1.3.4r10031");
@@ -163,6 +165,8 @@ int main( int argc, char ** argv ) {
 
     fsm.FSMThreadStop();
     */
+
+    HVInstancePTr hv = detectHypervisor();
 
     return 0;
 }

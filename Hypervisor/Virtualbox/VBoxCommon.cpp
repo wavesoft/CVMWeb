@@ -19,17 +19,29 @@
  */
 
 #include "VBoxCommon.h"
+#include "VBoxHypervisor.h"
+using namespace std;
+
+/**
+ * Allocate a new hypervisor using the specified paths
+ */
+HVInstancePtr __vboxInstance( string hvRoot, string hvBin, string hvAdditionsIso ) {
+    VBoxHypervisorPtr hv;
+
+    // Create a new hypervisor instance
+    hv = boost::make_shared<VBoxHypervisor>( hvRoot, hvBin, hvAdditionsIso );
+
+    return hv;
+}
 
 /**
  * Search Virtualbox on the environment and return an initialized
  * VBoxHypervisor object if it was found.
  */
-Hypervisor * vboxDetect() {
-
-	/*
-    Hypervisor * hv;
+HVInstancePtr vboxDetect() {
+    HVInstancePtr hv;
     vector<string> paths;
-    string bin, p;
+    string bin, iso, p;
     
     // In which directories to look for the binary
     #ifdef _WIN32
@@ -53,69 +65,57 @@ Hypervisor * vboxDetect() {
         #ifdef _WIN32
         bin = p + "/VBoxManage.exe";
         if (file_exists(bin)) {
-            hv = new Virtualbox();
-            hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p;
-            hv->hvBinary = bin;
-            ((Virtualbox*)hv)->hvGuestAdditions = "";
-            bin = p + "/VBoxGuestAdditions.iso";
-            if (file_exists(bin)) {
-                ((Virtualbox*)hv)->hvGuestAdditions = bin;
-            }
-            hv->detectVersion();
-            hv->daemonBinPath = "";
-            return hv;
+
+            // Check for iso
+            iso = p + "/VBoxGuestAdditions.iso";
+            if (!file_exists(iso)) iso = "";
+
+            // Instance hypervisor
+            hv = __vboxInstance( p, bin, iso );
+            break;
+
         }
         #endif
+
         #if defined(__APPLE__) && defined(__MACH__)
         bin = p + "/VBoxManage";
         if (file_exists(bin)) {
-            hv = new Virtualbox();
-            hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p;
-            hv->hvBinary = bin;
-            ((Virtualbox*)hv)->hvGuestAdditions = "";
-            bin = p + "/VBoxGuestAdditions.iso";
-            if (file_exists(bin)) {
-                ((Virtualbox*)hv)->hvGuestAdditions = bin;
-            }
-            hv->detectVersion();
-            hv->daemonBinPath = "";
-            return hv;
+
+            // Check for iso
+            iso = p + "/VBoxGuestAdditions.iso";
+            if (!file_exists(iso)) iso = "";
+
+            // Instance hypervisor
+            hv = __vboxInstance( p, bin, iso );
+            break;
+
         }
         #endif
+
         #ifdef __linux__
         bin = p + "/bin/VBoxManage";
         if (file_exists(bin)) {
-            hv = new Virtualbox();
-            hv->type = HV_VIRTUALBOX;
-            hv->hvRoot = p + "/bin";
-            hv->hvBinary = bin;
-            ((Virtualbox*)hv)->hvGuestAdditions = "";
-            
+
             // (1) Check for additions on XXX/share/virtualbox [/usr, /usr/local]
-            bin = p + "/share/virtualbox/VBoxGuestAdditions.iso";
-            if (!file_exists(bin)) {
-
+            iso = p + "/share/virtualbox/VBoxGuestAdditions.iso";
+            if (!file_exists(iso)) {
                 // (2) Check for additions on XXX/additions [/opt/VirtualBox]
-                bin = p + "/additions/VBoxGuestAdditions.iso";
-                if (file_exists(bin)) {
-                    ((Virtualbox*)hv)->hvGuestAdditions = bin;
+                iso = p + "/additions/VBoxGuestAdditions.iso";
+                if (!file_exists(iso)) {
+                    iso = "";
                 }
-
-            } else {
-                ((Virtualbox*)hv)->hvGuestAdditions = bin;
             }
-            hv->detectVersion();
-            hv->daemonBinPath = "";
-            return hv;
+
+            // Instance hypervisor
+            hv = __vboxInstance( p, bin, iso );
+
         }
         #endif
         
-    }	
-	*/
+    }
 
-	return NULL;
+    // Return hypervisor instance or nothing
+	return hv;
 
 }
 

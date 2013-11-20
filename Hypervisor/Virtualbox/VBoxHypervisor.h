@@ -35,13 +35,21 @@
 #include <boost/regex.hpp>
 
 /**
+ * Shared Pointer Definition
+ */
+class VBoxHypervisor;
+typedef boost::shared_ptr< VBoxHypervisor >     VBoxHypervisorPtr;
+
+/**
  * VirtualBox Hypervisor
  */
-class VBoxHypervisor : public Hypervisor {
+class VBoxHypervisor : public HVInstance {
 public:
 
-    VBoxHypervisor() : Hypervisor() {
+    VBoxHypervisor( std::string fRoot, std::string fBin, std::string fIso ) : HVInstance() {
         this->sessionLoaded = false;
+        this->hvRoot = fRoot;
+        this->hvHypervisor = fBin;
     };
 
     std::string             hvGuestAdditions;

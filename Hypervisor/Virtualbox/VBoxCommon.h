@@ -22,6 +22,7 @@
 #ifndef VBOXCOMMON_H
 #define VBOXCOMMON_H
 
+#include "Common/ProgressFeedback.h"
 #include "Common/Hypervisor.h"
 #include "VBoxStateStore.h"
 
@@ -30,10 +31,10 @@ class VBoxSession;
 class VBoxHypervisor;
 
 /* Global function to try to instantiate a VirtualBox Hypervisor */
-Hypervisor * 	vboxDetect();
+HVInstancePtr 	vboxDetect();
 
 /* Global function to try to install a VirtualBox Hypervisor */
-bool 			vboxInstall();
+bool 			vboxInstall( const FiniteTaskPtr & pf = FiniteTaskPtr() );
 
 
 #endif /* end of include guard: VBOXCOMMON_H */
