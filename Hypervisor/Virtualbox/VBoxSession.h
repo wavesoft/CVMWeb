@@ -23,7 +23,7 @@
 #define VBOXSESSION_H
 
 #include "VBoxCommon.h"
-#include "VBoxHypervisor.h"
+#include "VBoxInstance.h"
 
 #include <string>
 #include <map>
@@ -46,7 +46,7 @@ typedef boost::shared_ptr< VBoxSession >                VBoxSessionPtr;
 class VBoxSession : public SimpleFSM, public HVSession {
 public:
 
-    VBoxSession( ParameterMapPtr param ) : SimpleFSM(), HVSession(param) {
+    VBoxSession( ParameterMapPtr param, HVInstancePtr hv ) : SimpleFSM(), HVSession(param, hv) {
 
         FSM_REGISTRY(1,             // Entry point is on '1'
         {
@@ -160,7 +160,17 @@ public:
 protected:
 
     // Make friend class
-    friend class VBoxHypervisor;
+    friend class VBoxInstance;
+
+    /////////////////////////////////////
+    // External updates feedback
+    /////////////////////////////////////
+
+    /**
+     * Notification from the VBoxInstance that the session
+     * has been destroyed from an external source.
+     */
+    void                    hvNotifyDestroyed   ();
 
     /////////////////////////////////////
     // Tool functions
@@ -179,8 +189,6 @@ protected:
     ////////////////////////////////////
     // Local variables
     ////////////////////////////////////
-
-    VBoxHypervisor *        host;
     
     std::string             dataPath;
     bool                    updateLock;

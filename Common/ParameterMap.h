@@ -142,6 +142,11 @@ public:
     std::vector< std::string >	enumKeys    	( );
 
     /**
+     * Return true if the specified parameter exists
+     */
+    bool						contains 		( const std::string& name );
+
+    /**
      * Update all the parameters from the specified map
      */
     void						fromMap			( std::map< std::string, std::string> * map, bool clearBefore = false );

@@ -19,24 +19,24 @@
  */
 
 #include "VBoxCommon.h"
-#include "VBoxHypervisor.h"
+#include "VBoxInstance.h"
 using namespace std;
 
 /**
  * Allocate a new hypervisor using the specified paths
  */
 HVInstancePtr __vboxInstance( string hvRoot, string hvBin, string hvAdditionsIso ) {
-    VBoxHypervisorPtr hv;
+    VBoxInstancePtr hv;
 
     // Create a new hypervisor instance
-    hv = boost::make_shared<VBoxHypervisor>( hvRoot, hvBin, hvAdditionsIso );
+    hv = boost::make_shared<VBoxInstance>( hvRoot, hvBin, hvAdditionsIso );
 
     return hv;
 }
 
 /**
  * Search Virtualbox on the environment and return an initialized
- * VBoxHypervisor object if it was found.
+ * VBoxInstance object if it was found.
  */
 HVInstancePtr vboxDetect() {
     HVInstancePtr hv;

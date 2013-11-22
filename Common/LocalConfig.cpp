@@ -262,15 +262,12 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     // Read file
     std::string line;
     map->clear();
-    CVMWA_LOG( "Config", "Going to read map"  );
     while( std::getline(ifs, line) ) {
-      CVMWA_LOG( "Config", "LoadingMap : Processing line '" << line << "'"  );
       std::istringstream is_line(line);
       std::string key;
       if( std::getline(is_line, key, '=') ) {
         std::string value;
         if( std::getline(is_line, value) ) {
-          CVMWA_LOG( "Config", "LoadingMap : Setting '" << key << "' = '" << value << "'"  );
           map->insert( std::pair<std::string,std::string>(key, value) );
         }
       }

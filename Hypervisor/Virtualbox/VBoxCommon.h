@@ -28,7 +28,7 @@
 
 /* Forward-declare the classes */
 class VBoxSession;
-class VBoxHypervisor;
+class VBoxInstance;
 
 /* Global function to try to instantiate a VirtualBox Hypervisor */
 HVInstancePtr 	vboxDetect();

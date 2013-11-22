@@ -25,34 +25,6 @@
  ** ##################################################################################### */
 
 /**
- * Register a callback that handles the 'started' event
- */
-void ProgressTask::onStarted ( const cbStarted & cb ) {
-	startedCallbacks.push_back(cb);
-}
-
-/**
- * Register a callback that handles the 'completed' event
- */
-void ProgressTask::onCompleted ( const cbCompleted & cb ) {
-	completedCallbacks.push_back(cb);
-}
-
-/**
- * Register a callback that handles the 'failed' event
- */
-void ProgressTask::onFailure ( const cbFailure & cb ) {
-	failedCallbacks.push_back(cb);
-}
-
-/**
- * Register a callback that handles the 'progress' event
- */
-void ProgressTask::onProgress ( const cbProgress & cb ) {
-	progressCallbacks.push_back(cb);
-}
-
-/**
  * Mark the task as completed
  */
 void ProgressTask::complete ( const std::string& message ) {
@@ -121,10 +93,7 @@ void ProgressTask::_notifyCompleted ( const std::string& message ) {
 	lastMessage = message;
 
 	// Fire events
-	for (std::vector< cbCompleted >::iterator it = completedCallbacks.begin(); it != completedCallbacks.end(); ++it) {
-		cbCompleted cb = *it;
-		if (cb) cb( message );
-	}
+	fireCompleted( message );
 
 	// Propagate event
 	if (parent) {
@@ -141,10 +110,7 @@ void ProgressTask::_notifyFailed( const std::string& message, const int errorCod
 	lastMessage = message;
 
     // Fire the failure event
-	for (std::vector< cbFailure >::iterator it = failedCallbacks.begin(); it != failedCallbacks.end(); ++it) {
-		cbFailure cb = *it;
-		cb( message, errorCode );
-	}
+    fireFailed( message, errorCode );
 
 	// Forward event to the parent elements
 	if (parent)
@@ -169,10 +135,7 @@ void ProgressTask::_notifyUpdate ( const std::string& message ) {
 	} else {
 
 		// Call all the progress callbacks
-		for (std::vector< cbProgress >::iterator it = progressCallbacks.begin(); it != progressCallbacks.end(); ++it) {
-			cbProgress cb = *it;
-			if (cb) cb( message, getProgress() );
-		}
+		fireProgress( message, getProgress() );
 
 		// Propagate event
 		if (parent) {
@@ -197,10 +160,7 @@ void ProgressTask::_notifyStarted ( const std::string& message ) {
 	lastMessage = message;
 
 	// Fire callbacks
-	for (std::vector< cbStarted >::iterator it = startedCallbacks.begin(); it != startedCallbacks.end(); ++it) {
-		cbStarted cb = *it;
-		if (cb) cb( message );
-	}
+	fireStarted( message );
 
 	// Propagate event
 	if (parent) {
@@ -219,10 +179,7 @@ void ProgressTask::_forwardProgress( const std::string& message ) {
 	lastMessage = message;
 
 	// Call all the progress callbacks
-	for (std::vector< cbProgress >::iterator it = progressCallbacks.begin(); it != progressCallbacks.end(); ++it) {
-		cbProgress cb = *it;
-		cb( message, getProgress() );
-	}
+	fireProgress( message, getProgress() );
 
 	// Forward event to the parent elements
 	if (parent)

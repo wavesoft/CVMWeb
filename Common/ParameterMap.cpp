@@ -207,6 +207,15 @@ std::vector< std::string > ParameterMap::enumKeys ( ) {
 }
 
 /**
+ * Return true if the specified parameter exists
+ */
+bool ParameterMap::contains ( const std::string& name ) {
+    CRASH_REPORT_BEGIN;
+    return (parameters->find(prefix + name) == parameters->end());
+    CRASH_REPORT_END;
+}
+
+/**
  * Update all the parameters from the specified map
  */
 void ParameterMap::fromParameters ( const ParameterMapPtr& ptr, bool clearBefore ) {

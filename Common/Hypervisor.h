@@ -183,7 +183,7 @@ public:
      *
      * A required parameter is the parameter map of the session.
      */
-    HVSession( ParameterMapPtr param ) : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
+    HVSession( ParameterMapPtr param, HVInstancePtr hv ) : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
 
         // Prepare default parameter values
         parameters->setDefault("cpus",                  "1");
@@ -207,13 +207,14 @@ public:
         // Open UserData subgroup
         userData = parameters->subgroup("user-data");
         
-        // Indexing variable
+        // Populate local variables
         this->uuid = parameters->get("uuid");
-        
-        
+        this->hypervisor = hv;
+
     };
     
     std::string             uuid;
+    HVInstancePtr           hypervisor;
 
     /* Currently active user-data */
     //std::map<std::string,
@@ -293,8 +294,9 @@ public:
     std::string             dirData;
     std::string             dirDataCache;
     std::string             lastExecError;
-        
+    
     /* Session management commands */
+    std::list< HVSessionPtr > openSessions;
     std::map< std::string, 
         HVSessionPtr >      sessions;
     HVSessionPtr            sessionByGUID       ( const std::string& uuid );
@@ -303,7 +305,7 @@ public:
     int                     sessionValidate     ( const ParameterMapPtr& parameters );
 
     /* Overridable functions */
-    virtual int             loadSessions        ( ) = 0;
+    virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() ) = 0;
     virtual HVSessionPtr    allocateSession     ( ) = 0;
 
     virtual int             getCapabilities     ( HVINFO_CAPS * caps ) = 0;

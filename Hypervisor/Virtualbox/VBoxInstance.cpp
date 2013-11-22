@@ -28,7 +28,7 @@
 
 #include "global/config.h"
 
-#include "VBoxHypervisor.h"
+#include "VBoxInstance.h"
 #include "Common/Hypervisor.h"
 #include "Common/Utilities.h"
 
@@ -118,7 +118,7 @@ std::string changeUpperIP( std::string baseIP, int value ) {
 /** 
  * Return virtual machine information
  */
-map<string, string> VBoxHypervisor::getMachineInfo( std::string uuid, int timeout ) {
+map<string, string> VBoxInstance::getMachineInfo( std::string uuid, int timeout ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
@@ -142,7 +142,7 @@ map<string, string> VBoxHypervisor::getMachineInfo( std::string uuid, int timeou
 /**
  * Return all the properties of the guest
  */
-map<string, string> VBoxHypervisor::getAllProperties( string uuid ) {
+map<string, string> VBoxInstance::getAllProperties( string uuid ) {
     CRASH_REPORT_BEGIN;
     map<string, string> ans;
     vector<string> lines;
@@ -184,28 +184,47 @@ map<string, string> VBoxHypervisor::getAllProperties( string uuid ) {
 /**
  * Load sessions if they are not yet loaded
  */
-bool VBoxHypervisor::waitTillReady( const FiniteTaskPtr & pf ) {
+bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
+
+    // Update progress
+    if (pf) pf->setMax(2);
     
-    /**
-     * Session loading takes time, so instead of blocking the plugin
-     * at creation time, use this mechanism to delay-load it when first accessed.
-     */
+    // Session loading takes time, so instead of blocking the plugin
+    // at creation time, use this mechanism to delay-load it when first accessed.
     if (!this->sessionLoaded) {
-        this->loadSessions();
+
+        // Create a progress feedback for the session loading
+        FiniteTaskPtr pfLoading;
+        if (pf) pfLoading = pf->begin<FiniteTask>("Loading sessions");
+
+        // Load sessions
+        this->loadSessions( pfLoading );
         this->sessionLoaded = true;
+
+    } else {
+        if (pf) pf->done("Sessions are loaded");
     }
     
-    /**
-     * By the way, check if we have the extension pack installed
-     */
+    // By the way, check if we have the extension pack installed
     if (!this->hasExtPack()) {
+
+        // Create a progress feedback instance for the installer
+        FiniteTaskPtr pfInstall;
+        if (pf) pfInstall = pf->begin<FiniteTask>("Installing extension pack");
+
+        // Start extension pack installation
         this->installExtPack(
-            FBSTRING_PLUGIN_VERSION,
-            this->downloadProvider,
-            pf
+                FBSTRING_PLUGIN_VERSION,
+                this->downloadProvider,
+                pfInstall
             );
+
+    } else {
+        if (pf) pf->done("Extension pack is installed");
     }
+
+    if (pf) pf->complete("Hypervisor is ready");
 
     /**
      * All's good!
@@ -217,7 +236,7 @@ bool VBoxHypervisor::waitTillReady( const FiniteTaskPtr & pf ) {
 /**
  * Return a property from the VirtualBox guest
  */
-std::string VBoxHypervisor::getProperty( std::string uuid, std::string name ) {
+std::string VBoxInstance::getProperty( std::string uuid, std::string name ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     string value;
@@ -245,33 +264,19 @@ std::string VBoxHypervisor::getProperty( std::string uuid, std::string name ) {
 /**
  * Return Virtualbox sessions instead of classic
  */
-HVSessionPtr VBoxHypervisor::allocateSession() {
+HVSessionPtr VBoxInstance::allocateSession() {
     CRASH_REPORT_BEGIN;
     
     // Allocate a new GUID for this session
     std::string guid = newGUID();
 
     // Fetch a config object
-    LocalConfigPtr cfg = LocalConfig::forRuntime( "session-" + guid );
+    LocalConfigPtr cfg = LocalConfig::forRuntime( "vbsess-" + guid );
     cfg->set("uuid", guid);
 
     // Return new session instance
-    VBoxSessionPtr session = boost::make_shared< VBoxSession >( cfg );
+    VBoxSessionPtr session = boost::make_shared< VBoxSession >( cfg, this->shared_from_this() );
     
-    /*
-    VBoxSession * sess = new VBoxSession();
-    sess->name = name;
-    sess->key = key;
-    sess->host = this;
-    sess->rdpPort = 0;
-    sess->localApiPort = 0;
-    sess->dataPath = "";
-    sess->properties.clear();
-    sess->unsyncedProperties.clear();
-    sess->updateLock = false;
-    return sess;
-    */
-
     // Store on session registry and return session object
     this->sessions[ guid ] = session;
     return static_cast<HVSessionPtr>(session);
@@ -282,7 +287,7 @@ HVSessionPtr VBoxHypervisor::allocateSession() {
 /**
  * Load capabilities
  */
-int VBoxHypervisor::getCapabilities ( HVINFO_CAPS * caps ) {
+int VBoxInstance::getCapabilities ( HVINFO_CAPS * caps ) {
     CRASH_REPORT_BEGIN;
     map<string, string> data;
     vector<string> lines, parts;
@@ -374,7 +379,7 @@ int VBoxHypervisor::getCapabilities ( HVINFO_CAPS * caps ) {
 /**
  * Get a list of mediums managed by VirtualBox
  */
-std::vector< std::map< std::string, std::string > > VBoxHypervisor::getDiskList() {
+std::vector< std::map< std::string, std::string > > VBoxInstance::getDiskList() {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     std::vector< std::map< std::string, std::string > > resMap;
@@ -446,7 +451,7 @@ int __getPIDFromFile( std::string logPath ) {
 }
 
 /*
-int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
+int VBoxInstance::updateSession( HVSession * session, bool fast ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> vms, diskinfo;
@@ -715,23 +720,74 @@ int VBoxHypervisor::updateSession( HVSession * session, bool fast ) {
 */
 
 /**
+ * Return a VirtualBox Session based on the VirtualBox UUID specified
+ */
+HVSessionPtr VBoxInstance::sessionByVBID ( const std::string& virtualBoxGUID ) {
+    CRASH_REPORT_BEGIN;
+
+    // Look for a session with the given GUID
+    for (std::map< std::string,HVSessionPtr >::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
+        HVSessionPtr sess = (*i).second;
+        if (sess->parameters->get("vboxid", "").compare( virtualBoxGUID ) == 0 ) {
+            return sess;
+        }
+    }
+
+    // Return an unitialized HVSessionPtr if nothing is found
+    return HVSessionPtr();
+    CRASH_REPORT_END;
+}
+
+/**
  * Load session state from VirtualBox
  */
-int VBoxHypervisor::loadSessions() {
+int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
+    HVSessionPtr inst;
     vector<string> lines;
-    map<string, string> vms, diskinfo;
+    map<string, string> vms, diskinfo, vboxVms;
     string secret, kk, kv;
     string err;
-    
-    /* List the running VMs in the system */
+
+    // Acquire a system-wide mutex for session update
+    NAMED_MUTEX_LOCK("session-update");
+
+    // Initialize progress feedback
+    if (pf) {
+        pf->setMax(3);
+        pf->doing("Loading sessions from disk");
+    }
+
+    // Reset sessions array
+    sessions.clear();
+
+    // Load session registry from the disk
+    std::vector< std::string > vbDiskSessions  = LocalConfig::runtime()->enumFiles("vbsess-");
+    for (std::vector< std::string >::iterator it = vbDiskSessions.begin(); it != vbDiskSessions.end(); ++it) {
+        std::string sessName = *it;
+        CVMWA_LOG("Debug", "Importing session config " << sessName << " from disk");
+
+        // Load session config
+        LocalConfigPtr sessConfig = LocalConfig::forRuntime( sessName );
+        if (sessConfig->contains("name") && sessConfig->contains("uuid") && sessConfig->contains("vboxid") ) {
+
+            // Store session with the given UUID
+            sessions[ sessConfig->get("uuid") ] = boost::make_shared< VBoxSession >( 
+                sessConfig, this->shared_from_this() 
+            );
+
+        } else {
+            CVMWA_LOG("Warning", "Unable to validate session file " << sessName );
+        }
+
+    }
+
+    // List the running VMs in the system
     int ans;
-    NAMED_MUTEX_LOCK("generic");
     ans = this->exec("list vms", &lines, &err, 2, 2000);
-    NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
 
-    /* Tokenize */
+    // List the VM names and uuids
     vms = tokenize( &lines, '{' );
     this->sessions.clear();
     for (std::map<string, string>::iterator it=vms.begin(); it!=vms.end(); ++it) {
@@ -739,33 +795,27 @@ int VBoxHypervisor::loadSessions() {
         string uuid = (*it).second;
         name = name.substr(1, name.length()-3);
         uuid = uuid.substr(0, uuid.length()-1);
-        
-        /* Check if this VM has a secret web key. If yes, it's managed by the WebAPI */
-        secret = this->getProperty( uuid, "/CVMWeb/secret" );
-        if (!secret.empty()) {
-            
-            /* Create a populate session object */
-            HVSessionPtr session = this->allocateSession();
-            session->parameters->set("vboxid", uuid);
 
-            /* Update session info */
-            //updateSession( session, false );
-
-            /* Register this session */
-            //CVMWA_LOG( "Info", "Registering session name=" << session->name << ", key=" << session->key << ", uuid=" << session->uuid << ", state=" << session->state  );
-            //this->registerSession(session);
-
+        // Make sure it's not an inaccessible machine
+        if (name.find("<inaccessible>") != string::npos) {
+            CVMWA_LOG("Warning", "Found inaccessible VM " << uuid)
+            continue;
         }
+
+        // Store on map
+        vboxVms[name] = uuid;
     }
 
     return 0;
+    NAMED_MUTEX_UNLOCK;
+
     CRASH_REPORT_END;
 }
 
 /**
  * Check if the hypervisor has the extension pack installed (used for the more advanced RDP)
  */
-bool VBoxHypervisor::hasExtPack() {
+bool VBoxInstance::hasExtPack() {
     CRASH_REPORT_BEGIN;
     
     /**
@@ -794,7 +844,7 @@ bool VBoxHypervisor::hasExtPack() {
  * on it's own.
  *
  */
-int VBoxHypervisor::installExtPack( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf ) {
+int VBoxInstance::installExtPack( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
     string requestBuf;
     string checksum;

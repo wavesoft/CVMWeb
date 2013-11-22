@@ -39,7 +39,7 @@
 #include "contextiso.h"
 #include "floppyIO.h"
 
-#include "Hypervisor/Virtualbox/VBoxHypervisor.h"
+#include "Hypervisor/Virtualbox/VBoxCommon.h"
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -745,6 +745,9 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) {
 
     // Populate parameters
     sess->parameters->fromParameters( parameters );
+
+    // Store reference to open sessions
+    openSessions.push_back( sess );
     
     // Return the handler
     return sess;
@@ -774,56 +777,9 @@ HVSessionPtr HVInstance::sessionByName ( const std::string& name ) {
     CRASH_REPORT_END;
 }
 
-
 /**
- * Register a session to the session stack and allocate a new unique ID
+ * Check if we need to start or stop the daemon 
  */
-/*
-int HVInstance::registerSession( HVSession * sess ) {
-    CRASH_REPORT_BEGIN;
-    sess->internalID = this->sessionID++;
-    this->sessions.push_back(sess);
-    CVMWA_LOG( "Info", "Updated sessions (" << this->sessions.size()  );
-    return HVE_OK;
-    CRASH_REPORT_END;
-}
-*/
-
-/**
- * Release a session using the given id
- */
-/*
-int HVInstance::sessionFree( int id ) {
-    CRASH_REPORT_BEGIN;
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
-        if (sess->internalID == id) {
-            this->sessions.erase(i);
-            delete sess;
-            return HVE_OK;
-        }
-    }
-    return HVE_NOT_FOUND;
-    CRASH_REPORT_END;
-}
-*/
-
-/**
- * Return session for the given ID
- */
-/*
-HVSession * HVInstance::sessionGet( int id ) {
-    CRASH_REPORT_BEGIN;
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
-        if (sess->internalID == id) return sess;
-    }
-    return NULL;
-    CRASH_REPORT_END;
-}
-*/
-
-/* Check if we need to start or stop the daemon */
 int HVInstance::checkDaemonNeed() {
     CRASH_REPORT_BEGIN;
     
@@ -902,7 +858,7 @@ HVInstancePtr detectHypervisor() {
 int installHypervisor( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf, int retries ) {
     CRASH_REPORT_BEGIN;
     const int maxSteps = 200;
-    Hypervisor * hv = NULL;
+    HVInstancePtr hv;
     int res;
     string tmpHypervisorInstall;
     string checksum;
@@ -1393,7 +1349,7 @@ int installHypervisor( string versionID, DownloadProviderPtr downloadProvider, c
 
         // Check if it was successful
         hv = detectHypervisor();
-        if (hv == NULL) {
+        if (!hv) {
             CVMWA_LOG( "Info", "ERROR: Could not install hypervisor!" );
             if (tries<retries) {
                 if (installerPf) installerPf->restart("Re-trying hypervisor installation");
@@ -1432,9 +1388,6 @@ int installHypervisor( string versionID, DownloadProviderPtr downloadProvider, c
         }
     }
     */
-
-    // Release hypervisor
-    freeHypervisor(hv);
 
     // Completed
     if (pf) pf->complete("Hypervisor installed successfully");

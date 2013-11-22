@@ -52,7 +52,7 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
     // Setup callbacks
     pTasks->onStarted( boost::bind(&cb_started, _1) );
     pTasks->onCompleted(boost::bind(&cb_completed, _1));
-    pTasks->onFailure(boost::bind(&cb_error, _1, _2));
+    pTasks->onFailed(boost::bind(&cb_error, _1, _2));
     pTasks->onProgress(boost::bind(&cb_progress, _1, _2));
 
     // Set max
@@ -166,7 +166,15 @@ int main( int argc, char ** argv ) {
     fsm.FSMThreadStop();
     */
 
-    HVInstancePTr hv = detectHypervisor();
+    HVInstancePtr hv = detectHypervisor();
+    if (hv) {
+        cout << "HV Binary: " << hv->hvBinary << endl;
+
+        hv->loadSessions();
+        
+    } else {
+        cout << "No hypervisor found!" << endl; 
+    }
 
     return 0;
 }

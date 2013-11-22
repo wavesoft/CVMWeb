@@ -19,8 +19,8 @@
  */
 
 #pragma once
-#ifndef VBOXHYPERVISOR_H
-#define VBOXHYPERVISOR_H
+#ifndef VBoxInstance_H
+#define VBoxInstance_H
 
 #include "VBoxCommon.h"
 #include "VBoxSession.h"
@@ -37,43 +37,55 @@
 /**
  * Shared Pointer Definition
  */
-class VBoxHypervisor;
-typedef boost::shared_ptr< VBoxHypervisor >     VBoxHypervisorPtr;
+class VBoxInstance;
+typedef boost::shared_ptr< VBoxInstance >     VBoxInstancePtr;
 
 /**
  * VirtualBox Hypervisor
  */
-class VBoxHypervisor : public HVInstance {
+class VBoxInstance : public HVInstance {
 public:
 
-    VBoxHypervisor( std::string fRoot, std::string fBin, std::string fIso ) : HVInstance() {
+    VBoxInstance( std::string fRoot, std::string fBin, std::string fIso ) : HVInstance() {
         this->sessionLoaded = false;
         this->hvRoot = fRoot;
-        this->hvHypervisor = fBin;
+        this->hvBinary = fBin;
+        this->hvGuestAdditions = fIso;
     };
 
-    std::string             hvGuestAdditions;
 
-    bool                    hasExtPack          ();
-    int                     installExtPack      ( std::string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
-
-    /* Internal parameters */
-    int                     prepareSession      ( VBoxSession * session );
-    std::map<std::string, 
-        std::string>        getMachineInfo      ( std::string uuid, int timeout = SYSEXEC_TIMEOUT );
-    std::string             getProperty         ( std::string uuid, std::string name );
-    std::vector< std::map< std::string, std::string > > getDiskList();
-    std::map<std::string, std::string> getAllProperties  ( std::string uuid );
-
-    /* Overloads */
-    virtual int             loadSessions        ( );
+    /////////////////////////
+    // HVInstance Overloads
+    /////////////////////////
+    virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
     virtual HVSessionPtr    allocateSession     ( );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
     virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
 
+    /////////////////////////
+    // Friend functions
+    /////////////////////////
+    int                     prepareSession      ( VBoxSession * session );
+    std::map<std::string, 
+        std::string>        getMachineInfo      ( std::string uuid, int timeout = SYSEXEC_TIMEOUT );
+    std::string             getProperty         ( std::string uuid, std::string name );
+    std::vector< std::map< std::string, std::string > > 
+                            getDiskList         ();
+    std::map<std::string, std::string> 
+                            getAllProperties    ( std::string uuid );
+    bool                    hasExtPack          ();
+    int                     installExtPack      ( std::string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    HVSessionPtr            sessionByVBID       ( const std::string& virtualBoxGUID );
+
 private:
+
+    /////////////////////////
+    // Local properties
+    /////////////////////////
+
+    std::string             hvGuestAdditions;
     bool                    sessionLoaded;
     
 };
 
-#endif /* end of include guard: VBOXHYPERVISOR_H */
+#endif /* end of include guard: VBoxInstance_H */

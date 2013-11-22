@@ -22,6 +22,8 @@
 #ifndef PROGRESSFEEDBACK_H
 #define PROGRESSFEEDBACK_H
 
+#include "Callbacks.h"
+
 #include <vector>
 #include <list>
 
@@ -41,53 +43,22 @@ typedef boost::shared_ptr< FiniteTask >       		FiniteTaskPtr;
 typedef boost::shared_ptr< VariableTask >       	VariableTaskPtr;
 typedef boost::shared_ptr< BooleanTask >       		BooleanTaskPtr;
 
-
-/* Callback functions reference */
-typedef boost::function<void ( const std::string& message )>    						cbStarted;
-typedef boost::function<void ( const std::string& message )>    						cbCompleted;
-typedef boost::function<void ( const std::string& message, const int errorCode )> 		cbFailure;
-typedef boost::function<void ( const std::string& message, const double progress )> 	cbProgress;
-
 /**
  * Base class to monitor progress events
  */
-class ProgressTask: public boost::enable_shared_from_this<ProgressTask> {
+class ProgressTask: public boost::enable_shared_from_this<ProgressTask>, public CallbackHost {
 public:
 
 	//////////////////////
 	// Constructor
 	//////////////////////
 	ProgressTask() 
-		: started(false), completed(false), startedCallbacks(), parent(), lastMessage(""),
-		  completedCallbacks(), failedCallbacks(), progressCallbacks(), __lastEventTime(0) { };
+		: CallbackHost(), started(false), completed(false), parent(), lastMessage(""), __lastEventTime(0) { };
 
 
 	//////////////////////
 	// Event handlers
 	//////////////////////
-
-	/**
-	 * Register a callback that will be fired when the very first task has
-	 * started progressing.
-	 */
-	void 				onStarted		( const cbStarted & cb );
-
-	/**
-	 * Register a callback that will be fired when the last task has completed
-	 * progress.
-	 */
-	void 				onCompleted		( const cbCompleted & cb );
-
-	/**
-	 * Register a callback that will be fired when an error has occured.
-	 */
-	void 				onFailure		( const cbFailure & cb );
-
-	/**
-	 * Register a callback event that will be fired when a progress
-	 * event is updated.
-	 */
-	void 				onProgress		( const cbProgress & cb );
 
 	/**
 	 * Mark the task as completed, overriding any active progress
@@ -151,15 +122,6 @@ protected:
 	//////////////////////
 	bool				 				started;
 	bool 								completed;
-
-	//////////////////////
-	// Event registry
-	//////////////////////
-
-	std::vector< cbStarted >			startedCallbacks;
-	std::vector< cbCompleted >			completedCallbacks;
-	std::vector< cbFailure >			failedCallbacks;
-	std::vector< cbProgress >			progressCallbacks;
 
 	//////////////////////
 	// Internal callbacks

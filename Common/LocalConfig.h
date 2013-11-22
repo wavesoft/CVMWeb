@@ -47,7 +47,7 @@ public:
      * Private constructor that initializes the LocalConfig Class.
      * THIS SHOULD NOT BE USED DIRECTLY
      *
-     * If you want to create a new instance, you must use the LocalConfig::global() or the
+     * If you want to create a new instance, you must use the LocalConfig::global(), LocalConfig::runtime() or the
      * LocalConfig::forRuntime( "name" ) functions.
      */
     LocalConfig ( std::string configDir, std::string configName );
