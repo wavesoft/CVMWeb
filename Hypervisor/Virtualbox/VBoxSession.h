@@ -23,7 +23,6 @@
 #define VBOXSESSION_H
 
 #include "VBoxCommon.h"
-#include "VBoxInstance.h"
 
 #include <string>
 #include <map>
@@ -33,12 +32,6 @@
 #include "Common/CrashReport.h"
 
 #include <boost/regex.hpp>
-
-/**
- * Shared Pointer Definition
- */
-class VBoxSession;
-typedef boost::shared_ptr< VBoxSession >                VBoxSessionPtr;
 
 /**
  * Virtualbox Session, built around a Finite-State-Machine model
@@ -157,11 +150,6 @@ public:
     virtual int             update              ();
     virtual int             updateFast          ();
 
-protected:
-
-    // Make friend class
-    friend class VBoxInstance;
-
     /////////////////////////////////////
     // External updates feedback
     /////////////////////////////////////
@@ -171,6 +159,8 @@ protected:
      * has been destroyed from an external source.
      */
     void                    hvNotifyDestroyed   ();
+
+protected:
 
     /////////////////////////////////////
     // Tool functions

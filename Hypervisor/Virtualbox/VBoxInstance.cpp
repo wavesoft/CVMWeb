@@ -26,6 +26,7 @@
 #include <map>
 #include <algorithm>
 
+#include "CVMGlobals.h"
 #include "global/config.h"
 
 #include "VBoxInstance.h"
@@ -33,83 +34,6 @@
 #include "Common/Utilities.h"
 
 using namespace std;
-
-// Where to mount the bootable CD-ROM
-#define BOOT_CONTROLLER     "IDE"
-#define BOOT_PORT           "0"
-#define BOOT_DEVICE         "0"
-
-// Where to mount the scratch disk
-#define SCRATCH_CONTROLLER  "SATA"
-#define SCRATCH_PORT        "0"
-#define SCRATCH_DEVICE      "0"
-
-// Where to mount the contextualization CD-ROM
-#define CONTEXT_CONTROLLER  "SATA"
-#define CONTEXT_PORT        "1"
-#define CONTEXT_DEVICE      "0"
-
-// Where (if to) mount the guest additions CD-ROM
-#define GUESTADD_USE        1
-#define GUESTADD_CONTROLLER "SATA"
-#define GUESTADD_PORT       "2"
-#define GUESTADD_DEVICE     "0"
-
-// Where the floppyIO floppy is placed
-#define FLOPPYIO_ENUM_NAME  "Storage Controller Name (2)"
-    // ^^ The first controller is IDE, second is SATA, third is Floppy
-#define FLOPPYIO_CONTROLLER "Floppy"
-#define FLOPPYIO_PORT       "0"
-#define FLOPPYIO_DEVICE     "0"
-
-/** =========================================== **\
-                   Tool Functions
-\** =========================================== **/
-
-// Create some condensed strings using the above parameters
-#define BOOT_DSK            BOOT_CONTROLLER " (" BOOT_PORT ", " BOOT_DEVICE ")"
-#define SCRATCH_DSK         SCRATCH_CONTROLLER " (" SCRATCH_PORT ", " SCRATCH_DEVICE ")"
-#define CONTEXT_DSK         CONTEXT_CONTROLLER " (" CONTEXT_PORT ", " CONTEXT_DEVICE ")"
-#define GUESTADD_DSK        GUESTADD_CONTROLLER " (" GUESTADD_PORT ", " GUESTADD_DEVICE ")"
-#define FLOPPYIO_DSK        FLOPPYIO_CONTROLLER " (" FLOPPYIO_PORT ", " FLOPPYIO_DEVICE ")"
-
-/**
- * Extract the mac address of the VM from the NIC line definition
- */
-std::string extractMac( std::string nicInfo ) {
-    CRASH_REPORT_BEGIN;
-    // A nic line is like this:
-    // MAC: 08002724ECD0, Attachment: Host-only ...
-    size_t iStart = nicInfo.find("MAC: ");
-    if (iStart != string::npos ) {
-        size_t iEnd = nicInfo.find(",", iStart+5);
-        string mac = nicInfo.substr( iStart+5, iEnd-iStart-5 );
-        
-        // Convert from AABBCCDDEEFF notation to AA:BB:CC:DD:EE:FF
-        return mac.substr(0,2) + ":" +
-               mac.substr(2,2) + ":" +
-               mac.substr(4,2) + ":" +
-               mac.substr(6,2) + ":" +
-               mac.substr(8,2) + ":" +
-               mac.substr(10,2);
-               
-    } else {
-        return "";
-    }
-    CRASH_REPORT_END;
-};
-
-/**
- * Replace the last part of the given IP
- */
-std::string changeUpperIP( std::string baseIP, int value ) {
-    CRASH_REPORT_BEGIN;
-    size_t iDot = baseIP.find_last_of(".");
-    if (iDot == string::npos) return "";
-    return baseIP.substr(0, iDot) + "." + ntos<int>(value);
-    CRASH_REPORT_END;
-};
-
 
 /** =========================================== **\
             Virtualbox Implementation
@@ -215,7 +139,6 @@ bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf ) {
 
         // Start extension pack installation
         this->installExtPack(
-                FBSTRING_PLUGIN_VERSION,
                 this->downloadProvider,
                 pfInstall
             );
@@ -754,14 +677,15 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
 
     // Initialize progress feedback
     if (pf) {
-        pf->setMax(3);
+        pf->setMax(4);
         pf->doing("Loading sessions from disk");
     }
 
     // Reset sessions array
     sessions.clear();
 
-    // Load session registry from the disk
+    // [1] Load session registry from the disk
+    // =======================================
     std::vector< std::string > vbDiskSessions  = LocalConfig::runtime()->enumFiles("vbsess-");
     for (std::vector< std::string >::iterator it = vbDiskSessions.begin(); it != vbDiskSessions.end(); ++it) {
         std::string sessName = *it;
@@ -787,7 +711,14 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     ans = this->exec("list vms", &lines, &err, 2, 2000);
     if (ans != 0) return HVE_QUERY_ERROR;
 
-    // List the VM names and uuids
+    // Forward progress
+    if (pf) {
+        pf->done("Sessions loaded");
+        pf->doing("Loading sessions from hypervisor");
+    }
+
+    // [2] Collect the running VM info
+    // ================================
     vms = tokenize( &lines, '{' );
     this->sessions.clear();
     for (std::map<string, string>::iterator it=vms.begin(); it!=vms.end(); ++it) {
@@ -803,12 +734,64 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
         }
 
         // Store on map
-        vboxVms[name] = uuid;
+        vboxVms[uuid] = name;
     }
+
+    // Forward progress
+    if (pf) {
+        pf->done("Sessions loaded");
+        pf->doing("Cleaning-up expired sessions");
+    }
+
+    // [3] Remove the VMs that are not registered 
+    //     in the hypervisor.
+    // ===========================================
+    for (std::map< std::string,HVSessionPtr >::iterator it = this->sessions.begin(); it != this->sessions.end(); it++) {
+        HVSessionPtr sess = (*it).second;
+
+        // Check if the stored session does not correlate
+        // to a session in VirtualBox -> It means it was 
+        // destroyed externally.
+        if (vboxVms.find(sess->parameters->get("vboxid")) == vboxVms.end()) {
+
+            // Remove it from session map
+            sessions.erase( sess->uuid );
+
+        }
+
+    }
+
+    // Forward progress
+    if (pf) {
+        pf->done("Sessions cleaned-up");
+        pf->doing("Releasing old open sessions");
+    }
+
+    // [4] Check if some of the currently open session 
+    //     was lost.
+    // ===========================================
+    for (std::list< HVSessionPtr >::iterator it = openSessions.begin(); it != openSessions.end(); it++) {
+        HVSessionPtr sess = (*it);
+
+        // Check if the session has gone away
+        if (sessions.find(sess->uuid) == sessions.end()) {
+   
+            // Let session know that it has gone away
+            boost::static_pointer_cast<VBoxSession>(sess)->hvNotifyDestroyed();
+
+            // Remove it from open and rewind
+            openSessions.erase( it );
+            it = openSessions.begin();
+
+        }
+
+    }
+
+    // Notify progress
+    if (pf) pf->done("Old open sessions released");
 
     return 0;
     NAMED_MUTEX_UNLOCK;
-
     CRASH_REPORT_END;
 }
 
@@ -844,7 +827,7 @@ bool VBoxInstance::hasExtPack() {
  * on it's own.
  *
  */
-int VBoxInstance::installExtPack( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf ) {
+int VBoxInstance::installExtPack( DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
     string requestBuf;
     string checksum;
@@ -852,8 +835,14 @@ int VBoxInstance::installExtPack( string versionID, DownloadProviderPtr download
 
     // Notify extension pack installation
     if (pf) {
-        pf->setMax(3, false);
+        pf->setMax(5, false);
         pf->doing("Installing extension pack");
+    }
+
+    // If we already have an extension pack, complete
+    if (hasExtPack()) {
+        if (pf) pf->complete("Already installed");
+        return HVE_ALREADY_EXISTS;
     }
 
     // Begin a download task
@@ -862,7 +851,7 @@ int VBoxInstance::installExtPack( string versionID, DownloadProviderPtr download
     
     /* Contact the information point */
     CVMWA_LOG( "Info", "Fetching data" );
-    int res = downloadProvider->downloadText( "http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver=" + versionID, &requestBuf, downloadPf );
+    int res = downloadProvider->downloadText( URL_HYPERVISOR_CONFIG FBSTRING_PLUGIN_VERSION, &requestBuf, downloadPf );
     if ( res != HVE_OK ) {
         if (pf) pf->fail("Unable to fetch hypervisor configuration", res);
         return res;
@@ -872,19 +861,16 @@ int VBoxInstance::installExtPack( string versionID, DownloadProviderPtr download
     vector<string> lines;
     splitLines( requestBuf, &lines );
     map<string, string> data = tokenize( &lines, '=' );
-    
-    // Get the version of Virtualbox currently installed
-    size_t verPart = this->verString.find(" ");
-    if (verPart == string::npos) verPart = this->verString.length();
-    size_t revPart = this->verString.find("r");
-    if (revPart == string::npos) revPart = verPart;
 
     // Build version string (it will be something like "vbox-2.4.12")
-    string verstring = "vbox-" + this->verString.substr(0, revPart);
+    ostringstream oss;
+    oss << "vbox-" << version.major << "." << version.minor << "." << version.build;
+
+    CVMWA_LOG("INFO", "Ver string: '" << oss.str() << "' from '" << version.verString << "'");
 
     // Prepare name constants to be looked up on the configuration url
-    string kExtpackUrl = verstring      + "-extpack";
-    string kExtpackChecksum = verstring + "-extpackChecksum";
+    string kExtpackUrl = oss.str()      + "-extpack";
+    string kExtpackChecksum = oss.str() + "-extpackChecksum";
     string kExtpackExt = ".vbox-extpack";
 
     // Verify integrity of the data

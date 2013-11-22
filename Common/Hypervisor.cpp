@@ -67,6 +67,19 @@ boost::regex reVersionParse("(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?:[\\.\\-\\w](\\d+))?
 HypervisorVersion::HypervisorVersion( const std::string& verString ) {
     CRASH_REPORT_BEGIN;
 
+    // Set value
+    set( verString );
+
+    CRASH_REPORT_END;
+}
+
+
+/**
+ * Set a value to the specified version construct
+ */
+void HypervisorVersion::set( const std::string & version ) {
+    CRASH_REPORT_BEGIN;
+
     // Reset values
     this->major = 0;
     this->minor = 0;
@@ -77,7 +90,7 @@ HypervisorVersion::HypervisorVersion( const std::string& verString ) {
 
     // Try to match the expression
     boost::smatch matches;
-    if (boost::regex_match(verString, matches, reVersionParse, boost::match_extra)) {
+    if (boost::regex_match(version, matches, reVersionParse, boost::match_extra)) {
 
         // Get the entire matched string
         string stringMatch(matches[0].first, matches[0].second);
@@ -569,7 +582,7 @@ int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrM
 /**
  * Initialize hypervisor 
  */
-HVInstance::HVInstance() {
+HVInstance::HVInstance() : version("") {
     CRASH_REPORT_BEGIN;
     this->sessionID = 1;
     
@@ -579,47 +592,6 @@ HVInstance::HVInstance() {
     
     /* Unless overriden use the default downloadProvider */
     this->downloadProvider = DownloadProvider::Default();
-    
-    /* Reset vars */
-    this->verMajor = 0;
-    this->verMinor = 0;
-    this->type = 0;
-
-    CRASH_REPORT_END;
-};
-
-/**
- * Exec version and parse version
- */
-void HVInstance::detectVersion() {
-    CRASH_REPORT_BEGIN;
-    vector<string> out;
-    string err;
-    if (this->type == HV_VIRTUALBOX) {
-        this->exec("--version", &out, &err);
-        
-    } else {
-        this->verString = "Unknown";
-        this->verMajor = 0;
-        this->verMinor = 0;
-        return;
-    }
-    
-    /* We don't have enough information */
-    if (out.size() == 0) return;
-
-    /* Get version string */
-    string ver = out[0];
-    unsigned nl = ver.find_first_of("\r\n");
-    this->verString = ver.substr(0, nl);
-    
-    /* Get major */
-    unsigned mav = ver.find(".");
-    this->verMajor = ston<int>( ver.substr(0,mav) );
-    
-    /* Get minor */
-    unsigned miv = ver.find(".", mav+1);
-    this->verMinor = ston<int>( ver.substr(mav+1,miv-mav) );
     
     CRASH_REPORT_END;
 };
@@ -637,12 +609,12 @@ int HVInstance::sessionValidate ( const ParameterMapPtr& parameters ) {
     // Extract name and key
     std::string name = parameters->get("name");
     if (name.empty()) {
-        CVMWA_LOG("Error", "Missing 'name' parameter on sessionOpen" );
+        CVMWA_LOG("Error", "Missing 'name' parameter on sessionValidate" );
         return HVE_NOT_VALIDATED;
     }
     std::string key = parameters->get("key");
     if (name.empty()) {
-        CVMWA_LOG("Error", "Missing 'key' parameter on sessionOpen" );
+        CVMWA_LOG("Error", "Missing 'key' parameter on sessionValidate" );
         return HVE_NOT_VALIDATED;
     }
 

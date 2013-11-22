@@ -152,14 +152,16 @@ void CVMWeb::onPluginReady()
     if (strBrowser.find("MSIE ") != string::npos) {
         // For Non-IE Browsers, allocate a download provider that uses browser for I/O 
         browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
+        CVMWA_LOG("Debug", "Switching to browser download provider");
     } else {
-
+        // Otherwise use the default provider
+        browserDownloadProvider = DownloadProvider::Default();
+        CVMWA_LOG("Debug", "Using failover default download provider");
     }
 
     // We now have the plugin path, get the location of the daemon binary
     if (this->hv != NULL) {
         this->hv->daemonBinPath = this->getDaemonBin();
-        CVMWA_LOG("Debug", "Setting browser download provider");
         this->hv->setDownloadProvider( browserDownloadProvider );
     }
 

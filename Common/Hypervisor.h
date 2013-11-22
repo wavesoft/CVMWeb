@@ -158,6 +158,11 @@ public:
     HypervisorVersion       ( const std::string& verString );
 
     /**
+     * Set a value to the specified version construct
+     */
+    void                    set( const std::string & version );
+
+    /**
      * Compare to the given revision
      */
     int                     compare( const HypervisorVersion& version );
@@ -284,16 +289,15 @@ class HVInstance : public boost::enable_shared_from_this<HVInstance> {
 public:
     
     HVInstance();
-    int                     type;
     
-    int                     verMajor;
-    int                     verMinor;
-    std::string             verString;
     std::string             hvBinary;
     std::string             hvRoot;
     std::string             dirData;
     std::string             dirDataCache;
     std::string             lastExecError;
+    
+    // The Version String for the hypervisor
+    HypervisorVersion       version;
     
     /* Session management commands */
     std::list< HVSessionPtr > openSessions;
@@ -305,9 +309,9 @@ public:
     int                     sessionValidate     ( const ParameterMapPtr& parameters );
 
     /* Overridable functions */
+    virtual int             getType             ( ) { return HV_NONE; };
     virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() ) = 0;
     virtual HVSessionPtr    allocateSession     ( ) = 0;
-
     virtual int             getCapabilities     ( HVINFO_CAPS * caps ) = 0;
     virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
     virtual int             getUsage            ( HVINFO_RES * usage);
@@ -320,12 +324,11 @@ public:
     std::string             cernVMVersion       ( std::string filename );
     int                     buildContextISO     ( std::string userData, std::string * filename );
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
-    void                    detectVersion       ( );
     
     /* Control functions (called externally) */
     int                     checkDaemonNeed ();
     void                    setDownloadProvider( DownloadProviderPtr p );
-    
+
     /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
              the Hypervisor class in order to use the checkDaemonNeed() function. It's
              a hack because those two systems (JSAPI & HypervisorAPI) should be isolated. */

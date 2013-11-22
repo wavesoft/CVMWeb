@@ -18,6 +18,7 @@
 #include "Common/ProgressFeedback.h"
 
 #include "Hypervisor/Virtualbox/VBoxSession.h"
+#include "Hypervisor/Virtualbox/VBoxInstance.h"
 
 #include <openssl/rand.h>
 
@@ -166,11 +167,23 @@ int main( int argc, char ** argv ) {
     fsm.FSMThreadStop();
     */
 
+    FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
+
+    // Setup callbacks
+    pTasks->onStarted( boost::bind(&cb_started, _1) );
+    pTasks->onCompleted(boost::bind(&cb_completed, _1));
+    pTasks->onFailed(boost::bind(&cb_error, _1, _2));
+    pTasks->onProgress(boost::bind(&cb_progress, _1, _2));
+
+    // Detect and instantiate hypervisor
     HVInstancePtr hv = detectHypervisor();
     if (hv) {
         cout << "HV Binary: " << hv->hvBinary << endl;
 
-        hv->loadSessions();
+        // Wait until hypervisor is ready
+        hv->waitTillReady( pTasks );
+        
+        //boost::static_pointer_cast<VBoxInstance>(hv)->installExtPack( DownloadProvider::Default(),  );
         
     } else {
         cout << "No hypervisor found!" << endl; 

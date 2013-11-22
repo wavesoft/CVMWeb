@@ -256,21 +256,21 @@ FB::variant CVMWebAPI::checkSession( const FB::variant& vm, const FB::variant& s
 FB::variant CVMWebAPI::requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB ) {
     CRASH_REPORT_BEGIN;
     
-    /* Block requests when reached throttled state */
+    // Block requests when reached throttled state
     if (this->throttleBlock) {
         if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_ACCESS_DENIED ));
         return CVME_ACCESS_DENIED;
     }
 
-    /* Check for invalid plugin */
+    // Check for invalid plugin
     CVMWebPtr p = this->getPlugin();
     if (p->hv == NULL) return CVME_UNSUPPORTED;
     
-    /* Schedule thread exec */
+    // Schedule thread exec
     lastThread = boost::thread(boost::bind(&CVMWebAPI::requestSafeSession_thread,
          this, vmcpURL, successCb, failureCb, progressCB));
 
-    /* Scheduled for creation */
+    // Scheduled for creation
     return HVE_SCHEDULED;
         
     CRASH_REPORT_END;
@@ -284,24 +284,24 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
 
     try {
 
-        /* Handle request */
+        // Handle request
         CVMWebPtr p = this->getPlugin();
         if (p->hv == NULL) {
             if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( CVME_UNSUPPORTED ));
             return;
         }
 
-        /* Create a progress delegate */
+        // Create a progress delegate
         ProgressDelegate onProgress( progressCB );
         onProgress.fire( 1, 50, "Initializing hypervisor" );
 
-        /* Wait for delaied hypervisor initiation */
+        // Wait for delaied hypervisor initiation
         p->hv->waitTillReady( FBSTRING_PLUGIN_VERSION, onProgress.getFunction(), 2, 25, 50 );
 
-        /* Fetch domain info */
+        // Fetch domain info
         std::string domain = this->getDomainName();
 
-        /* Try to update authorized keystore if it's in an invalid state */
+        // Try to update authorized keystore if it's in an invalid state
         onProgress.fire( 25, 50, "Initializing crypto store" );
         if (!isDomainPrivileged()) {
         
@@ -322,7 +322,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
         
         }
     
-        /* Validate arguments */
+        // Validate arguments
         onProgress.fire( 30, 50, "Contacting configuration server" );
         std::string sURL = vmcpURL.convert_cast<std::string>();
         if (sURL.empty()) {
@@ -330,7 +330,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
             return;
         }
     
-        /* Put salt and user-specific ID in the URL */
+        // Put salt and user-specific ID in the URL
         std::string salt = p->crypto->generateSalt();
         std::string glueChar = "&";
         if (sURL.find("?") == string::npos) glueChar = "?";
@@ -339,7 +339,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
             "cvm_salt=" + salt + "&" +
             "cvm_hostid=" + this->calculateHostID( domain );
     
-        /* Download data from URL */
+        // Download data from URL
         std::string jsonString;
         int res = p->browserDownloadProvider->downloadText( newURL, &jsonString );
         if (res < 0) {
@@ -347,14 +347,14 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
             return;
         }
     
-        /* Try to parse the data */
+        // Try to parse the data
         FB::variant jsonData = FB::jsonToVariantValue( jsonString );
         if (!jsonData.is_of_type<FB::VariantMap>()) {
             if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_QUERY_ERROR ));
             return;
         }
     
-        /* Validate response */
+        // Validate response
         FB::VariantMap jsonHash = jsonData.cast<FB::VariantMap>();
         if (jsonHash.find("name") == jsonHash.end()) {
             if (IS_CB_AVAILABLE(failureCb)) failureCb.cast<FB::JSObjectPtr>()->InvokeAsync("", FB::variant_list_of( HVE_USAGE_ERROR ));
@@ -369,7 +369,7 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
             return;
         };
     
-        /* Validate signature */
+        // Validate signature
         onProgress.fire( 35, 50, "Validating server identity" );
         res = p->crypto->signatureValidate( domain, salt, jsonHash );
         if (res < 0) {
@@ -377,11 +377,11 @@ void CVMWebAPI::requestSafeSession_thread( const FB::variant& vmcpURL, const FB:
             return;
         }
     
-        /* Fetch useful fields */
+        // Fetch useful fields
         string vmName = jsonHash["name"].convert_cast<string>();
         string vmSecret = jsonHash["secret"].convert_cast<string>();
     
-        /* Check session state */
+        // Check session state
         res = p->hv->sessionValidate( vmName, vmSecret );
         if (res == 2) { 
             // Invalid password

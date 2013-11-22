@@ -82,11 +82,18 @@ public:
 
 	/** 
 	 * Lock updates
+	 *
+	 * You can use this function along with the unlock() function in order
+	 * to optimize the write performance. lock() the parameter map before
+	 * you set the parameter values and unlock() it when you are done.
 	 */
 	void 						lock 			( );
 
 	/** 
 	 * Unlock updates and commit
+	 *
+	 * This function will synchronize the changes only if something has 
+	 * changed since the time the lock() function was called.
 	 */
 	void 						unlock 			( );
 
@@ -190,7 +197,7 @@ private:
 	bool						locked;
 
 	/**
-	 * Flags if something was chaged between a locked() state
+	 * Flags if something was chaged between a locked state
 	 */
 	bool 						changed;
 

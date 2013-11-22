@@ -31,7 +31,7 @@
 ///////////////////////////////////////////////////////////////////
 
 /**
- * The hypervisor configuration URL
+ * The hypervisor configuration URL (plugin version will be appended)
  */
 #define		URL_HYPERVISOR_CONFIG			"http://cernvm.cern.ch/releases/webapi/hypervisor.config?ver="
 

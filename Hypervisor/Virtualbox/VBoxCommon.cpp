@@ -126,3 +126,40 @@ bool vboxInstall() {
 
     return false;
 }
+
+/**
+ * Tool function to extract the mac address of the VM from the NIC line definition
+ */
+std::string _vbox_extractMac( std::string nicInfo ) {
+    CRASH_REPORT_BEGIN;
+    // A nic line is like this:
+    // MAC: 08002724ECD0, Attachment: Host-only ...
+    size_t iStart = nicInfo.find("MAC: ");
+    if (iStart != string::npos ) {
+        size_t iEnd = nicInfo.find(",", iStart+5);
+        string mac = nicInfo.substr( iStart+5, iEnd-iStart-5 );
+        
+        // Convert from AABBCCDDEEFF notation to AA:BB:CC:DD:EE:FF
+        return mac.substr(0,2) + ":" +
+               mac.substr(2,2) + ":" +
+               mac.substr(4,2) + ":" +
+               mac.substr(6,2) + ":" +
+               mac.substr(8,2) + ":" +
+               mac.substr(10,2);
+               
+    } else {
+        return "";
+    }
+    CRASH_REPORT_END;
+};
+
+/**
+ * Tool function to replace the last part of the given IP
+ */
+std::string _vbox_changeUpperIP( std::string baseIP, int value ) {
+    CRASH_REPORT_BEGIN;
+    size_t iDot = baseIP.find_last_of(".");
+    if (iDot == string::npos) return "";
+    return baseIP.substr(0, iDot) + "." + ntos<int>(value);
+    CRASH_REPORT_END;
+};

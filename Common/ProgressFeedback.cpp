@@ -73,6 +73,9 @@ void ProgressTask::fail ( const std::string& message, const int errorCode ) {
  */
 void ProgressTask::doing ( const std::string& message ) {
 
+	// Notify started
+	_notifyStarted( message );
+
 	// Notify update
 	_notifyUpdate(message);
 

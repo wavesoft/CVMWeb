@@ -35,32 +35,40 @@
 #include <boost/regex.hpp>
 
 /**
- * Shared Pointer Definition
- */
-class VBoxInstance;
-typedef boost::shared_ptr< VBoxInstance >     VBoxInstancePtr;
-
-/**
  * VirtualBox Hypervisor
  */
 class VBoxInstance : public HVInstance {
 public:
 
     VBoxInstance( std::string fRoot, std::string fBin, std::string fIso ) : HVInstance() {
+
+        // Populate variables
         this->sessionLoaded = false;
         this->hvRoot = fRoot;
         this->hvBinary = fBin;
         this->hvGuestAdditions = fIso;
+
+        // Detect and update VirtualBox Version
+        std::vector< std::string > out;
+        std::string err;
+        this->exec("--version", &out, &err);
+
+        // If we got some output, extract version numbers
+        if (out.size() > 0)
+            version.set( out[0] );
+
     };
 
 
     /////////////////////////
     // HVInstance Overloads
     /////////////////////////
+    virtual int             getType             ( ) { return HV_VIRTUALBOX; };
     virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
-    virtual HVSessionPtr    allocateSession     ( );
-    virtual int             getCapabilities     ( HVINFO_CAPS * caps );
     virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    virtual HVSessionPtr    allocateSession     ( );
+    virtual HVSessionPtr    openSession         ( const ParameterMapPtr & requestParameters );
+    virtual int             getCapabilities     ( HVINFO_CAPS * caps );
 
     /////////////////////////
     // Friend functions
@@ -74,7 +82,7 @@ public:
     std::map<std::string, std::string> 
                             getAllProperties    ( std::string uuid );
     bool                    hasExtPack          ();
-    int                     installExtPack      ( std::string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    int                     installExtPack      ( DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
     HVSessionPtr            sessionByVBID       ( const std::string& virtualBoxGUID );
 
 private:
