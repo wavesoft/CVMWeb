@@ -853,7 +853,7 @@ int VBoxInstance::installExtPack( DownloadProviderPtr downloadProvider, const Fi
     // Notify extension pack installation
     if (pf) {
         pf->setMax(5, false);
-        pf->doing("Installing extension pack");
+        pf->doing("Preparing for extension pack installation");
     }
 
     // If we already have an extension pack, complete
@@ -931,6 +931,7 @@ int VBoxInstance::installExtPack( DownloadProviderPtr downloadProvider, const Fi
     res = this->exec( "extpack install \"" + tmpExtpackFile + "\"", NULL, &err, 2, SYSEXEC_TIMEOUT, true );
     NAMED_MUTEX_UNLOCK;
     if (res != HVE_OK) {
+        if (pf) pf->fail("Extension pack failed to install", HVE_EXTERNAL_ERROR);
         return HVE_EXTERNAL_ERROR;
     }
     if (pf) pf->done("Installed extension pack");

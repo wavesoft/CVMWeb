@@ -577,7 +577,7 @@ int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrM
     
         /* Execute */
         string execError;
-        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, gui, retries, timeout );
+        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries, timeout, gui );
         if (stderrMsg != NULL) *stderrMsg = execError;
 
         /* Store the last error occured */

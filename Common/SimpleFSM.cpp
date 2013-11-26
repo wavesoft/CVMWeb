@@ -92,7 +92,9 @@ void SimpleFSM::FSMRegistryEnd( int rootID ) {
 	fsmTargetState = rootID;
 	pt = fsmNodes.find( rootID );
 	fsmRootNode = &((*pt).second);
-	fsmCurrentNode = fsmRootNode;
+
+	// Reset current node
+	fsmCurrentNode = NULL;
 
 	// Flush temp arrays
 	fsmTmpRouteLinks.clear();
@@ -100,32 +102,16 @@ void SimpleFSM::FSMRegistryEnd( int rootID ) {
 }
 
 /**
- * Run next action in the FSM
+ * Helper function to call a handler
  */
-bool SimpleFSM::FSMContinue( bool inThread ) {
-	if (fsmInsideHandler) return false;
-	if (fsmCurrentPath.empty()) return false;
-	fsmInsideHandler = true;
-
-	// Get next action in the path
-	FSMNode * next = fsmCurrentPath.front();
-    fsmCurrentPath.pop_front();
-
-	// Skip state nodes
-	while ((!next->handler) && !fsmCurrentPath.empty()) {
-		next = fsmCurrentPath.front();
-        fsmCurrentPath.pop_front();
-	}
-
-	// Change current node
-	fsmCurrentNode = next;
+bool SimpleFSM::_callHandler( FSMNode * node, bool inThread ) {
 
 	// Use guarded execution
 	try {
 
 		// Run the new state
-		if (next->handler)
-			next->handler();
+		if (node->handler)
+			node->handler();
 
 	} catch (boost::thread_interrupted &e) {
 		CVMWA_LOG("Debuf", "FSM Handler interrupted");
@@ -145,9 +131,59 @@ bool SimpleFSM::FSMContinue( bool inThread ) {
 
 	} catch ( std::exception &e ) {
 		CVMWA_LOG("Exception", e.what() );
+		return false;
+
 	} catch ( ... ) {
 		CVMWA_LOG("Exception", "Unknown exception" );
+		return false;
+
 	}
+
+	// Executed successfully
+	return true;
+
+}
+
+/**
+ * Run next action in the FSM
+ */
+bool SimpleFSM::FSMContinue( bool inThread ) {
+	if (fsmInsideHandler) return false;
+	if (fsmCurrentPath.empty()) return false;
+	fsmInsideHandler = true;
+
+	// If that's the first time we call FSMContinue,
+	// run the root action
+	if (fsmCurrentNode == NULL) {
+		bool ans;
+
+		// Set and run root node
+		fsmCurrentNode = fsmRootNode;
+		ans = _callHandler(fsmCurrentNode, inThread);
+
+		// We are now outside the handler
+		fsmInsideHandler = false;
+
+		// Return immediately
+		return ans;
+	}
+
+	// Get next action in the path
+	FSMNode * next = fsmCurrentPath.front();
+    fsmCurrentPath.pop_front();
+
+	// Skip state nodes
+	while ((!next->handler) && !fsmCurrentPath.empty()) {
+		next = fsmCurrentPath.front();
+        fsmCurrentPath.pop_front();
+	}
+
+	// Change current node
+	fsmCurrentNode = next;
+
+	// Call handler
+	if (!_callHandler(next, inThread)) 
+		return false;
 
 	// We are now outside the handler
 	fsmInsideHandler = false;
@@ -274,10 +310,6 @@ void SimpleFSM::FSMSkew(int state) {
  * Local function to do FSMContinue when needed in a threaded way
  */
 void SimpleFSM::FSMThreadLoop() {
-
-	// Reset path to initial node
-	fsmCurrentPath.clear();
-	FSMGoto(1);
 
 	// Catch interruptions
 	try {

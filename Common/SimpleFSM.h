@@ -131,6 +131,9 @@ private:
 	void							_fsmPause();
 	void 							_fsmWakeup();
 
+	// Reusable function to run the node handler
+	bool 							_callHandler( FSMNode * node, bool inThread );
+
 };
 
 
