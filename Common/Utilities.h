@@ -203,7 +203,7 @@ int                                                 md5_bin         ( std::strin
  * 
  * This function will wait for the command to finish and it will return it's exit code
  */
-int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1, int timeout = SYSEXEC_TIMEOUT );
+int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1, int timeout = SYSEXEC_TIMEOUT, bool gui = false );
 
 /**
  * Platform-independant function to execute the given command-line without

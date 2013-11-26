@@ -642,7 +642,7 @@ void abortSysExec() {
 /**
  * Cross-platform exec and return function (called by sysExec())
  */
-int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, int timeout ) {
+int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, int timeout, bool gui ) {
     CRASH_REPORT_BEGIN;
     try {
 #ifndef _WIN32
@@ -844,6 +844,15 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
     siStartInfo.hStdError = g_hChildStdErr_Wr;
 	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
+    // Prepare flags depending on what we want to display
+    DWORD cwFlags = 0;
+    if (gui) {
+        siStartInfo.wShowWindow = SW_SHOWNORMAL;
+    } else {
+        siStartInfo.wShowWindow = SW_HIDE;
+        cwFlags = CREATE_NO_WINDOW;
+    }
+
     /* Build cmdline */
     string execpath = "\"" + app + "\" " + cmdline;
 
@@ -855,7 +864,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 		NULL,
 		NULL,
 		TRUE,
-		CREATE_NO_WINDOW,
+		cwFlags,
 		NULL,
 		NULL,
 		&siStartInfo,
@@ -1008,7 +1017,7 @@ int sysExecAsync( string app, string cmdline ) {
 /**
  * Cross-platform exec function with retry functionality
  */
-int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries, int timeout ) {
+int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries, int timeout, bool gui ) {
     CRASH_REPORT_BEGIN;
     string stdError;
     int res = 252;
@@ -1024,7 +1033,7 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
         
         // Call the wrapper function
         CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
-        res = __sysExec( app, cmdline, stdoutList, &stdError, timeout );
+        res = __sysExec( app, cmdline, stdoutList, &stdError, timeout, gui );
         CVMWA_LOG("Debug", "Exec EXIT_CODE: " << res);
 
         // Check for "Error" in the stderr

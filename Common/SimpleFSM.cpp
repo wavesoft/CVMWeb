@@ -277,7 +277,7 @@ void SimpleFSM::FSMThreadLoop() {
 
 	// Reset path to initial node
 	fsmCurrentPath.clear();
-	fsmCurrentPath.push_back( fsmRootNode );
+	FSMGoto(1);
 
 	// Catch interruptions
 	try {

@@ -330,7 +330,7 @@ public:
     virtual int             getUsage            ( HVINFO_RES * usage);
     
     /* Tool functions (used internally or from session objects) */
-    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT );
+    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT, bool gui = false );
     int                     cernVMDownload      ( std::string version, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), std::string flavor = DEFAULT_CERNVM_FLAVOR, std::string arch = DEFAULT_CERNVM_ARCH );
     int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr() );
     int                     cernVMCached        ( std::string version, std::string * filename );
