@@ -314,6 +314,11 @@ char *                                              getTimestamp    ();
 std::string                                         compactID       ( std::string id );
 
 /**
+ * Check if the given PID is alive
+ */
+bool                                                isPIDAlive      ( int pid );
+
+/**
  * Release memory from the named mutexes already acquired by the named mutex locks
  */
 void                                                flushNamedMutexes ();
@@ -327,7 +332,6 @@ void                                                mapDump         ( const std:
  * Visualize the dump of a string:vector
  */
 void                                                vectorDump      ( const std::vector< std::string >& v );
-
 
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */

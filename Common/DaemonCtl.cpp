@@ -54,40 +54,6 @@ std::string getDaemonLockfile() {
 }
 
 /**
- * Check if the given process ID is still running
- */
-bool isAlive( int pid ) {
-    CRASH_REPORT_BEGIN;
-    
-    #if defined(__APPLE__) && defined(__MACH__)
-        struct proc_bsdinfo bsdInfo;
-        int ret = proc_pidinfo( pid, PROC_PIDTBSDINFO, 0, &bsdInfo, sizeof(bsdInfo));
-        return (ret > 0);
-    #endif
-    #ifdef __linux__
-        int ret = kill( pid, 0 );
-        return (ret == 0);
-    #endif
-    #ifdef _WIN32
-        DWORD lpExitCode;
-        
-        // Open handle
-        HANDLE hProc = OpenProcess( PROCESS_QUERY_INFORMATION, false, pid);
-        if (hProc == NULL) return false;
-        
-        // Query exit code (returns STILL_ALIVE if it's still alive)
-        GetExitCodeProcess( hProc, &lpExitCode );
-        CloseHandle( hProc );
-
-        // Check status
-        return (lpExitCode == STILL_ACTIVE);
-    #endif
-
-    return false;
-    CRASH_REPORT_END;
-}
-
-/**
  * Return the daemon pid from the lockfile
  */
 int daemonLockFilePID () {
@@ -125,7 +91,7 @@ bool isDaemonRunning () {
         return false;
     
     /* Check if it's running */
-    return isAlive( pid );
+    return isPIDAlive( pid );
     
     CRASH_REPORT_END;
 }

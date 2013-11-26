@@ -175,6 +175,9 @@ int main( int argc, char ** argv ) {
     pTasks->onFailed(boost::bind(&cb_error, _1, _2));
     pTasks->onProgress(boost::bind(&cb_progress, _1, _2));
 
+    // Install Hypervisor
+    installHypervisor( DownloadProvider::Default(), pTasks );
+
     // Detect and instantiate hypervisor
     HVInstancePtr hv = detectHypervisor();
     if (hv) {

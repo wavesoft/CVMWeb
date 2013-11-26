@@ -1594,6 +1594,40 @@ void explode( std::string const &input, char sep, std::vector<std::string> * out
     CRASH_REPORT_END;
 }
 
+/**
+ * Check if the given process ID is still running
+ */
+bool isPIDAlive( int pid ) {
+    CRASH_REPORT_BEGIN;
+    
+    #if defined(__APPLE__) && defined(__MACH__)
+        struct proc_bsdinfo bsdInfo;
+        int ret = proc_pidinfo( pid, PROC_PIDTBSDINFO, 0, &bsdInfo, sizeof(bsdInfo));
+        return (ret > 0);
+    #endif
+    #ifdef __linux__
+        int ret = kill( pid, 0 );
+        return (ret == 0);
+    #endif
+    #ifdef _WIN32
+        DWORD lpExitCode;
+        
+        // Open handle
+        HANDLE hProc = OpenProcess( PROCESS_QUERY_INFORMATION, false, pid);
+        if (hProc == NULL) return false;
+        
+        // Query exit code (returns STILL_ALIVE if it's still alive)
+        GetExitCodeProcess( hProc, &lpExitCode );
+        CloseHandle( hProc );
+
+        // Check status
+        return (lpExitCode == STILL_ACTIVE);
+    #endif
+
+    return false;
+    CRASH_REPORT_END;
+}
+
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
 /* ======================================================== */

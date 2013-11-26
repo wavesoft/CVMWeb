@@ -110,7 +110,7 @@ map<string, string> VBoxInstance::getAllProperties( string uuid ) {
  */
 bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
-
+    
     // Update progress
     if (pf) pf->setMax(2);
     
