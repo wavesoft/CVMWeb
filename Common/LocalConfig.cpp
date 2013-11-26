@@ -140,6 +140,8 @@ bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines
     // Dump the contents
     for (std::vector<std::string>::iterator i = lines->begin(); i != lines->end(); ++i) {
         std::string line = *i;
+
+        // Store line
         ofs << line << std::endl;
     }
     
@@ -183,9 +185,25 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     if (ofs.fail()) return false;
     
     // Dump the contents
+    std::string::size_type pos = 0;
     for (std::map<std::string, std::string>::iterator it=map->begin(); it!=map->end(); ++it) {
         std::string key = (*it).first;
         std::string value = (*it).second;
+
+        // Do not allow new-line span: Replace \n to "\n", \r to "\r" and "\" to "\\"
+        while((pos = value.find("\\", pos)) != std::string::npos) {
+            value.replace(pos, 2, "\\\\");
+            pos += 2;
+        }
+        while((pos = value.find("\n", pos)) != std::string::npos) {
+            value.replace(pos, 2, "\\n");
+            pos += 2;
+        }
+        while((pos = value.find("\r", pos)) != std::string::npos) {
+            value.replace(pos, 2, "\\r");
+            pos += 2;
+        }
+
         CVMWA_LOG("Config", "Storing '" << key << "=" << value << "'");
         ofs << key << "=" << value << std::endl;
     }
@@ -212,7 +230,10 @@ bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines
     std::string line;
     lines->clear();
     while( std::getline(ifs, line) ) {
+
+        // Store line
         lines->push_back(line);
+
     }
     
     // Close file
@@ -261,16 +282,34 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     
     // Read file
     std::string line;
+    std::string::size_type pos = 0;
     map->clear();
     while( std::getline(ifs, line) ) {
-      std::istringstream is_line(line);
-      std::string key;
-      if( std::getline(is_line, key, '=') ) {
-        std::string value;
-        if( std::getline(is_line, value) ) {
-          map->insert( std::pair<std::string,std::string>(key, value) );
+        std::istringstream is_line(line);
+        std::string key;
+        if( std::getline(is_line, key, '=') ) {
+            std::string value;
+            if( std::getline(is_line, value) ) {
+
+                // Revert new-line span: Replace "\n" to \n, "\r" to \r and "\\"" to "\"
+                while((pos = value.find("\\\\", pos)) != std::string::npos) {
+                    value.replace(pos, 1, "\\");
+                    pos += 1;
+                }
+                while((pos = value.find("\\n", pos)) != std::string::npos) {
+                    value.replace(pos, 1, "\n");
+                    pos += 1;
+                }
+                while((pos = value.find("\\r", pos)) != std::string::npos) {
+                    value.replace(pos, 1, "\r");
+                    pos += 1;
+                }
+
+                // Insert into map
+                map->insert( std::pair<std::string,std::string>(key, value) );
+
+            }
         }
-      }
     }
     
     // Close file

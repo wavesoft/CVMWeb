@@ -25,16 +25,6 @@
 #include <sstream>
 #include <cstdlib>
 
-#if defined(__APPLE__) && defined(__MACH__)
-#include <libproc.h>
-#endif
-
-#ifdef __linux__
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#endif
-
 using namespace std;
 
 /**

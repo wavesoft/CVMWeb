@@ -405,3 +405,13 @@ boost::thread * SimpleFSM::FSMThreadStart() {
 	fsmThread = new boost::thread(boost::bind(&SimpleFSM::FSMThreadLoop, this));
 	return fsmThread;
 }
+
+/**
+ * Release mutex upon destruction
+ */
+SimpleFSM::~SimpleFSM() {
+
+	// Join thread
+	FSMThreadStop();
+
+}

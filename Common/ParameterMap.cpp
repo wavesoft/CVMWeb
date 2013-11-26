@@ -49,7 +49,7 @@ std::string ParameterMap::get( const std::string& kname, std::string defaultValu
 void ParameterMap::set ( const std::string& kname, std::string value ) {
     CRASH_REPORT_BEGIN;
     std::string name = prefix + kname;
-    parameters->insert(std::pair< std::string, std::string >( name, value ));
+    (*parameters)[name] = value;
     if (!locked) {
         commitChanges();
     } else {
@@ -66,11 +66,8 @@ void ParameterMap::setDefault ( const std::string& kname, std::string value ) {
     CRASH_REPORT_BEGIN;
     std::string name = prefix + kname;
 
-    // If the entry already exists, exit
-    if (parameters->find(name) != parameters->end()) return;
-
-    // Otherwise insert the entry
-    // (But don't trigger commitChanges)
+    // Insert the given entry (only if it's missing)
+    // and don't trigger commitChanges.
     parameters->insert(std::pair< std::string, std::string >( name, value ));
 
     CRASH_REPORT_END;
@@ -94,7 +91,7 @@ template<typename T> T ParameterMap::getNum ( const std::string& kname, T defaul
 template<typename T> void ParameterMap::setNum ( const std::string& kname, T value ) {
     CRASH_REPORT_BEGIN;
     std::string name = prefix + kname;
-    parameters->insert(std::pair< std::string, std::string >( name, ntos<T>( value ) ));
+    (*parameters)[name] = ntos<T>( value );
     if (!locked) {
         commitChanges();
     } else {
@@ -255,9 +252,7 @@ void ParameterMap::fromMap ( std::map< std::string, std::string> * map, bool cle
 
     // Store values
     for (std::map< std::string, std::string>::iterator it = map->begin(); it != map->end(); ++it) {
-        parameters->insert(std::pair< std::string, std::string >(
-                (*it).first, (*it).second
-            ));
+        (*parameters)[(*it).first] = (*it).second;
     }
 
     // If we are not locked, sync changes.

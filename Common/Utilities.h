@@ -95,6 +95,7 @@
 
 // Only for apple
 #if defined(__APPLE__) && defined(__MACH__)
+#include <libproc.h>
 #endif
 
 // String constants of EOL

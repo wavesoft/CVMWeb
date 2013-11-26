@@ -193,6 +193,15 @@ int main( int argc, char ** argv ) {
         parm->set("vboxid", "883bacbf-daf3-4307-a66d-6001b0b29b36");
 
         HVSessionPtr sess = hv->sessionOpen( parm );
+        if (!sess) {
+            cerr << "Session could not be oppened!" << endl;
+            return 1;
+        }
+
+        cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;
+
+        sleepMs(1000);
+        hv->loadSessions();
 
         //boost::static_pointer_cast<VBoxInstance>(hv)->installExtPack( DownloadProvider::Default(),  );
         sleepMs(10000);

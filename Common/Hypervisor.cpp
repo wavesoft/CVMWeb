@@ -713,6 +713,9 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) {
             // Exists and it's valid. Update parameters
             sess->parameters->fromParameters( parameters );
 
+            // Replace key with it's crypto-hashed version
+            sess->parameters->set("key", keyHash);
+
             // And return instance
             return sess;
 
@@ -728,6 +731,9 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) {
 
     // Populate parameters
     sess->parameters->fromParameters( parameters );
+
+    // Replace key with it's crypto-hashed version
+    sess->parameters->set("key", keyHash);
 
     // Store reference to open sessions
     openSessions.push_back( sess );

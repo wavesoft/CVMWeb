@@ -78,6 +78,11 @@ public:
 		{ };
 
 	/**
+	 * Destructor
+	 */
+	~SimpleFSM();
+
+	/**
 	 * Pick the closest path to go from current state to the given state
 	 */
 	void 							FSMGoto(int state);

@@ -81,7 +81,7 @@ public:
     std::map<std::string, std::string> 
                             getAllProperties    ( std::string uuid );
     bool                    hasExtPack          ();
-    int                     installExtPack      ( DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    int                     installExtPack      ( const DownloadProviderPtr & downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
     HVSessionPtr            sessionByVBID       ( const std::string& virtualBoxGUID );
 
 private:

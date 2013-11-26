@@ -696,7 +696,7 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     }
 
     // Reset sessions array
-    if (sessions.size() > 0)
+    if (!sessions.empty())
         sessions.clear();
 
     // [1] Load session registry from the disk
@@ -737,7 +737,6 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     // [2] Collect the running VM info
     // ================================
     vms = tokenize( &lines, '{' );
-    this->sessions.clear();
     for (std::map<string, string>::iterator it=vms.begin(); it!=vms.end(); ++it) {
         string name = (*it).first;
         string uuid = (*it).second;
@@ -844,7 +843,7 @@ bool VBoxInstance::hasExtPack() {
  * on it's own.
  *
  */
-int VBoxInstance::installExtPack( DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf ) {
+int VBoxInstance::installExtPack( const DownloadProviderPtr & downloadProvider, const FiniteTaskPtr & pf ) {
     CRASH_REPORT_BEGIN;
     string requestBuf;
     string checksum;

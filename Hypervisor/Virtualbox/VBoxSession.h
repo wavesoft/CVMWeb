@@ -99,9 +99,6 @@ public:
 
         });
 
-        // Start the FSM
-        startFSM();
-
     }
 
     /////////////////////////////////////
@@ -170,14 +167,27 @@ public:
      */
     void                    hvStop              ();
 
+    /**
+     *  Compile the user data and return it's string representation
+     */
+    std::string             getUserData         ();
+
 protected:
 
     /////////////////////////////////////
     // Tool functions
     /////////////////////////////////////
 
-    /* VirtualBox-specific functions */
-    int                     wrapExec            ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg = NULL, int retries = 4, int timeout = SYSEXEC_TIMEOUT );
+    /**
+     * Execute the specified command using the hypervisor binary as base
+     */
+    int                     wrapExec            ( std::string cmd, 
+                                                  std::vector<std::string> * stdoutList, 
+                                                  std::string * stderrMsg = NULL, 
+                                                  int retries = 4, 
+                                                  int timeout = SYSEXEC_TIMEOUT );
+
+
     int                     getMachineUUID      ( std::string mname, std::string * ans_uuid,  int flags );
     std::string             getDataFolder       ();
     std::string             getHostOnlyAdapter  ();
