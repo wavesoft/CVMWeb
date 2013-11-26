@@ -39,7 +39,7 @@ std::string ParameterMap::get( const std::string& kname, std::string defaultValu
     std::string name = prefix + kname;
     if (parameters->find(name) == parameters->end())
         return defaultValue;
-    return parameters->at(name);
+    return (*parameters)[name];
     CRASH_REPORT_END;
 }
 
@@ -84,7 +84,7 @@ template<typename T> T ParameterMap::getNum ( const std::string& kname, T defaul
     std::string name = prefix + kname;
     if (parameters->find(name) == parameters->end())
         return defaultValue;
-    return ston<T>(parameters->at(name));
+    return ston<T>((*parameters)[name]);
     CRASH_REPORT_END;
 }
 
@@ -211,7 +211,7 @@ std::vector< std::string > ParameterMap::enumKeys ( ) {
  */
 bool ParameterMap::contains ( const std::string& name ) {
     CRASH_REPORT_BEGIN;
-    return (parameters->find(prefix + name) == parameters->end());
+    return (parameters->find(prefix + name) != parameters->end());
     CRASH_REPORT_END;
 }
 
@@ -229,9 +229,8 @@ void ParameterMap::fromParameters ( const ParameterMapPtr& ptr, bool clearBefore
 
     // Store values
     for (std::vector< std::string >::iterator it = ptrKeys.begin(); it != ptrKeys.end(); ++it) {
-        parameters->insert(std::pair< std::string, std::string >(
-                *it, ptr->parameters->at(*it)
-            ));
+        CVMWA_LOG("INFO", "Importing key " << *it << " = " << ptr->parameters->at(*it));
+        (*this->parameters)[*it] = (*ptr->parameters)[*it];
     }
 
     // If we are not locked, sync changes.
@@ -286,9 +285,7 @@ void ParameterMap::toMap ( std::map< std::string, std::string> * map, bool clear
 
     // Store my keys to map
     for (std::vector<std::string>::iterator it = myKeys.begin(); it != myKeys.end(); ++it) {
-        map->insert(std::pair< std::string, std::string >(
-                *it, parameters->at(*it)
-            ));
+        (*map)[*it] = (*parameters)[*it];
     }
 
     CRASH_REPORT_END;

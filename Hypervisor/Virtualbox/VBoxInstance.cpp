@@ -682,7 +682,8 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     }
 
     // Reset sessions array
-    sessions.clear();
+    if (sessions.size() > 0)
+        sessions.clear();
 
     // [1] Load session registry from the disk
     // =======================================
@@ -693,15 +694,17 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
 
         // Load session config
         LocalConfigPtr sessConfig = LocalConfig::forRuntime( sessName );
-        if (sessConfig->contains("name") && sessConfig->contains("uuid") && sessConfig->contains("vboxid") ) {
-
+        if (!sessConfig->contains("name")) {
+            CVMWA_LOG("Warning", "Missing 'name' in file " << sessName );
+        } else if (!sessConfig->contains("uuid")) {
+            CVMWA_LOG("Warning", "Missing 'uuid' in file " << sessName );
+        } else if (!sessConfig->contains("vboxid")) {
+            CVMWA_LOG("Warning", "Missing 'vboxid' in file " << sessName );
+        } else {
             // Store session with the given UUID
             sessions[ sessConfig->get("uuid") ] = boost::make_shared< VBoxSession >( 
                 sessConfig, this->shared_from_this() 
             );
-
-        } else {
-            CVMWA_LOG("Warning", "Unable to validate session file " << sessName );
         }
 
     }

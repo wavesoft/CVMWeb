@@ -99,6 +99,9 @@ public:
 
         });
 
+        // Start the FSM
+        startFSM();
+
     }
 
     /////////////////////////////////////
@@ -160,6 +163,13 @@ public:
      */
     void                    hvNotifyDestroyed   ();
 
+    /**
+     * Notification from the VBoxInstance that we are going
+     * for a forceful shutdown. We should cleanup everything
+     * without raising any alert during the handling.
+     */
+    void                    hvStop              ();
+
 protected:
 
     /////////////////////////////////////
@@ -175,6 +185,7 @@ protected:
         std::string>        getMachineInfo      ( int timeout = SYSEXEC_TIMEOUT );
     int                     startVM             ();
     int                     controlVM           ( std::string how, int timeout = SYSEXEC_TIMEOUT );
+    void                    startFSM            ( );
 
     ////////////////////////////////////
     // Local variables

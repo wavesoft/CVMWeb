@@ -179,11 +179,21 @@ int main( int argc, char ** argv ) {
     HVInstancePtr hv = detectHypervisor();
     if (hv) {
         cout << "HV Binary: " << hv->hvBinary << endl;
+        cout << "HV Version: " << hv->version.verString << endl;
 
         // Wait until hypervisor is ready
         hv->waitTillReady( pTasks );
         
+        ParameterMapPtr parm = boost::make_shared<ParameterMap>();
+        parm->set("name", "LHC@Home");
+        parm->set("key", "awesome13");
+        parm->set("vboxid", "883bacbf-daf3-4307-a66d-6001b0b29b36");
+
+        HVSessionPtr sess = hv->sessionOpen( parm );
+
         //boost::static_pointer_cast<VBoxInstance>(hv)->installExtPack( DownloadProvider::Default(),  );
+        sleepMs(10000);
+
         
     } else {
         cout << "No hypervisor found!" << endl; 

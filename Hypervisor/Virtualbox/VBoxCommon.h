@@ -61,9 +61,9 @@
 #define GUESTADD_DSK        GUESTADD_CONTROLLER " (" GUESTADD_PORT ", " GUESTADD_DEVICE ")"
 #define FLOPPYIO_DSK        FLOPPYIO_CONTROLLER " (" FLOPPYIO_PORT ", " FLOPPYIO_DEVICE ")"
 
-/////////////////////////
+/////////////////////////////////
 // Global forward declerations
-/////////////////////////
+/////////////////////////////////
 
 // Static definition
 class VBoxSession;

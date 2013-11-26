@@ -275,6 +275,10 @@ void SimpleFSM::FSMSkew(int state) {
  */
 void SimpleFSM::FSMThreadLoop() {
 
+	// Reset path to initial node
+	fsmCurrentPath.clear();
+	fsmCurrentPath.push_back( fsmRootNode );
+
 	// Catch interruptions
 	try {
 

@@ -193,6 +193,18 @@ void VBoxSession::ResumeVM() {
 /////////////////////////////////////
 
 /**
+ * Called by the constructor to initialize and activate the session
+ * by initializing the FSM.
+ */
+void VBoxSession::startFSM ( ) {
+
+    // Start the FSM thread
+    FSMThreadStart();
+
+}
+
+
+/**
  * Initialize a new session
  */
 int VBoxSession::open ( int cpus, int memory, int disk, std::string cvmVersion, int flags ) {
@@ -373,10 +385,21 @@ int VBoxSession::updateFast ( ) {
  * Notification from the VBoxInstance that the session
  * has been forcefully destroyed from an external source.
  */
-void VBoxSession::hvNotifyDestroyed() {
+void VBoxSession::hvNotifyDestroyed () {
 
 }
 
+/**
+ * Notification from the VBoxInstance that we are going
+ * for a forceful shutdown. We should cleanup everything
+ * without raising any alert during the handling.
+ */
+void VBoxSession::hvStop () {
+
+    // Stop the FSM thread
+    FSMThreadStop();
+
+}
 
 /////////////////////////////////////
 /////////////////////////////////////

@@ -87,6 +87,7 @@ void HypervisorVersion::set( const std::string & version ) {
     this->revision = 0;
     this->misc = "";
     this->verString = "";
+    this->isDefined = false;
 
     // Try to match the expression
     boost::smatch matches;
@@ -114,9 +115,19 @@ void HypervisorVersion::set( const std::string & version ) {
         string strMisc(matches[5].first, matches[5].second);
         this->misc = strMisc;
 
+        // Mark as defined
+        this->isDefined = true;
+
     }
 
     CRASH_REPORT_END;
+}
+
+/**
+ * Return if a version is defined
+ */
+bool HypervisorVersion::defined() {
+    return isDefined;
 }
 
 /**
@@ -582,7 +593,7 @@ int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrM
 /**
  * Initialize hypervisor 
  */
-HVInstance::HVInstance() : version("") {
+HVInstance::HVInstance() : version(""), sessions(), openSessions() {
     CRASH_REPORT_BEGIN;
     this->sessionID = 1;
     

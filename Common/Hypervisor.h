@@ -172,6 +172,18 @@ public:
      */
     int                     compareStr( const std::string& version );
 
+    /**
+     * Return if a version is defined
+     */
+    bool                    defined();
+
+private:
+
+    /**
+     * Flags if the version is defined
+     */
+    bool                    isDefined;
+
 };
 
 /**
