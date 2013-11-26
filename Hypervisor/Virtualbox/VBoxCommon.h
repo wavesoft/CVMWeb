@@ -95,7 +95,7 @@ std::string _vbox_changeUpperIP( std::string baseIP, int value );
 HVInstancePtr 	vboxDetect();
 
 /* Global function to try to install a VirtualBox Hypervisor */
-int 			vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 3 );
+int 			vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInteractionPtr & ui = UserInteractionPtr(), const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 3 );
 
 
 

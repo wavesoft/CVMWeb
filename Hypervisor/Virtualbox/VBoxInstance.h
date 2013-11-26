@@ -65,7 +65,7 @@ public:
     /////////////////////////
     virtual int             getType             ( ) { return HV_VIRTUALBOX; };
     virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
-    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr(), const UserInteractionPtr & ui = UserInteractionPtr() );
     virtual HVSessionPtr    allocateSession     ( );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
 

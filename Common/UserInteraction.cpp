@@ -22,7 +22,7 @@
 #include <boost/bind.hpp>
 
 // Initialize singleton to default
-UserInteraction::defaultSingleton;
+UserInteractionPtr defaultSingleton;
 
 /**
  * Return default user interaction pointer
@@ -42,18 +42,18 @@ UserInteractionPtr UserInteraction::Default() {
 /**
  * Display the specified message and wait for an OK/Cancel response.
  */
-int UserInteraction::confirm ( const std::string & message, int timeout = 0 ) {
+int UserInteraction::confirm ( const std::string& title, const std::string & message, int timeout ) {
 	if (!cbConfirm) return UI_UNDEFINED;
-	cbConfirm( message, bind::boost( &UserInteraction::__cbCallback, this ) );
+	cbConfirm( title, message, boost::bind( &UserInteraction::__cbResult, this, _1 ) );
 	return __waitResult( timeout );
 }
 
 /**
  * Display the specified message and wait until the user clicks OK.
  */
-int UserInteraction::alert ( const std::string& message, int timeout = 0 ) {
+int UserInteraction::alert ( const std::string& title, const std::string& message, int timeout ) {
 	if (!cbAlert) return UI_UNDEFINED;
-	cbAlert( message, bind::boost( &UserInteraction::__cbCallback, this ) );
+	cbAlert( title, message, boost::bind( &UserInteraction::__cbResult, this, _1 ) );
 	return __waitResult( timeout );
 }
 
@@ -61,31 +61,47 @@ int UserInteraction::alert ( const std::string& message, int timeout = 0 ) {
  * Display a licence whose contents is fetched from the given URL and
  * wait for user response for accepting or declining it.
  */
-int UserInteraction::confirmLicense	( const std::string& url, int timeout = 0 ) {
+int UserInteraction::confirmLicenseURL	( const std::string& title, const std::string& url, int timeout ) {
+	if (!cbLicenseURL) return UI_UNDEFINED;
+	cbLicenseURL( title, url, boost::bind( &UserInteraction::__cbResult, this, _1 ) );
+	return __waitResult( timeout );
+}
+
+/**
+ * Display a licence whose contents is provided as a parameter
+ */
+int UserInteraction::confirmLicense	( const std::string& title, const std::string& buffer, int timeout ) {
 	if (!cbLicense) return UI_UNDEFINED;
-	cbLicense( url, bind::boost( &UserInteraction::__cbCallback, this ) );
+	cbLicense( title, buffer, boost::bind( &UserInteraction::__cbResult, this, _1 ) );
 	return __waitResult( timeout );
 }
 
 /**
  * Define a handler for confirm message
  */
-int UserInteraction::setConfirmHandler	( const callbackConfirm & cb ) {
+void UserInteraction::setConfirmHandler	( const callbackConfirm & cb ) {
 	cbConfirm = cb;
 }
 
 /**
  * Define a handler for alert message
  */
-int UserInteraction::setAlertHandler ( const callbackAlert & cb ) {
+void UserInteraction::setAlertHandler ( const callbackAlert & cb ) {
 	cbAlert = cb;
 }
 
 /**
- * Define a handler for alert message
+ * Define a handler for license message (offline)
  */
-int UserInteraction::setLicenseHandler ( const callbackLicense & cb ) {
+void UserInteraction::setLicenseHandler ( const callbackLicense & cb ) {
 	cbLicense = cb;
+}
+
+/**
+ * Define a handler for license message (online)
+ */
+void UserInteraction::setLicenseURLHandler ( const callbackLicense & cb ) {
+	cbLicenseURL = cb;
 }
 
 /** 
@@ -110,14 +126,14 @@ int UserInteraction::__waitResult ( int timeout ) {
 /**
  * Callback function for receiving feedback from the callback handlers
  */
-void UserInteraction::__cbCallback( int result ) {
+void UserInteraction::__cbResult( int result ) {
 
 	// If result is negative, switch to '0' = Undefined
 	if (result < 0) result = 0;
 
 	// Update result
     {
-        boost::unique_lock<boost::mutex> lock(fsmtPauseMutex);
+        boost::unique_lock<boost::mutex> lock(mutex);
         this->result = result;
     }
 

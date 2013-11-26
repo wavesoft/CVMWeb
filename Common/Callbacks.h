@@ -33,12 +33,6 @@
 
 #include "Utilities.h"
 
-// Include firebreath headers only if we are building for firebrath
-#ifdef FIREBRATH_BUILD
-#include "JSObject.h"
-#include "variant_list.h"
-#endif
-
 //////////////////////////////////////
 // Callback function declerations
 //////////////////////////////////////
@@ -104,38 +98,5 @@ public:
 	std::vector< cbProgress >		progressCallbacks;
 
 };
-
-
-// Build the firebreath interface only if we are building for firebrath
-#ifdef FIREBRATH_BUILD
-
-/**
- * Wrapper class that registers handlers for javascript events
- */
-class FBCallbackHost {
-public:
-
-	FBCallbackHost( const CallbackHostPtr & ch ) : parent(ch) 	{ };
-
-	void 				jsStarted( const FB::variant &cb )		{ cbStarted = cb };
-	void				jsCompleted( const FB::variant &cb )	{ cbCompleted = cb };
-	void 				jsFailed( const FB::variant &cb )		{ cbFailed = cb };
-	void 				jsProgress( const FB::variant &cb )		{ cbProgress = cb };
-
-private:
-
-	const CallbackHostPtr parent;
-	FB::variant 		jcbStarted;
-	FB::variant 		jcbCompleted;
-	FB::variant 		jcbFailed;
-	FB::variant 		jcbProgress;
-
-	void 				_delegate_jsStarted( const std::string & msg );
-	void 				_delegate_jsCompleted( const std::string & msg );
-	void 				_delegate_jsFailed( const std::string & msg, const int errorCode );
-	void 				_delegate_jsProgress( const std::string& msg, const double progress );
-
-};
-#endif
 
 #endif /* end of include guard: CALLBACKS_H */

@@ -43,10 +43,10 @@ typedef boost::shared_ptr< AcceptInteraction >      AcceptInteractionPtr;
 /**
  * User interaction callbacks
  */
-typedef boost::function< void (int result) >  										callbackResult;
-typedef boost::function< void (const std::string&, const callbackResult& cb) >		callbackConfirm;
-typedef boost::function< void (const std::string&, const callbackResult& cb) >		callbackAlert;
-typedef boost::function< void (const std::string&, const callbackResult& cb) >		callbackLicense;
+typedef boost::function< void (int result) >  															callbackResult;
+typedef boost::function< void (const std::string&, const std::string&, const callbackResult& cb) >		callbackConfirm;
+typedef boost::function< void (const std::string&, const std::string&, const callbackResult& cb) >		callbackAlert;
+typedef boost::function< void (const std::string&, const std::string&, const callbackResult& cb) >		callbackLicense;
 
 /**
  * A class through interaction with the user can happen
@@ -66,11 +66,6 @@ public:
 	 */
 	static UserInteractionPtr	Default();
 
-	/**
-	 * Singleton instance of default interaction class
-	 */
-	static UserInteractionPtr	defaultSingleton;
-
 	//////////////////////////////
 	// Usage interface
 	//////////////////////////////
@@ -83,18 +78,23 @@ public:
 	/**
 	 * Display the specified message and wait for an OK/Cancel response.
 	 */
-	virtual int 		confirm				( const std::string & message, int timeout = 0 );
+	virtual int 		confirm					( const std::string& title, const std::string & message, int timeout = 0 );
 
 	/**
 	 * Display the specified message and wait until the user clicks OK.
 	 */
-	virtual int 		alert				( const std::string& message, int timeout = 0 );
+	virtual int 		alert					( const std::string& title, const std::string& message, int timeout = 0 );
 
 	/**
 	 * Display a licence whose contents is fetched from the given URL and
 	 * wait for user response for accepting or declining it.
 	 */
-	virtual int 		confirmLicense		( const std::string& url, int timeout = 0 );
+	virtual int 		confirmLicenseURL		( const std::string& title, const std::string& url, int timeout = 0 );
+
+	/**
+	 * Display a licence whose contents is provided as a parameter
+	 */
+	virtual int 		confirmLicense			( const std::string& title, const std::string& message, int timeout = 0 );
 
 	//////////////////////////////
 	// Connect interface
@@ -103,29 +103,34 @@ public:
 	/**
 	 * Define a handler for confirm message
 	 */
-	void 				setConfirmHandler	( const callbackConfirm & cb );
+	void 				setConfirmHandler		( const callbackConfirm & cb );
 
 	/**
 	 * Define a handler for alert message
 	 */
-	void 				setAlertHandler		( const callbackAlert & cb );
+	void 				setAlertHandler			( const callbackAlert & cb );
 
 	/**
-	 * Define a handler for alert message
+	 * Define a handler for license message (online)
 	 */
-	void 				setLicenseHandler	( const callbackLicense & cb );
+	void 				setLicenseURLHandler	( const callbackLicense & cb );
+
+	/**
+	 * Define a handler for license message (offline)
+	 */
+	void 				setLicenseHandler		( const callbackLicense & cb );
 
 protected:
 
 	/**
 	 * Local callbackResult function
 	 */
-	void				__cbResult			( int result );
+	void				__cbResult				( int result );
 
 	/** 
 	 * Local function to wait for callback
 	 */
-	int 				__waitResult		( int timeout = 0 );
+	int 				__waitResult			( int timeout = 0 );
 
 private:
 
@@ -140,7 +145,12 @@ private:
 	callbackAlert		cbAlert;
 
 	/**
-	 * Handler for alert message
+	 * Handler for online (URL) license message
+	 */
+	callbackLicense		cbLicenseURL;
+
+	/**
+	 * Handler for offline license message
 	 */
 	callbackLicense		cbLicense;
 

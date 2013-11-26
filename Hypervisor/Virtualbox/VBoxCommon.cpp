@@ -126,7 +126,7 @@ HVInstancePtr vboxDetect() {
 /**
  * Start installation of VirtualBox.
  */
-int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskPtr & pf, int retries ) {
+int vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInteractionPtr & ui, const FiniteTaskPtr & pf, int retries ) {
     CRASH_REPORT_BEGIN;
     const int maxSteps = 200;
     HVInstancePtr hv;
@@ -136,7 +136,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskP
 
     // Initialize progress feedback
     if (pf) {
-        pf->setMax(3);
+        pf->setMax(5);
     }
 
     ////////////////////////////////////
@@ -296,7 +296,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskP
             }
 
             // Send progress fedback
-            if (pf) pf->done("Unable to download hypervisor installer");
+            if (pf) pf->fail("Unable to download hypervisor installer");
             return res;
         }
         
@@ -343,7 +343,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskP
     string errorMsg;
     for (int tries=0; tries<retries; tries++) {
         #if defined(__APPLE__) && defined(__MACH__)
-            if (installerPf) installerPf->setMax(3, false);
+            if (installerPf) installerPf->setMax(4, false);
 
             CVMWA_LOG( "Info", "Attaching" << tmpHypervisorInstall );
             if (installerPf) installerPf->doing("Mouting hypervisor DMG disk");
@@ -406,7 +406,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskP
             }
 
         #elif defined(_WIN32)
-            if (installerPf) installerPf->setMax(1, false);
+            if (installerPf) installerPf->setMax(2, false);
 
             // Start installer
             if (installerPf) installerPf->doing("Starting installer");
@@ -422,7 +422,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskP
             shExecInfo.lpFile = (LPCSTR)tmpHypervisorInstall.c_str();
             shExecInfo.lpParameters = (LPCSTR)"";
             shExecInfo.lpDirectory = NULL;
-            shExecInfo.nShow = SW_SHOW;
+            shExecInfo.nShow = SW_SHOWNORMAL;
             shExecInfo.hInstApp = NULL;
 
             // Validate handle
@@ -471,7 +471,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const FiniteTaskP
             if (installerPf) installerPf->complete("Installed hypervisor");
 
         #elif defined(__linux__)
-            if (installerPf) installerPf->setMax(4, false);
+            if (installerPf) installerPf->setMax(5, false);
 
             // Check if our environment has what the installer needs
             if (installerPf) installerPf->doing("Probing environment");

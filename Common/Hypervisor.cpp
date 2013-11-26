@@ -367,7 +367,7 @@ bool HVSession::isAPIAlive( unsigned char handshake ) {
 /////////////////////////////////////
 
 /* Incomplete type placeholders */
-bool HVInstance::waitTillReady(const FiniteTaskPtr & pf)  { return false; }
+bool HVInstance::waitTillReady(const FiniteTaskPtr & pf, const UserInteractionPtr & ui)  { return false; }
 
 /**
  * Measure the resources from the sessions
@@ -838,9 +838,9 @@ HVInstancePtr detectHypervisor() {
 /**
  * Install hypervisor
  */
-int installHypervisor( string versionID, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf, int retries ) {
+int installHypervisor( const DownloadProviderPtr& downloadProvider, const UserInteractionPtr & ui, const FiniteTaskPtr & pf, int retries ) {
     
     // The only hypervisor we currently support is VirtualBox
-    return vboxInstall( downloadProvider, pf, retries );
+    return vboxInstall( downloadProvider, ui, pf, retries );
 
 }

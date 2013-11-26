@@ -23,7 +23,18 @@
 #define CVMUSERINTERACTION_H
 
 #include "Common/UserInteraction.h"
+ 
+#include "JSObject.h"
+#include "variant_list.h"
 
 
+/**
+ * User interaction that uses javascript I/O functions
+ */
+class CVMWebInteraction {
+public:
+
+
+};
 
 #endif /* end of include guard: CVMUSERINTERACTION_H */

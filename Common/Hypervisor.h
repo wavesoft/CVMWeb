@@ -32,6 +32,7 @@
 #include "Utilities.h"
 #include "CrashReport.h"
 #include "ParameterMap.h"
+#include "UserInteraction.h"
 
 /* Hypervisor types */
 #define HV_NONE                 0
@@ -325,7 +326,7 @@ public:
     virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() ) = 0;
     virtual HVSessionPtr    allocateSession     ( ) = 0;
     virtual int             getCapabilities     ( HVINFO_CAPS * caps ) = 0;
-    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr(), const UserInteractionPtr & ui = UserInteractionPtr() );
     virtual int             getUsage            ( HVINFO_RES * usage);
     
     /* Tool functions (used internally or from session objects) */
@@ -355,7 +356,7 @@ protected:
  * Exposed functions
  */
 HVInstancePtr                   detectHypervisor    ( );
-int                             installHypervisor   ( std::string clientVersion, DownloadProviderPtr downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 4 );
+int                             installHypervisor   ( const DownloadProviderPtr & downloadProvider, const UserInteractionPtr & ui = UserInteractionPtr(), const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 4 );
 std::string                     hypervisorErrorStr  ( int error );
 
 

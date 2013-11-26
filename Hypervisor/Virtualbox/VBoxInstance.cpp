@@ -108,7 +108,7 @@ map<string, string> VBoxInstance::getAllProperties( string uuid ) {
 /**
  * Load sessions if they are not yet loaded
  */
-bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf ) {
+bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf, const UserInteractionPtr & ui ) {
     CRASH_REPORT_BEGIN;
     
     // Update progress
@@ -136,6 +136,20 @@ bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf ) {
         // Create a progress feedback instance for the installer
         FiniteTaskPtr pfInstall;
         if (pf) pfInstall = pf->begin<FiniteTask>("Installing extension pack");
+
+        // Extension pack is released under PUEL license
+        // require the user to confirm before continuing
+        if (ui) {
+            if (ui->confirmLicenseURL("VirtualBox Personal Use and Evaluation License (PUEL)", "https://www.virtualbox.org/wiki/VirtualBox_PUEL") != UI_OK) {
+                // User did not click OK
+
+                // Send error
+                if (pf) pf->fail("User denied Oracle PUEL license");
+
+                // Abort
+                return false;
+            }
+        }
 
         // Start extension pack installation
         this->installExtPack(
