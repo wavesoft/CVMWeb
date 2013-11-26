@@ -149,7 +149,7 @@ bool SimpleFSM::_callHandler( FSMNode * node, bool inThread ) {
  */
 bool SimpleFSM::FSMContinue( bool inThread ) {
 	if (fsmInsideHandler) return false;
-	if (fsmCurrentPath.empty()) return false;
+	if (fsmCurrentPath.empty() && (fsmCurrentNode != NULL)) return false;
 	fsmInsideHandler = true;
 
 	// If that's the first time we call FSMContinue,

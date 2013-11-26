@@ -74,7 +74,7 @@ public:
 	/**
 	 * Constructor
 	 */
-	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmtPauseChanged()
+	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmInsideHandler(false), fsmtPauseChanged()
 		{ };
 
 	/**
