@@ -497,11 +497,7 @@ std::string VBoxSession::getUserData ( ) {
 
     // Update local userData
     if ( !patchedUserData.empty() ) {
-
-        CVMWA_LOG("Debug", "Replacing from '" << patchedUserData << "'");
         patchedUserData = macroReplace( userData->parameters, patchedUserData );
-        CVMWA_LOG("Debug", "Replaced to '" << patchedUserData << "'");
-
     }
 
     // Return user data

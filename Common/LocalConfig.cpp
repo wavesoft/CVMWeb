@@ -116,7 +116,6 @@ std::vector< std::string > LocalConfig::enumFiles ( std::string prefix ) {
                     result.push_back( fn.substr(0, fn.length()-5) );
 
                 }
-
             }
         }
     }
@@ -191,20 +190,22 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
         std::string value = (*it).second;
 
         // Do not allow new-line span: Replace \n to "\n", \r to "\r" and "\" to "\\"
+        pos = 0;
         while((pos = value.find("\\", pos)) != std::string::npos) {
-            value.replace(pos, 2, "\\\\");
+            value.replace(pos, 1, "\\\\");
             pos += 2;
         }
+        pos = 0;
         while((pos = value.find("\n", pos)) != std::string::npos) {
-            value.replace(pos, 2, "\\n");
+            value.replace(pos, 1, "\\n");
             pos += 2;
         }
+        pos = 0;
         while((pos = value.find("\r", pos)) != std::string::npos) {
             value.replace(pos, 2, "\\r");
             pos += 2;
         }
 
-        CVMWA_LOG("Config", "Storing '" << key << "=" << value << "'");
         ofs << key << "=" << value << std::endl;
     }
     
@@ -292,16 +293,19 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
             if( std::getline(is_line, value) ) {
 
                 // Revert new-line span: Replace "\n" to \n, "\r" to \r and "\\"" to "\"
+                pos = 0;
                 while((pos = value.find("\\\\", pos)) != std::string::npos) {
-                    value.replace(pos, 1, "\\");
+                    value.replace(pos, 2, "\\");
                     pos += 1;
                 }
+                pos = 0;
                 while((pos = value.find("\\n", pos)) != std::string::npos) {
-                    value.replace(pos, 1, "\n");
+                    value.replace(pos, 2, "\n");
                     pos += 1;
                 }
+                pos = 0;
                 while((pos = value.find("\\r", pos)) != std::string::npos) {
-                    value.replace(pos, 1, "\r");
+                    value.replace(pos, 2, "\r");
                     pos += 1;
                 }
 
