@@ -43,48 +43,53 @@ using namespace std;
  *  ${name:default}   : Replace with the variable value or the given default value.
  *
  */
-std::string macroReplace( ParameterDataMapPtr uData, std::string iString ) {
+std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
     CRASH_REPORT_BEGIN;
+
+    // Extract map data to given map
+    std::map< std::string, std::string > uData;
+    if (mapData) mapData->toMap( &uData );
+
+    // Replace Tokens
     size_t iPos, ePos, lPos = 0, tokStart = 0, tokLen = 0;
     while ( (iPos = iString.find("${", lPos)) != string::npos ) {
 
         // Find token bounds
-        CVMWA_LOG("Debug", "Found '${' at " << iPos);
+//        CVMWA_LOG("Debug", "Found '${' at " << iPos);
         tokStart = iPos;
         iPos += 2;
         ePos = iString.find("}", iPos);
         if (ePos == string::npos) break;
-        CVMWA_LOG("Debug", "Found '}' at " << ePos);
+//        CVMWA_LOG("Debug", "Found '}' at " << ePos);
         tokLen = ePos - tokStart;
 
         // Extract token value
         string token = iString.substr(tokStart+2, tokLen-2);
-        CVMWA_LOG("Debug", "Token is '" << token << "'");
+//        CVMWA_LOG("Debug", "Token is '" << token << "'");
         
         // Extract default
         string vDefault = "";
         iPos = token.find(":");
         if (iPos != string::npos) {
-            CVMWA_LOG("Debug", "Found ':' at " << iPos );
-            token = token.substr(0, iPos);
+//            CVMWA_LOG("Debug", "Found ':' at " << iPos );
             vDefault = token.substr(iPos+1);
-            CVMWA_LOG("Debug", "Default is '" << vDefault << "', token is '" << token << "'" );
+            token = token.substr(0, iPos);
+//            CVMWA_LOG("Debug", "Default is '" << vDefault << "', token is '" << token << "'" );
         }
 
         
         // Look for token value
         string vValue = vDefault;
-        CVMWA_LOG("Debug", "Checking value" );
-        if (uData != NULL)
-            if (uData->find(token) != uData->end())
-                vValue = uData->at(token);
+//        CVMWA_LOG("Debug", "Checking value" );
+        if (uData.find(token) != uData.end())
+            vValue = uData[token];
         
         // Replace value
-        CVMWA_LOG("Debug", "Value is '" << vValue << "'" );
+//        CVMWA_LOG("Debug", "Value is '" << vValue << "'" );
         iString = iString.substr(0,tokStart) + vValue + iString.substr(tokStart+tokLen+1);
         
         // Move forward
-        CVMWA_LOG("Debug", "String replaced" );
+//        CVMWA_LOG("Debug", "String replaced" );
         lPos = tokStart + tokLen;
     }
     
@@ -497,7 +502,7 @@ std::string VBoxSession::getUserData ( ) {
 
     // Update local userData
     if ( !patchedUserData.empty() ) {
-        patchedUserData = macroReplace( userData->parameters, patchedUserData );
+        patchedUserData = macroReplace( userData, patchedUserData );
     }
 
     // Return user data

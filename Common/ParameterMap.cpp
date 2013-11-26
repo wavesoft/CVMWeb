@@ -227,7 +227,7 @@ void ParameterMap::fromParameters ( const ParameterMapPtr& ptr, bool clearBefore
     // Store values
     for (std::vector< std::string >::iterator it = ptrKeys.begin(); it != ptrKeys.end(); ++it) {
         CVMWA_LOG("INFO", "Importing key " << *it << " = " << ptr->parameters->at(*it));
-        (*this->parameters)[*it] = (*ptr->parameters)[*it];
+        (*this->parameters)[prefix + *it] = (*ptr->parameters)[*it];
     }
 
     // If we are not locked, sync changes.
@@ -252,7 +252,7 @@ void ParameterMap::fromMap ( std::map< std::string, std::string> * map, bool cle
 
     // Store values
     for (std::map< std::string, std::string>::iterator it = map->begin(); it != map->end(); ++it) {
-        (*parameters)[(*it).first] = (*it).second;
+        (*parameters)[prefix + (*it).first] = (*it).second;
     }
 
     // If we are not locked, sync changes.
@@ -280,7 +280,7 @@ void ParameterMap::toMap ( std::map< std::string, std::string> * map, bool clear
 
     // Store my keys to map
     for (std::vector<std::string>::iterator it = myKeys.begin(); it != myKeys.end(); ++it) {
-        (*map)[*it] = (*parameters)[*it];
+        (*map)[*it] = (*parameters)[ prefix + *it];
     }
 
     CRASH_REPORT_END;
