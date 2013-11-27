@@ -335,8 +335,7 @@ int HVSession::hibernate()                                          { return HVE
 int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
 int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::updateFast()                                         { return HVE_NOT_IMPLEMENTED; }
-int HVSession::open( int cpus, int memory, int disk, std::string cvmVersion, int flags ) 
-                                                                    { return HVE_NOT_IMPLEMENTED; }
+int HVSession::open()                                               { return HVE_NOT_IMPLEMENTED; }
 int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
 int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
@@ -593,16 +592,18 @@ int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrM
 /**
  * Initialize hypervisor 
  */
-HVInstance::HVInstance() : version(""), sessions(), openSessions() {
+HVInstance::HVInstance() : version(""), sessions(), openSessions(), userInteraction(), downloadProvider(), {
     CRASH_REPORT_BEGIN;
     this->sessionID = 1;
     
-    /* Pick a system folder to store persistent information  */
+    // Pick a system folder to store persistent information
     this->dirData = getAppDataPath();
     this->dirDataCache = this->dirData + "/cache";
     
-    /* Unless overriden use the default downloadProvider */
-    this->downloadProvider = DownloadProvider::Default();
+    // Unless overriden use the default downloadProvider and 
+    // userInteraction pointers
+    downloadProvider = DownloadProvider::Default();
+    userInteraction = UserInteraction::Default();
     
     CRASH_REPORT_END;
 };
@@ -656,28 +657,6 @@ int HVInstance::sessionValidate ( const ParameterMapPtr& parameters ) {
 }
 
 /**
- * Get a session using it's unique ID
- */
-/*
-HVSession * HVInstance::sessionLocate( std::string uuid ) {
-    CRASH_REPORT_BEGIN;
-    
-    // Check for running sessions with the given uuid
-    for (vector<HVSession*>::iterator i = this->sessions.begin(); i != this->sessions.end(); i++) {
-        HVSession* sess = *i;
-        if (sess->uuid.compare(uuid) == 0) {
-            return sess;
-        }
-    }
-    
-    // Not found
-    return NULL;
-    
-    CRASH_REPORT_END;
-}
-*/
-
-/**
  * Open or reuse a hypervisor session
  */
 HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) { 
@@ -708,34 +687,24 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) {
     // If we found one, continue
     if (sess) {
         // Validate secret key
-        if (sess->parameters->get("key","").compare(keyHash) == 0) {
-
-            // Exists and it's valid. Update parameters
-            sess->parameters->fromParameters( parameters );
-
-            // Replace key with it's crypto-hashed version
-            sess->parameters->set("key", keyHash);
-
-            // And return instance
-            return sess;
-
-        } else {
+        if (sess->parameters->get("key","").compare(keyHash) != 0) {
             // Exists but the password is invalid
             return voidPtr;
         }
-    }
+    } else {
 
-    // Otherwise, allocate one
-    sess = this->allocateSession();
-    if (!sess) return voidPtr;
+        // Otherwise, allocate one
+        sess = this->allocateSession();
+        if (!sess) return voidPtr;
+
+    }
 
     // Populate parameters
     sess->parameters->fromParameters( parameters );
+    sess->parameters->set("key", keyHash); // (Replace with it's crypto-hash version)
 
-    // Replace key with it's crypto-hashed version
-    sess->parameters->set("key", keyHash);
-
-    // Store reference to open sessions
+    // Open session and store it to the openSesions store
+    sess->open( );
     openSessions.push_back( sess );
     
     // Return the handler

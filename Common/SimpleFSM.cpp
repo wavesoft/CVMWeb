@@ -270,6 +270,17 @@ void SimpleFSM::FSMGoto(int state) {
 
 	}
 
+	// If we have progress feedback, update the max
+	if (fsmProgress) {
+
+		// Update max tasks that needs to be done
+		fsmProgress->setMax( fsmCurrentPath.length(), false );
+
+		// Display the reset message
+		fsmProgress->reset( fsmProgressResetMsg );
+
+	}
+
 	// Notify possibly paused thread
 	if (fsmThread != NULL)
 		_fsmWakeup();
@@ -387,6 +398,72 @@ void SimpleFSM::_fsmWakeup() {
         fsmtPaused = false;
     }
     fsmtPauseChanged.notify_all();
+}
+
+/**
+ * Set a progress object to use with SimpleFSM.
+ *
+ * This will enable automatic re-calibration of the maximum elements of the finite-task
+ * progress feedback mechanism when the FSM engine is picking a different path.
+ *
+ */
+void SimpleFSM::FSMUseProgress ( const FiniteTaskPtr & pf, const std::string & resetMessage ) {
+	fsmProgress = pf;
+	fsmProgressResetMsg = resetMessage;
+}
+
+/**
+ * Trigger the "Doing" action of the SimpleFSM progress feedback -if available-
+ *
+ * This function should be placed in the beginning of all the FSM action handlers in order
+ * to provide more meaningul message to the user.
+ */
+void SimpleFSM::FSMDoing ( const std::string & message ) {
+	if (fsmProgress) {
+		fsmProgress->doing(message);
+	}
+}
+
+/**
+ * Trigger the "Done" action of the SimpleFSM progress feedback -if available-
+ *
+ * This function should be placed in the end of all the FSM action handlers in order
+ * to provide more meaningul message to the user.
+ */
+void SimpleFSM::FSMDone ( const std::string & message ) {
+	if (fsmProgress) {
+		fsmProgress->done(message);
+	}
+}
+
+/**
+ * Wait until the FSM reaches the specified state
+ */
+void FSMWaitFor	( int state, int timeout ) {
+
+	// Find the state
+	std::map<int,FSMNode>::iterator pt;
+	pt = fsmNodes.find( state );
+	if (pt == fsmNodes.end()) return;
+
+	// If we are already on this state, don't do anything
+	if (fsmCurrentNode == fsmwState) return;
+
+	// Switch to the target state
+	fsmwState = &((*pt).second);
+
+	/*
+    {
+        boost::unique_lock<boost::mutex> lock(fsmwStateMutex);
+        fsmtPaused = false;
+    }
+    fsmwStateChanged.notify_all();
+	*/
+
+	// Wait for state
+    boost::unique_lock<boost::mutex> lock(fsmwStateMutex);
+    fsmwStateChanged.wait(lock);
+
 }
 
 /**

@@ -110,155 +110,200 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
  * Initialize connection with VirtualBox
  */
 void VBoxSession::Initialize() {
-    cout << "- Initialize" << endl;
+    FSMDoing("Initializing session");
+
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+
+    FSMDone("Session initialized");
 }
 
 /**
  * Load VirtualBox session 
  */
 void VBoxSession::UpdateSession() {
-    cout << "- UpdateSession" << endl;
+    FSMDoing("Loading session information");
+
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
     FSMSkew(3);
+
+    FSMDone("Session updated");
 }
 
 /**
  * Handle errors
  */
 void VBoxSession::HandleError() {
-    cout << "- HandleError" << endl;
+    FSMDoing("Handling error");
+
+    FSMDone("Error handled");
 }
 
 /**
  * Cure errors
  */
 void VBoxSession::CureError() {
-    cout << "- CureError" << endl;
+    FSMDoing("Curing Error");
+
+    FSMDone("Error cured");
 }
 
 /**
  * Create new VM
  */
 void VBoxSession::CreateVM() {
-    cout << "- CreateVM" << endl;
+    FSMDoing("Creating Virtual Machine");
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+
+    FSMDone("Session initialized");
 }
 
 /**
  * Configure the new VM instace
  */
 void VBoxSession::ConfigureVM() {
-    cout << "- ConfigureVM" << endl;
+    FSMDoing("Configuring Virtual Machine");
     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+
+    FSMDone("Virtual Machine configured");
 }
 
 /**
  * Download the required media to the application folder
  */
 void VBoxSession::DownloadMedia() {
-    cout << "- DownloadMedia" << endl;
+    FSMDoing("Downloading required media");
     boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+
+    FSMDone("Media downloaded");
 }
 
 /**
  * Configure boot media of the VM
  */
 void VBoxSession::ConfigureVMBoot() {
-    cout << "- ConfigureVMBoot" << endl;
+    FSMDoing("Preparing boot medium");
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+
+    FSMDone("Boot medium prepared");
 }
 
 /**
  * Release Boot media of the VM
  */
 void VBoxSession::ReleaseVMBoot() {
+    FSMDoing("Releasing boot medium");
     cout << "- ReleaseVMBoot" << endl;
+
+    FSMDone("Boot medium released");
 }
 
 /**
  * Allocate a new scratch disk for the VM
  */
 void VBoxSession::ConfigureVMScratch() {
-    cout << "- ConfigureVMScratch" << endl;
+    FSMDoing("Preparing scatch storage");
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+
+    FSMDone("Scratch storage prepared");
 }
 
 /**
  * Release the scratch disk from the VM
  */
 void VBoxSession::ReleaseVMScratch() {
-    cout << "- ReleaseVMScratch" << endl;
+    FSMDoing("Releasing scratch storage");
+
+    FSMDone("Scratch storage released");
 }
 
 /**
  * Create a VM API disk (ex. floppyIO or OpenNebula ISO)
  */
 void VBoxSession::ConfigureVMAPI() {
-    cout << "- ConfigureVMAPI" << endl;
+    FSMDoing("Preparing VM API medium");
+
+    FSMDone("VM API medium prepared");
 }
 
 /**
  * Release a VM API disk
  */
 void VBoxSession::ReleaseVMAPI() {
-    cout << "- ReleaseVMAPI" << endl;
+    FSMDoing("Releasing VM API medium");
+
+    FSMDone("VM API medium released");
 }
 
 /**
  * Prepare the VM for booting
  */
 void VBoxSession::PrepareVMBoot() {
-    cout << "- PrepareVMBoot" << endl;
+    FSMDoing("Preparing for VM Boot");
+
+    FSMDone("VM Booted");
 }
 
 /**
  * Destroy the VM instance (remove files and everything)
  */
 void VBoxSession::DestroyVM() {
-    cout << "- DestroyVM" << endl;
+    FSMDoing("Destryoing VM");
+
+    FSMDone("VM Destroyed");
 }
 
 /**
  * Shut down the VM
  */
 void VBoxSession::PoweroffVM() {
-    cout << "- PoweroffVM" << endl;
+    FSMDoing("Powering VM off");
+
+    FSMDone("VM Powered off");
 }
 
 /**
  * Discard saved VM state
  */
 void VBoxSession::DiscardVMState() {
-    cout << "- DiscardVMState" << endl;
+    FSMDoing("Discarding saved VM state");
+
+    FSMDone("Saved VM state discarted");
 }
 
 /**
  * Boot the VM
  */
 void VBoxSession::StartVM() {
-    cout << "- StartVM" << endl;
+    FSMDoing("Starting VM");
+
+    FSMDone("VM Started");
 }
 
 /**
  * Save the state of the VM
  */
 void VBoxSession::SaveVMState() {
-    cout << "- SaveVMState" << endl;
+    FSMDoing("Saving VM state");
+
+    FSMDone("VM State saved");
 }
 
 /**
  * Put the VM in paused state
  */
 void VBoxSession::PauseVM() {
-    cout << "- PauseVM" << endl;
+    FSMDoing("Pausing the VM");
+
+    FSMDone("VM Paused");
 }
 
 /**
  * Resume the VM from paused state
  */
 void VBoxSession::ResumeVM() {
-    cout << "- ResumeVM" << endl;
+    FSMDoing("Resuming VM");
+
+    FSMDone("VM Resumed");
 }
 
 /////////////////////////////////////
@@ -270,23 +315,16 @@ void VBoxSession::ResumeVM() {
 /////////////////////////////////////
 
 /**
- * Called by the constructor to initialize and activate the session
- * by initializing the FSM.
+ * Initialize a new session
  */
-void VBoxSession::startFSM ( ) {
-
+int VBoxSession::open ( ) {
+    
     // Start the FSM thread
     FSMThreadStart();
 
-}
-
-
-/**
- * Initialize a new session
- */
-int VBoxSession::open ( int cpus, int memory, int disk, std::string cvmVersion, int flags ) {
+    // We are good
+    return HVE_SCHEDULED;
     
-    return HVE_NOT_IMPLEMENTED;
 }
 
 /**

@@ -137,7 +137,7 @@ public:
     virtual int             reset               ();
     virtual int             stop                ();
     virtual int             hibernate           ();
-    virtual int             open                ( int cpus, int memory, int disk, std::string cvmVersion, int flags );
+    virtual int             open                ();
     virtual int             start               ( std::map<std::string,std::string> *userData );
     virtual int             setExecutionCap     ( int cap);
     virtual int             setProperty         ( std::string name, std::string key );
@@ -195,7 +195,6 @@ protected:
         std::string>        getMachineInfo      ( int timeout = SYSEXEC_TIMEOUT );
     int                     startVM             ();
     int                     controlVM           ( std::string how, int timeout = SYSEXEC_TIMEOUT );
-    void                    startFSM            ( );
 
     ////////////////////////////////////
     // Local variables

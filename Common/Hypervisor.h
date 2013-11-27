@@ -269,7 +269,7 @@ public:
     virtual int             reset();
     virtual int             stop();
     virtual int             hibernate();
-    virtual int             open( int cpus, int memory, int disk, std::string cvmVersion, int flags );
+    virtual int             open();
     virtual int             start( std::map<std::string,std::string> *userData );
     virtual int             setExecutionCap(int cap);
     virtual int             setProperty( std::string name, std::string key );
@@ -341,6 +341,7 @@ public:
     /* Control functions (called externally) */
     int                     checkDaemonNeed ();
     void                    setDownloadProvider( DownloadProviderPtr p );
+    void                    setUserInteraction( UserInteractionPtr p );
 
     /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
              the Hypervisor class in order to use the checkDaemonNeed() function. It's
@@ -350,6 +351,7 @@ public:
 protected:
     int                                         sessionID;
     DownloadProviderPtr                         downloadProvider;
+    UserInteractionPtr                          userInteraction;
 };
 
 /**

@@ -74,7 +74,7 @@ public:
 	/**
 	 * Constructor
 	 */
-	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmInsideHandler(false), fsmtPauseChanged()
+	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmInsideHandler(false), fsmtPauseChanged(), fsmProgress()
 		{ };
 
 	/**
@@ -85,35 +85,71 @@ public:
 	/**
 	 * Pick the closest path to go from current state to the given state
 	 */
-	void 							FSMGoto(int state);
+	void 							FSMGoto				( int state );
 
 	/**
 	 * Skew the current path by switching to given state and then continuing
 	 * to the state pointed by goto
 	 */
-	void 							FSMSkew(int state);
+	void 							FSMSkew				( int state );
 
 	/**
 	 * Called externally to continue to the next FSM action
-	 */
-	bool 							FSMContinue( bool inThread = false );
+	 */	
+	bool 							FSMContinue			( bool inThread = false );
 
 	/**
 	 * Start the FSM management thread
 	 */
-	boost::thread *					FSMThreadStart();
+	boost::thread *					FSMThreadStart		();
 
 	/**
 	 * Stop the FSM thread
 	 */
-	void 							FSMThreadStop();
+	void 							FSMThreadStop		();
+
+	/**
+	 * Enable progress feedback on this SimpleFSM instance
+	 */
+	void 							FSMUseProgress		( const FiniteTaskPtr & pf, const std::string & resetMessage );
+
+	/**
+	 * Wait for FSM to reach the specified state
+	 */
+	void 							FSMWaitFor		( int state, int timeout = 0 );
+
+	/**
+	 * Public progress feedback instance used by actions
+	 */
+	FiniteTaskPtr					fsmProgress;
 
 protected:
 
-	void 					        FSMRegistryBegin();
-	void 					        FSMRegistryAdd( int id, fsmHandler handler, ... );
-	void 					        FSMRegistryEnd( int rootID );
-	void 							FSMThreadLoop();
+	/**
+	 * Trigger the "Doing" action of the SimpleFSM progress feedback -if available-
+	 *
+	 * This function should be placed in the beginning of all the FSM action handlers in order
+	 * to provide more meaningul message to the user.
+	 */
+	void 							FSMDoing			( const std::string & message );
+
+	/**
+	 * Trigger the "Done" action of the SimpleFSM progress feedback -if available-
+	 *
+	 * This function should be placed in the end of all the FSM action handlers in order
+	 * to provide more meaningul message to the user.
+	 */
+	void 							FSMDone				( const std::string & message );
+
+	// Registry functions encapsulated by the FSM_ macros
+	void 					        FSMRegistryBegin	();
+	void 					        FSMRegistryAdd		( int id, fsmHandler handler, ... );
+	void 					        FSMRegistryEnd		( int rootID );
+
+	/**
+	 * The entry point for the thread loop
+	 */
+	void 							FSMThreadLoop		();
 
 	// Private variables
     std::map<int,std::vector<int> > fsmTmpRouteLinks;
@@ -131,6 +167,15 @@ private:
 	bool 							fsmtPaused;
 	boost::mutex 					fsmtPauseMutex;
 	boost::condition_variable 		fsmtPauseChanged;
+
+	// Wait synchronization
+	FSMNode *						fsmwState;
+	bool 							fsmwStateWaiting;
+	boost::mutex 					fsmwStateMutex;
+	boost::condition_variable 		fsmwStateChanged;
+
+	// Progress
+	std::string 					fsmProgressResetMsg;
 
 	// Pause/Resume for long periods of idle-ness
 	void							_fsmPause();
