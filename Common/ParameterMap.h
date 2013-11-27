@@ -139,6 +139,16 @@ public:
     template<typename T> void   setNum          ( const std::string& name, T value );
 
     /**
+     * Set a boolean parameter
+     */
+    void                        setBool         ( const std::string& name, bool value );
+
+    /**
+     * Get a boolean parameter
+     */
+    bool                        getBool         ( const std::string& name, bool defaultValue = false );
+
+    /**
      * Return a sub-parameter group instance
      */
     ParameterMapPtr				subgroup		( const std::string& name );

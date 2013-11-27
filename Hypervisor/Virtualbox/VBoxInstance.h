@@ -31,6 +31,7 @@
 #include "Common/Hypervisor.h"
 #include "Common/ProgressFeedback.h"
 #include "Common/CrashReport.h"
+#include "Common/LocalConfig.h"
 
 #include <boost/regex.hpp>
 
@@ -47,6 +48,9 @@ public:
         this->hvRoot = fRoot;
         this->hvBinary = fBin;
         this->hvGuestAdditions = fIso;
+
+        // Load hypervisor-specific runtime configuration
+        this->hvConfig = LocalConfig::forRuntime("virtualbox");
 
         // Detect and update VirtualBox Version
         std::vector< std::string > out;
@@ -68,6 +72,7 @@ public:
     virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr(), const UserInteractionPtr & ui = UserInteractionPtr() );
     virtual HVSessionPtr    allocateSession     ( );
     virtual int             getCapabilities     ( HVINFO_CAPS * caps );
+    virtual void            abort               ( );
 
     /////////////////////////
     // Friend functions
@@ -90,6 +95,7 @@ private:
     // Local properties
     /////////////////////////
 
+    LocalConfigPtr          hvConfig;
     std::string             hvGuestAdditions;
     bool                    sessionLoaded;
     

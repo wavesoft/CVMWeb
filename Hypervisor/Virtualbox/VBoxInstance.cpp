@@ -75,7 +75,7 @@ map<string, string> VBoxInstance::getAllProperties( string uuid ) {
     /* Get guest properties */
     NAMED_MUTEX_LOCK( uuid );
     if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, 4, 2000 ) == 0) {
-        for (vector<string>::iterator it = lines.begin(); it < lines.end(); it++) {
+        for (vector<string>::iterator it = lines.begin(); it < lines.end(); ++it) {
             string line = *it;
 
             /* Find the anchor locations */
@@ -140,8 +140,8 @@ bool VBoxInstance::waitTillReady( const FiniteTaskPtr & pf, const UserInteractio
         // Extension pack is released under PUEL license
         // require the user to confirm before continuing
         if (ui) {
-            if (ui->confirmLicenseURL("VirtualBox Personal Use and Evaluation License (PUEL)", "https://www.virtualbox.org/wiki/VirtualBox_PUEL") != UI_OK) {
-                // User did not click OK
+            if (ui->confirmLicense("VirtualBox Personal Use and Evaluation License (PUEL)", VBOX_PUEL_LICENSE) != UI_OK) {
+                // (User did not click OK)
 
                 // Send error
                 if (pf) pf->fail("User denied Oracle PUEL license");
@@ -762,7 +762,7 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     // [3] Remove the VMs that are not registered 
     //     in the hypervisor.
     // ===========================================
-    for (std::map< std::string,HVSessionPtr >::iterator it = this->sessions.begin(); it != this->sessions.end(); it++) {
+    for (std::map< std::string,HVSessionPtr >::iterator it = this->sessions.begin(); it != this->sessions.end(); ++it) {
         HVSessionPtr sess = (*it).second;
 
         // Check if the stored session does not correlate
@@ -770,8 +770,17 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
         // destroyed externally.
         if (vboxVms.find(sess->parameters->get("vboxid")) == vboxVms.end()) {
 
-            // Remove it from session map
-            sessions.erase( sess->uuid );
+            // Make sure the session is not aware of that
+            if (sess->state != STATE_CLOSED) {
+
+                // Remove it from session map and rewind
+                sessions.erase( sess->uuid );
+                it = this->sessions.begin();
+
+                // Quit if we are done
+                if (this->sessions.size() == 0) break;
+
+            }
 
         }
 
@@ -786,7 +795,7 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     // [4] Check if some of the currently open session 
     //     was lost.
     // ===========================================
-    for (std::list< HVSessionPtr >::iterator it = openSessions.begin(); it != openSessions.end(); it++) {
+    for (std::list< HVSessionPtr >::iterator it = openSessions.begin(); it != openSessions.end(); ++it) {
         HVSessionPtr sess = (*it);
 
         // Check if the session has gone away
@@ -799,6 +808,9 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
             openSessions.erase( it );
             it = openSessions.begin();
 
+            // Quit if we are done
+            if (openSessions.size() == 0) break;
+
         }
 
     }
@@ -809,6 +821,23 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
     return 0;
     NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
+}
+
+/**
+ * Abort what's happening and prepare for shutdown
+ */
+void VBoxInstance::abort() {
+
+    // Abort all open sessions
+    for (std::list< HVSessionPtr >::iterator it = openSessions.begin(); it != openSessions.end(); ++it) {
+        HVSessionPtr sess = (*it);
+        sess->abort();
+    }
+
+    // Cleanup
+    openSessions.clear();
+    sessions.clear();
+
 }
 
 /**

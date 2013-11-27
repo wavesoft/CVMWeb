@@ -94,7 +94,7 @@ void SimpleFSM::FSMRegistryEnd( int rootID ) {
 	fsmRootNode = &((*pt).second);
 
 	// Reset current node
-	fsmCurrentNode = NULL;
+	fsmCurrentNode = fsmRootNode;
 
 	// Flush temp arrays
 	fsmTmpRouteLinks.clear();
@@ -151,22 +151,6 @@ bool SimpleFSM::FSMContinue( bool inThread ) {
 	if (fsmInsideHandler) return false;
 	if (fsmCurrentPath.empty() && (fsmCurrentNode != NULL)) return false;
 	fsmInsideHandler = true;
-
-	// If that's the first time we call FSMContinue,
-	// run the root action
-	if (fsmCurrentNode == NULL) {
-		bool ans;
-
-		// Set and run root node
-		fsmCurrentNode = fsmRootNode;
-		ans = _callHandler(fsmCurrentNode, inThread);
-
-		// We are now outside the handler
-		fsmInsideHandler = false;
-
-		// Return immediately
-		return ans;
-	}
 
 	// Get next action in the path
 	FSMNode * next = fsmCurrentPath.front();
@@ -245,6 +229,10 @@ void findShortestPath( std::vector< FSMNode * > path, FSMNode * node, int state,
  * Build the path to go to the given state and start the FSM subsystem
  */
 void SimpleFSM::FSMGoto(int state) {
+
+	// Allow only one thread to steer the FSM
+	boost::mutex::scoped_lock lock(fsmGotoMutex);
+
     CVMWA_LOG("Debug", "Going towards " << state);
 
 	// Reset path
@@ -274,10 +262,10 @@ void SimpleFSM::FSMGoto(int state) {
 	if (fsmProgress) {
 
 		// Update max tasks that needs to be done
-		fsmProgress->setMax( fsmCurrentPath.length(), false );
+        fsmProgress->setMax( fsmCurrentPath.size(), false );
 
 		// Display the reset message
-		fsmProgress->reset( fsmProgressResetMsg );
+        fsmProgress->restart( fsmProgressResetMsg );
 
 	}
 
@@ -419,6 +407,7 @@ void SimpleFSM::FSMUseProgress ( const FiniteTaskPtr & pf, const std::string & r
  * to provide more meaningul message to the user.
  */
 void SimpleFSM::FSMDoing ( const std::string & message ) {
+	CVMWA_LOG("Debug", "Doing " << message);
 	if (fsmProgress) {
 		fsmProgress->doing(message);
 	}
@@ -431,6 +420,7 @@ void SimpleFSM::FSMDoing ( const std::string & message ) {
  * to provide more meaningul message to the user.
  */
 void SimpleFSM::FSMDone ( const std::string & message ) {
+	CVMWA_LOG("Debug", "Done " << message);
 	if (fsmProgress) {
 		fsmProgress->done(message);
 	}
@@ -439,7 +429,7 @@ void SimpleFSM::FSMDone ( const std::string & message ) {
 /**
  * Wait until the FSM reaches the specified state
  */
-void FSMWaitFor	( int state, int timeout ) {
+void SimpleFSM::FSMWaitFor	( int state, int timeout ) {
 
 	// Find the state
 	std::map<int,FSMNode>::iterator pt;

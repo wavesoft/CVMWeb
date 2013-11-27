@@ -326,25 +326,6 @@ int __diskExtract( const std::string& sGZOutput, const std::string& checksum, co
 /////////////////////////////////////
 /////////////////////////////////////
 
-/* Incomplete type placeholders */
-int HVSession::pause()                                              { return HVE_NOT_IMPLEMENTED; }
-int HVSession::close( bool unmonitored )                            { return HVE_NOT_IMPLEMENTED; }
-int HVSession::stop()                                               { return HVE_NOT_IMPLEMENTED; }
-int HVSession::resume()                                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::hibernate()                                          { return HVE_NOT_IMPLEMENTED; }
-int HVSession::reset()                                              { return HVE_NOT_IMPLEMENTED; }
-int HVSession::update()                                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::updateFast()                                         { return HVE_NOT_IMPLEMENTED; }
-int HVSession::open()                                               { return HVE_NOT_IMPLEMENTED; }
-int HVSession::start( std::map<std::string,std::string> *userData ) { return HVE_NOT_IMPLEMENTED; }
-int HVSession::setExecutionCap(int cap)                             { return HVE_NOT_IMPLEMENTED; }
-int HVSession::setProperty( std::string name, std::string key )     { return HVE_NOT_IMPLEMENTED; }
-int HVSession::getAPIPort()                                         { return 0; }
-std::string HVSession::getAPIHost()                                 { return ""; }
-std::string HVSession::getProperty( std::string name )              { return ""; }
-std::string HVSession::getRDPHost()                                 { return ""; }
-std::string HVSession::getExtraInfo( int extraInfo )                { return ""; }
-
 /**
  * Try to connect to the API port and check if it succeeded
  */
@@ -364,9 +345,6 @@ bool HVSession::isAPIAlive( unsigned char handshake ) {
 ////
 /////////////////////////////////////
 /////////////////////////////////////
-
-/* Incomplete type placeholders */
-bool HVInstance::waitTillReady(const FiniteTaskPtr & pf, const UserInteractionPtr & ui)  { return false; }
 
 /**
  * Measure the resources from the sessions
@@ -592,7 +570,7 @@ int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrM
 /**
  * Initialize hypervisor 
  */
-HVInstance::HVInstance() : version(""), sessions(), openSessions(), userInteraction(), downloadProvider(), {
+HVInstance::HVInstance() : version(""), sessions(), openSessions(), userInteraction(), downloadProvider() {
     CRASH_REPORT_BEGIN;
     this->sessionID = 1;
     

@@ -61,6 +61,7 @@
 
 /* Session states */
 #define STATE_CLOSED            0
+#define STATE_DESTROYED         0
 #define STATE_OPPENING          1
 #define STATE_OPEN              2
 #define STATE_STARTING          3
@@ -227,10 +228,15 @@ public:
         
         // Populate local variables
         this->uuid = parameters->get("uuid");
+        this->state = parameters->getNum<int>("state", 0);
         this->hypervisor = hv;
 
     };
     
+    ////////////////////////////////////////
+    // Session variables
+    ////////////////////////////////////////
+
     std::string             uuid;
     HVInstancePtr           hypervisor;
 
@@ -262,27 +268,111 @@ public:
 
     ParameterMapPtr         userData;
     ParameterMapPtr         parameters;
-        
-    virtual int             pause();
-    virtual int             close( bool unmonitored = false );
-    virtual int             resume();
-    virtual int             reset();
-    virtual int             stop();
-    virtual int             hibernate();
-    virtual int             open();
-    virtual int             start( std::map<std::string,std::string> *userData );
-    virtual int             setExecutionCap(int cap);
-    virtual int             setProperty( std::string name, std::string key );
-    virtual std::string     getProperty( std::string name );
-    virtual std::string     getRDPHost();
-    virtual std::string     getAPIHost();
-    virtual int             getAPIPort();
+
+    ////////////////////////////////////////
+    // Session API implementation
+    ////////////////////////////////////////
+
+    /**
+     * Pause the VM
+     */
+    virtual int             pause() = 0;
+
+    /**
+     * Close the VM
+     */
+    virtual int             close( bool unmonitored = false ) = 0;
+
+    /**
+     * Resume a previously paused VM
+     */
+    virtual int             resume() = 0;
+
+    /**
+     * Cold-boot reset of the VM
+     */
+    virtual int             reset() = 0;
+
+    /**
+     * Power-off the VM
+     */
+    virtual int             stop() = 0;
+
+    /**
+     * Save state of the VM and stop it
+     */
+    virtual int             hibernate() = 0;
+
+    /**
+     * Create or resume session
+     */
+    virtual int             open() = 0;
+
+    /**
+     * Boot the VM
+     */    
+    virtual int             start( std::map<std::string,std::string> *userData ) = 0;
+
+    /**
+     * Change the execution cap
+     * The value specified should be between 0 and 100
+     */
+    virtual int             setExecutionCap(int cap) = 0;
+
+    /**
+     * Set an arbitrary property to the VM store
+     */
+    virtual int             setProperty( std::string name, std::string key ) = 0;
+
+    /**
+     * Get an arbitrary property from the VM store
+     */
+    virtual std::string     getProperty( std::string name ) = 0;
+
+    /**
+     * Return the 'hostname:port' address where the user should
+     * connect in order to see the RDP display.
+     */
+    virtual std::string     getRDPAddress() = 0;
+
+    /**
+     * Return the IP address where the user should
+     * connect in order to interact with the VM.
+     */
+    virtual std::string     getAPIHost() = 0;
+
+    /**
+     * Return the API port number where the user should
+     * connect in order to interact with the VM.
+     */
+    virtual int             getAPIPort() = 0;
+
+    /**
+     * Probe the API Port and check if it's alive.
+     * There are different handshakes availables:
+     *
+     * - HSK_NONE   : No protocol negotiation. Just check if we can connect
+     * - HSK_SIMPLE : Just send a space and a newline and check if it's still connected
+     * - HSK_HTTP   : Send a basic HTTP GET / request and expect some data as response 
+     *
+     */
     virtual bool            isAPIAlive( unsigned char handshake = HSK_HTTP );
 
-    virtual std::string     getExtraInfo( int extraInfo );
+    /**
+     * Get extra information from the session that were not thought
+     * during the design-phase of the project, or they are hypervisor-specific
+     */
+    virtual std::string     getExtraInfo( int extraInfo ) = 0;
 
-    virtual int             update();
-    virtual int             updateFast();
+    /**
+     * Re-read the session variables from disk
+     */
+    virtual int             update() = 0;
+
+    /**
+     * Abort current task and prepare session for reaping
+     */
+    virtual void            abort() = 0;
 
     callbackDebug           onDebug;
     callbackVoid            onOpen;
@@ -300,47 +390,178 @@ public:
  */
 class HVInstance : public boost::enable_shared_from_this<HVInstance> {
 public:
-    
+
+    /**
+     * Hypervisor instance constructor
+     */    
     HVInstance();
     
+    ////////////////////////////////////////
+    // Common variables
+    ////////////////////////////////////////
+
+    /**
+     * The full path to the binary for management to the hypervisor
+     */
     std::string             hvBinary;
+
+    /**
+     * The root path of the hypervisor
+     */
     std::string             hvRoot;
+
+    /**
+     * The directory where the VM data should be placed (permanent)
+     */
     std::string             dirData;
+
+    /**
+     * The directory where the VM data can be placed (volatile)
+     */
     std::string             dirDataCache;
+
+    /**
+     * HACK: The last STDERR buffer from the exec() function
+     */
     std::string             lastExecError;
-    
-    // The Version String for the hypervisor
+
+    /**
+     * The hypervisor version
+     */
     HypervisorVersion       version;
     
-    /* Session management commands */
+    ////////////////////////////////////////
+    // Session management
+    ////////////////////////////////////////
+
+    /**
+     * A list of currently open sessions
+     */
     std::list< HVSessionPtr > openSessions;
-    std::map< std::string, 
-        HVSessionPtr >      sessions;
-    HVSessionPtr            sessionByGUID       ( const std::string& uuid );
+
+    /**
+     * The map of session UUIDs and their object instance
+     */
+    std::map< std::string, HVSessionPtr >      sessions;
+
+    /**
+     * Return a session by it's name
+     */
     HVSessionPtr            sessionByName       ( const std::string& name );
+
+    /**
+     * Open a session using the specified input parameters
+     */
     HVSessionPtr            sessionOpen         ( const ParameterMapPtr& parameters );
+
+    /**
+     * Validate a session using the specified input parameters
+     */
     int                     sessionValidate     ( const ParameterMapPtr& parameters );
 
-    /* Overridable functions */
+    ////////////////////////////////////////
+    // Overridable functions
+    ////////////////////////////////////////
+
+    /**
+     * Return the hypervisor type ID
+     */
     virtual int             getType             ( ) { return HV_NONE; };
+
+    /**
+     * Load the sessions from disk/hypervisor into the sessions[] map
+     */
     virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() ) = 0;
+
+    /**
+     * Allocate a new session and store it on the openSessions[] list and the sessions[] map
+     */
     virtual HVSessionPtr    allocateSession     ( ) = 0;
+
+    /**
+     * Fetch the hypervisor capabilities
+     */
     virtual int             getCapabilities     ( HVINFO_CAPS * caps ) = 0;
-    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr(), const UserInteractionPtr & ui = UserInteractionPtr() );
+
+    /**
+     * Wait until the hypervisor is initialized
+     */
+    virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr(), const UserInteractionPtr & ui = UserInteractionPtr() ) = 0;
+
+    /**
+     * Count the resources used by the hypervisor
+     */
     virtual int             getUsage            ( HVINFO_RES * usage);
-    
-    /* Tool functions (used internally or from session objects) */
+
+    /**
+     * Immediately abort current task and reap all sessions
+     */
+    virtual void            abort() = 0;
+
+    //////////////////////////////////////////////
+    // Tool functions
+    // (Used internally or from session objects)
+    //////////////////////////////////////////////
+
+    /**
+     * Execute the hypervisor binary, appending the specified argument list.
+     * This command just encapsulates a sysExec function
+     */
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT, bool gui = false );
+
+    /**
+     * Download a CernVM disk using the specified version string and store
+     * it to the filename pointer provided.
+     */
     int                     cernVMDownload      ( std::string version, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), std::string flavor = DEFAULT_CERNVM_FLAVOR, std::string arch = DEFAULT_CERNVM_ARCH );
+
+    /**
+     * Download an arbitrary disk image with a given checksum and store the
+     * resulting filename to the specified filename pointer.
+     */
     int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr() );
+
+    /**
+     * Return the cached disk image for the specified CernVM version
+     */
     int                     cernVMCached        ( std::string version, std::string * filename );
+
+    /**
+     * Parse the given filename and detect the CernVM Version
+     */
     std::string             cernVMVersion       ( std::string filename );
+
+    /**
+     * Build a Contextualization CD-ROM with the specified user-data and
+     * store it to the file pointer specified.
+     */
     int                     buildContextISO     ( std::string userData, std::string * filename );
+
+    /**
+     * Build a floppy disk using the specified user-data and store the resulting
+     * filename to the filename pointer.
+     */
     int                     buildFloppyIO       ( std::string userData, std::string * filename );
     
-    /* Control functions (called externally) */
+
+    //////////////////////////////////////////////
+    // Control functions
+    //////////////////////////////////////////////
+
+    /**
+     * Check if we need a daemon for our sessions and if we do, start it.
+     * Otherwise stop any running instance.
+     */
     int                     checkDaemonNeed ();
+
+    /**
+     * Change the default download provider to the one specified
+     */
     void                    setDownloadProvider( DownloadProviderPtr p );
+
+    /**
+     * Change the default user interaction proxy to the one specified
+     */
     void                    setUserInteraction( UserInteractionPtr p );
 
     /* HACK: Only the JSAPI knows where it's located. Therefore it must provide it to
@@ -354,11 +575,27 @@ protected:
     UserInteractionPtr                          userInteraction;
 };
 
+//////////////////////////////////////////////
+// Global functions
+//////////////////////////////////////////////
+
 /**
- * Exposed functions
+ * Detect the installed hypervisors in the system and return the first
+ * available hypervisor instance pointer.
  */
 HVInstancePtr                   detectHypervisor    ( );
-int                             installHypervisor   ( const DownloadProviderPtr & downloadProvider, const UserInteractionPtr & ui = UserInteractionPtr(), const FiniteTaskPtr & pf = FiniteTaskPtr(), int retries = 4 );
+
+/**
+ * Install the default hypervisor in the system
+ */
+int                             installHypervisor   ( const DownloadProviderPtr & downloadProvider, 
+                                                      const UserInteractionPtr & ui = UserInteractionPtr(), 
+                                                      const FiniteTaskPtr & pf = FiniteTaskPtr(), 
+                                                      int retries = 4 );
+
+/**
+ * Return the string representation of a hypervisor error code
+ */
 std::string                     hypervisorErrorStr  ( int error );
 
 

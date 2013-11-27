@@ -123,8 +123,35 @@ void VBoxSession::Initialize() {
 void VBoxSession::UpdateSession() {
     FSMDoing("Loading session information");
 
-    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-    FSMSkew(3);
+    // Get VM status
+    map<string, string> info = getMachineInfo();
+
+    // If we got an error, the VM is missing
+    if (info.find(":ERROR:") != info.end()) {
+        FSMSkew(3); // Destroyed state
+    } else {
+        // Route according to state
+        if (info.find("State") != info.end()) {
+            string state = info["State"];
+            if (state.find("running") != string::npos) {
+                FSMSkew(7); // Running state
+            } else if (state.find("paused") != string::npos) {
+                FSMSkew(6); // Paused state
+            } else if (state.find("saved") != string::npos) {
+                FSMSkew(5); // Saved state
+            } else if (state.find("aborted") != string::npos) {
+                FSMSkew(4); // Aborted is also a 'powered-off' state
+            } else if (state.find("powered off") != string::npos) {
+                FSMSkew(4); // Powered off state
+            } else {
+                // UNKNOWN STATE //
+                CVMWA_LOG("ERROR", "Unknown state");
+            }
+        } else {
+            // ERROR //
+            CVMWA_LOG("ERROR", "Missing state info");
+        }
+    }
 
     FSMDone("Session updated");
 }
@@ -322,6 +349,9 @@ int VBoxSession::open ( ) {
     // Start the FSM thread
     FSMThreadStart();
 
+    // Goto Initialize
+    FSMGoto(100);
+
     // We are good
     return HVE_SCHEDULED;
     
@@ -434,7 +464,7 @@ int VBoxSession::setProperty ( std::string name, std::string key ) {
 /**
  * Get a property of the VM
  */
-std::string VBoxSession::getProperty ( std::string name, bool forceUpdate ) {
+std::string VBoxSession::getProperty ( std::string name ) {
     return "";
 }
 
@@ -442,7 +472,7 @@ std::string VBoxSession::getProperty ( std::string name, bool forceUpdate ) {
  * Build a hostname where the user should connect
  * in order to get the VM's display.
  */
-std::string VBoxSession::getRDPHost ( ) {
+std::string VBoxSession::getRDPAddress ( ) {
     return "";
 }
 
@@ -479,13 +509,16 @@ int VBoxSession::update ( ) {
 }
 
 /**
- * Simmilar to the update() function, but we are
- * just interested about the state of the VM.
- *
- * TODO: Wha??
+ * Abort what we are doing and prepare
+ * for reaping.
  */
-int VBoxSession::updateFast ( ) {
-    return HVE_NOT_IMPLEMENTED;
+void VBoxSession::abort ( ) {
+
+    // Stop the FSM thread
+    // (This will send an interrupt signal,
+    // causing all intermediate code to except)
+    FSMThreadStop();
+
 }
 
 /////////////////////////////////////
@@ -574,9 +607,20 @@ std::string VBoxSession::getHostOnlyAdapter ( ) {
  * Return the properties of the VM.
  */
 std::map<std::string, std::string> VBoxSession::getMachineInfo ( int timeout ) {
-    std::map<std::string, std::string> info;
-
-    return info;
+    CRASH_REPORT_BEGIN;
+    vector<string> lines;
+    map<string, string> dat;
+    
+    /* Perform property update */
+    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, 4, timeout);
+    if (ans != 0) {
+        dat[":ERROR:"] = ntos<int>( ans );
+        return dat;
+    }
+    
+    /* Tokenize response */
+    return tokenize( &lines, ':' );
+    CRASH_REPORT_END;
 }
 
 /**

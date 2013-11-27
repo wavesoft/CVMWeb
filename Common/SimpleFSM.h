@@ -23,6 +23,8 @@
 #define SIMPLEFSM_H
 
 #include "Utilities.h"
+#include "Common/ProgressFeedback.h"
+
 #include <list>
 #include <vector>
 #include <map>
@@ -74,8 +76,11 @@ public:
 	/**
 	 * Constructor
 	 */
-	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmInsideHandler(false), fsmtPauseChanged(), fsmProgress()
-		{ };
+	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmtPauseChanged(),
+			  	  fsmwState(NULL), fsmwStateWaiting(false), fsmwStateMutex(), fsmwStateChanged(),
+				  fsmInsideHandler(false), fsmProgress(), fsmGotoMutex(), fsmTargetState(0),
+				  fsmCurrentPath(), fsmRootNode(NULL), fsmCurrentNode(), fsmNodes(), fsmTmpRouteLinks()
+				  { };
 
 	/**
 	 * Destructor
@@ -173,6 +178,9 @@ private:
 	bool 							fsmwStateWaiting;
 	boost::mutex 					fsmwStateMutex;
 	boost::condition_variable 		fsmwStateChanged;
+
+	// Mutex for FSMGoto
+	boost::mutex  					fsmGotoMutex;
 
 	// Progress
 	std::string 					fsmProgressResetMsg;

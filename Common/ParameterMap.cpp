@@ -287,6 +287,24 @@ void ParameterMap::toMap ( std::map< std::string, std::string> * map, bool clear
 }
 
 /**
+ * Set a boolean parameter
+ */
+void ParameterMap::setBool ( const std::string& name, bool value ) {
+    std::string v = "n";
+    if (value) v = "y";
+    set(name, v);
+}
+
+/**
+ * Get a boolean parameter
+ */
+bool ParameterMap::getBool ( const std::string& name, bool defaultValue ) {
+    std::string v = get(name, "");
+    if (v.empty()) return defaultValue;
+    return ((v[0] == 'y') || (v[0] == 't') || (v[0] == '1'));
+}
+
+/**
  * Template implementations for numeric values
  */
 template int ParameterMap::getNum<int>( const std::string&, int defValue );

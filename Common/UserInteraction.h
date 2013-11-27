@@ -31,6 +31,8 @@
 #define UI_UNDEFINED	0x00
 #define	UI_OK 			0x01
 #define UI_CANCEL 		0x02
+#define UI_NOTAGAIN		0x100
+#define UI_MASK_BUTTON	0xff
 
 /**
  * User interaction shared pointer
@@ -187,6 +189,11 @@ public:
 	 * Automatically confirm a license
 	 */
 	virtual int 		confirmLicense		( const std::string& url, int timeout = 0 ) { return UI_OK; };
+
+	/**
+	 * Automatically confirm a license
+	 */
+	virtual int 		confirmLicenseURL	( const std::string& url, int timeout = 0 ) { return UI_OK; };
 
 };
 

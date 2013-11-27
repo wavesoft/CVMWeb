@@ -131,8 +131,11 @@ std::vector< std::string > LocalConfig::enumFiles ( std::string prefix ) {
 bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines ) {
     CRASH_REPORT_BEGIN;
     
-    // Truncate file
+    // Only a single instance can write at a time
     std::string file = this->configDir + "/" + name + ".lst";
+    NAMED_MUTEX_LOCK(file);
+
+    // Truncate file
     std::ofstream ofs ( file.c_str() , std::ofstream::out | std::ofstream::trunc);
     if (ofs.fail()) return false;
     
@@ -147,7 +150,8 @@ bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines
     // Close
     ofs.close();
     return true;
-    
+
+    NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
 }
 
@@ -157,8 +161,11 @@ bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines
 bool LocalConfig::saveBuffer ( std::string name, std::string * buffer ) {
     CRASH_REPORT_BEGIN;
     
-    // Truncate file
+    // Only a single isntance can access the file
     std::string file = this->configDir + "/" + name + ".dat";
+    NAMED_MUTEX_LOCK(file);
+
+    // Truncate file
     std::ofstream ofs ( file.c_str() , std::ofstream::out | std::ofstream::trunc);
     if (ofs.fail()) return false;
     
@@ -169,6 +176,7 @@ bool LocalConfig::saveBuffer ( std::string name, std::string * buffer ) {
     ofs.close();
     return true;
 
+    NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
 }
 /**
@@ -177,9 +185,12 @@ bool LocalConfig::saveBuffer ( std::string name, std::string * buffer ) {
 bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string> * map ) {
     CRASH_REPORT_BEGIN;
     
-    // Truncate file
+    // Only a single isntance can access the file
     std::string file = this->configDir + "/" + name + ".conf";
+    NAMED_MUTEX_LOCK(file);
     CVMWA_LOG("Config", "Saving" << file );
+
+    // Truncate file
     std::ofstream ofs ( file.c_str() , std::ofstream::out | std::ofstream::trunc);
     if (ofs.fail()) return false;
     
@@ -213,6 +224,7 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     ofs.close();
     return true;
     
+    NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
 }
 
@@ -222,8 +234,11 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
 bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines ) {
     CRASH_REPORT_BEGIN;
     
-    // Load configuration
+    // Only a single isntance can access the file
     std::string file = this->configDir + "/" + name + ".lst";
+    NAMED_MUTEX_LOCK(file);
+
+    // Load configuration
     std::ifstream ifs ( file.c_str() , std::ifstream::in);
     if (ifs.fail()) return false;
     
@@ -241,6 +256,7 @@ bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines
     ifs.close();
     return true;
     
+    NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
 }
 
@@ -250,8 +266,11 @@ bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines
 bool LocalConfig::loadBuffer ( std::string name, std::string * buffer ) {
     CRASH_REPORT_BEGIN;
     
-    // Load configuration
+    // Only a single isntance can access the file
     std::string file = this->configDir + "/" + name + ".dat";
+    NAMED_MUTEX_LOCK(file);
+
+    // Load configuration
     std::ifstream ifs ( file.c_str() , std::ifstream::in);
     if (ifs.fail()) return false;
     
@@ -266,6 +285,7 @@ bool LocalConfig::loadBuffer ( std::string name, std::string * buffer ) {
     ifs.close();
     return true;
     
+    NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
 }
 
@@ -275,8 +295,11 @@ bool LocalConfig::loadBuffer ( std::string name, std::string * buffer ) {
 bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string> * map ) {
     CRASH_REPORT_BEGIN;
     
-    // Load configuration
+    // Only a single isntance can access the file
     std::string file = this->configDir + "/" + name + ".conf";
+    NAMED_MUTEX_LOCK(file);
+
+    // Load configuration
     CVMWA_LOG( "Config", "LoadingMap " << file.c_str()  );
     std::ifstream ifs ( file.c_str() , std::ifstream::in);
     if (ifs.fail()) return false;
@@ -320,6 +343,7 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     ifs.close();
     return true;
     
+    NAMED_MUTEX_UNLOCK;
     CRASH_REPORT_END;
 }
 

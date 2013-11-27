@@ -198,13 +198,17 @@ int main( int argc, char ** argv ) {
             return 1;
         }
 
-        cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;
+        // Goto powered off state
+        sess->stop();
 
-        sleepMs(1000);
-        hv->loadSessions();
+        //cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;
+
+        //sleepMs(1000);
+        //hv->loadSessions();
 
         //boost::static_pointer_cast<VBoxInstance>(hv)->installExtPack( DownloadProvider::Default(),  );
         sleepMs(10000);
+        hv->abort();
 
         
     } else {
