@@ -427,6 +427,29 @@ void SimpleFSM::FSMDone ( const std::string & message ) {
 }
 
 /**
+ * Trigger the "begin" action of the SimpleFSM progress feedback.
+ * This function cannot be used when FSMDoing/FSMDone are used.
+ */
+template <typename T> boost::shared_ptr<T> 
+SimpleFSM::FSMBegin( const std::string& message ) {
+	boost::shared_ptr<T> ptr = boost::shared_ptr<T>();
+	if (fsmProgress) {
+		ptr = fsmProgress->begin<T>(message);
+	}
+	return ptr;
+}
+
+/**
+ * Trigger the "Fail" action of the SimpleFSM progress feedback -if available-
+ */
+void SimpleFSM::FSMFail ( const std::string & message, const int errorCode ) {
+	CVMWA_LOG("Debug", "Done " << message);
+	if (fsmProgress) {
+		fsmProgress->fail(message, errorCode);
+	}
+}
+
+/**
  * Wait until the FSM reaches the specified state
  */
 void SimpleFSM::FSMWaitFor	( int state, int timeout ) {
@@ -482,3 +505,10 @@ SimpleFSM::~SimpleFSM() {
 	FSMThreadStop();
 
 }
+
+/**
+ * Implement some known templates
+ */
+template FiniteTaskPtr      SimpleFSM::FSMBegin<FiniteTask>( const std::string& message );
+template VariableTaskPtr    SimpleFSM::FSMBegin<VariableTask>( const std::string& message );
+template BooleanTaskPtr     SimpleFSM::FSMBegin<BooleanTask>( const std::string& message );

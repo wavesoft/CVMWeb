@@ -165,6 +165,11 @@ std::string                                         stripComponent  ( std::strin
 std::string                                         getFilename     ( std::string path );
 
 /**
+ * Cross-platform basename implementation for URLs
+ */
+std::string                                         getURLFilename  ( const std::string& path );
+
+/**
  * Get the base64 representation of the given string buffer
  */
 std::string                                         base64_encode   ( const ::std::string &bindata );

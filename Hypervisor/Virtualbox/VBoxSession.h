@@ -46,7 +46,7 @@ public:
 
             // Target states
             FSM_STATE(1, 100);      // Entry point
-            FSM_STATE(2, 102);      // Error
+            FSM_STATE(2, 102,112);  // Error
             FSM_STATE(3, 104);      // Destroyed
             FSM_STATE(4, 105,108);  // Power off
             FSM_STATE(5, 107,108);  // Saved
@@ -64,11 +64,12 @@ public:
                 FSM_HANDLER(103, &VBoxSession::CureError,           101);       // Try to recover error and recheck state
 
             // 104: CREATE SEQUENCE
-            FSM_HANDLER(104, &VBoxSession::CreateVM,                201);       // Allocate VM
-                FSM_HANDLER(201, &VBoxSession::ConfigureVM,         202);       // Configure VM
+            FSM_HANDLER(104, &VBoxSession::CreateVM,                210);       // Allocate VM
+                FSM_HANDLER(210, &VBoxSession::ConfigNetwork,       202);       // Configure the network devices
                 FSM_HANDLER(202, &VBoxSession::DownloadMedia,       203);       // Download required media files
                 FSM_HANDLER(203, &VBoxSession::ConfigureVMBoot,     204);       // Configure Boot media
-                FSM_HANDLER(204, &VBoxSession::ConfigureVMScratch,  4);         // Configure Scratch storage
+                FSM_HANDLER(204, &VBoxSession::ConfigureVMScratch,  201);       // Configure Scratch storage
+                FSM_HANDLER(201, &VBoxSession::ConfigureVM,         4);         // Configure VM
 
             // 105: DESTROY SEQUENCE
             FSM_HANDLER(105, &VBoxSession::ReleaseVMScratch,        207);       // Release Scratch storage
@@ -97,7 +98,16 @@ public:
             // 111: PAUSE SEQUENCE
             FSM_HANDLER(111, &VBoxSession::ResumeVM,                7);         // Resume VM
 
+            // 112: FATAL ERROR
+            FSM_HANDLER(112, &VBoxSession::FatalErrorSink);                     // Fatal error sink
+
         });
+
+        // Reset error states
+        errorCount = 0;
+        errorTimestamp = 0;
+        errorCode = 0;
+        errorMessage = "";
 
     }
 
@@ -126,6 +136,8 @@ public:
     void SaveVMState();
     void PauseVM();
     void ResumeVM();
+    void FatalErrorSink();
+    void ConfigNetwork();
 
     /////////////////////////////////////
     // HVSession Implementation
@@ -186,10 +198,11 @@ protected:
                                                   int retries = 4, 
                                                   int timeout = SYSEXEC_TIMEOUT );
 
+    void                    errorOccured        ( const std::string & str, int errNo );
 
     int                     getMachineUUID      ( std::string mname, std::string * ans_uuid,  int flags );
     std::string             getDataFolder       ();
-    std::string             getHostOnlyAdapter  ();
+    int                     getHostOnlyAdapter  ( std::string * adapterName, const FiniteTaskPtr & fp = FiniteTaskPtr() );
     std::map<std::string, 
         std::string>        getMachineInfo      ( int timeout = SYSEXEC_TIMEOUT );
     int                     startVM             ();
@@ -201,6 +214,13 @@ protected:
     
     std::string             dataPath;
     bool                    updateLock;
+
+    // Error handling and healing variables
+    int                     errorCode;
+    std::string             errorMessage;
+    int                     errorCount;
+    unsigned long           errorTimestamp;
+
 
     ////////////////////////////////////
     // State variables

@@ -146,6 +146,18 @@ protected:
 	 */
 	void 							FSMDone				( const std::string & message );
 
+	/**
+	 * Trigger the "Fail" action of the SimpleFSM progress feedback -if available-
+	 */
+	void 							FSMFail				( const std::string & message, const int errorCode = -1 );
+
+	/**
+	 * Trigger the "begin" action of the SimpleFSM progress feedback.
+	 * This function cannot be used when FSMDoing/FSMDone are used.
+	 */
+	template <typename T>
+	 	boost::shared_ptr<T> 		FSMBegin 			( const std::string & message );
+
 	// Registry functions encapsulated by the FSM_ macros
 	void 					        FSMRegistryBegin	();
 	void 					        FSMRegistryAdd		( int id, fsmHandler handler, ... );

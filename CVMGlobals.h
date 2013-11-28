@@ -131,6 +131,39 @@
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 ////
+//// Session Configuration
+////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+
+/**
+ * Delay between twon concecutive user denies after which his requests
+ * will be ignored (in milliseconds).
+ */
+#define 	THROTTLE_TIMESPAN       		5000 
+
+/** 
+ * After how many denies the plugin will be blocked for the session
+ */
+#define 	THROTTLE_TRIES          		2
+
+/**
+ * Maximum delay (in milliseconds) between two consecutive errors within
+ * which a new error will be counted excess and placed in the error loop
+ */
+#define 	SESSION_HEAL_THRESSHOLD			10000
+
+/**
+ * Maximum number of retries within thressold after which we will abandon
+ * any further attemt for error healing.
+ */
+#define 	SESSION_HEAL_TRIES				2
+
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+////
 //// Misc configuration
 ////
 ///////////////////////////////////////////////////////////////////
@@ -145,17 +178,6 @@
  * The prefix separator used for sub-group definitions on ParameterMap
  */
 #define 	PMAP_GROUP_SEPARATOR			"/"
-
-/**
- * Delay between twon concecutive user denies after which his requests
- * will be ignored (in milliseconds).
- */
-#define 	THROTTLE_TIMESPAN       		5000 
-
-/** 
- * After how many denies the plugin will be blocked for the session
- */
-#define 	THROTTLE_TRIES          		2
 
 
 #endif /* End of include guard CVMGLOBALS_H */

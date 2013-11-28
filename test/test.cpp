@@ -167,6 +167,9 @@ int main( int argc, char ** argv ) {
     fsm.FSMThreadStop();
     */
 
+    cout << getURLFilename( "https://mail.google.com/intl/en/mail/help/about.html?edit_test=41&name=john#inbox" ) << endl;
+    return 1;
+
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
 
     // Setup callbacks

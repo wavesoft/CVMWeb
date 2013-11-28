@@ -255,6 +255,26 @@ std::string getFilename ( std::string path ) {
 }
 
 /**
+ * Get the filename from the URL specified
+ */
+std::string getURLFilename ( const std::string& path ) {
+    CRASH_REPORT_BEGIN;
+    std::string filename = getFilename(path);
+    size_t pos = filename.find("?");
+    if (pos == std::string::npos) {
+        pos = filename.find("#");
+        if (pos == std::string::npos) {
+            return filename;
+        } else {
+            return filename.substr(0, pos-1);
+        }
+    } else {
+        return filename.substr(0, pos-1);
+    }
+    CRASH_REPORT_END;
+}
+
+/**
  * Run prepareAppDataPath only once, then use string singleton
  */
 std::string getAppDataPath() {

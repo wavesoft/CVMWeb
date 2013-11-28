@@ -223,8 +223,9 @@ public:
         parameters->setDefault("diskChecksum",          "");
         parameters->setDefault("cernvmVersion",         DEFAULT_CERNVM_VERSION);
 
-        // Open UserData subgroup
+        // Open sub-groups
         userData = parameters->subgroup("user-data");
+        local = parameters->subgroup("local");
         
         // Populate local variables
         this->uuid = parameters->get("uuid");
@@ -266,8 +267,9 @@ public:
 
     int                     internalID;
 
-    ParameterMapPtr         userData;
     ParameterMapPtr         parameters;
+    ParameterMapPtr         userData;
+    ParameterMapPtr         local;
 
     ////////////////////////////////////////
     // Session API implementation
@@ -510,16 +512,16 @@ public:
     int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT, bool gui = false );
 
     /**
-     * Download a CernVM disk using the specified version string and store
-     * it to the filename pointer provided.
+     * Download an arbitrary file and validate it against a checksum
+     * file, both provided as URLs
      */
-    int                     cernVMDownload      ( std::string version, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), std::string flavor = DEFAULT_CERNVM_FLAVOR, std::string arch = DEFAULT_CERNVM_ARCH );
+    int                     downloadFileURL     ( const std::string & fileURL, const std::string & checksumURL, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), const int retries = 2 );
 
     /**
-     * Download an arbitrary disk image with a given checksum and store the
-     * resulting filename to the specified filename pointer.
+     * Download an arbitrary file and validate it against a checksum
+     * string specified in parameter
      */
-    int                     diskImageDownload   ( std::string url, std::string checksum, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr() );
+    int                     downloadFile        ( const std::string & fileURL, const std::string & checksumString, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), const int retries = 2 );
 
     /**
      * Return the cached disk image for the specified CernVM version
@@ -570,9 +572,9 @@ public:
     std::string             daemonBinPath;
     
 protected:
-    int                                         sessionID;
-    DownloadProviderPtr                         downloadProvider;
-    UserInteractionPtr                          userInteraction;
+    int                     sessionID;
+    DownloadProviderPtr     downloadProvider;
+    UserInteractionPtr      userInteraction;
 };
 
 //////////////////////////////////////////////
