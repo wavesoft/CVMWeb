@@ -139,13 +139,23 @@ void VBoxSession::UpdateSession() {
 
     // Query VM status and fetch local state variable
     map<string, string> info = getMachineInfo();
-    int localState = local->getNum<int>("initialized",0);
+    int localInitialized = local->getNum<int>("initialized",0);
 
     // Store machine info
-    machine->fromMap( &info );
+    machine->fromMap( &info, true );
 
     // If we got an error, the VM is missing
     if (info.find(":ERROR:") != info.end()) {
+
+        if (localInitialized != 0) {
+
+            // If the VM was initialized but now nothing is found,
+            // it means that the VM was destroyed externally.
+            // Therefore we must flush the local variables
+            local->clear();
+            
+        }
+
         FSMSkew(3); // Destroyed state
 
     } else {
@@ -153,7 +163,7 @@ void VBoxSession::UpdateSession() {
         if (info.find("State") != info.end()) {
 
             // Check if we are not initialized
-            if (localState == 0) {
+            if (localInitialized == 0) {
 
                 // We are not initialized, so just switch to 'exists' state and
                 // let it be re-initialized.
@@ -336,7 +346,7 @@ void VBoxSession::ConfigureVM() {
     // Modify VM to match our needs
     args.str("");
     args << "modifyvm "
-        << uuid
+        << parameters->get("vboxid")
         << " --cpus "                   << parameters->get("cpus", "2")
         << " --memory "                 << parameters->get("memory", "1024")
         << " --cpuexecutioncap "        << parameters->get("executionCap", "80")
@@ -952,8 +962,18 @@ void VBoxSession::DiscardVMState() {
 void VBoxSession::StartVM() {
     FSMDoing("Starting VM");
 
+    // Extract flags
+    int flags = parameters->getNum<int>("flags", 0);
+    int ans;
+
     // Start VM
-    int ans = this->wrapExec("startvm " + parameters->get("vboxid"), NULL);
+    if ((flags & HVF_HEADFUL) != 0) {
+        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type gui", NULL);
+    } else {
+        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type headless", NULL);
+    }
+
+    // Handle errors
     if (ans != 0) {
         errorOccured("Unable to start the VM", ans);
         return;
@@ -1134,7 +1154,7 @@ int VBoxSession::hibernate ( ) {
 int VBoxSession::start ( std::map<std::string,std::string> *userData ) {
     
     // Update user data
-    *(this->userData->parameters.get()) = *userData;
+    this->userData->fromMap( userData, true );
 
     // Switch to running state
     FSMGoto(7);

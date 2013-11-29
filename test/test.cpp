@@ -201,7 +201,8 @@ int main( int argc, char ** argv ) {
         }
 
         // Goto powered off state
-        sess->stop();
+        std::map< std::string, std::string > args;
+        sess->start( &args );
 
         //cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;
 

@@ -1230,6 +1230,11 @@ string base64_encode_ptr( const unsigned char * ptr, size_t binlen ) {
  */
 string base64_encode( const ::std::string &bindata ) {
     CRASH_REPORT_BEGIN;
+
+    // If no data are passed, return empty string
+    if (bindata.empty()) return "";
+
+    // Base64-encode the buffer
     return base64_encode_ptr( (const unsigned char *)bindata.c_str(), bindata.length() );
     CRASH_REPORT_END;
 }
@@ -1245,6 +1250,9 @@ string base64_decode(const ::std::string &ascdata) {
     const string::const_iterator last = ascdata.end();
     int bits_collected = 0;
     unsigned int accumulator = 0;
+
+    // If no data are passed, return empty string
+    if (ascdata.empty()) return "";
 
     for (string::const_iterator i = ascdata.begin(); i != last; ++i) {
        const int c = *i;
