@@ -1391,9 +1391,15 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
             getKV( machine->get(DISK_SLOT), &kk, &kv, '(', 0 );
             kk = kk.substr(0, kk.length()-1);
 
+            // Convert string names so we can use
+            // the same string names everywhere.
+            std::string umType = type;
+            if (umType.compare("hdd")) umType="disk";
+            if (umType.compare("dvddrive")) umType="dvd";
+
             // Close and unregister medium
             args.str("");
-            args << "closemedium " << type << " "
+            args << "closemedium " << umType << " "
                 << "\"" << kk << "\"";
 
             // Execute and handle errors

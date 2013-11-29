@@ -192,6 +192,7 @@ int main( int argc, char ** argv ) {
         ParameterMapPtr parm = boost::make_shared<ParameterMap>();
         parm->set("name", "LHC@Home 3.0");
         parm->set("key", "awesome13");
+        parm->set("flags", "5");
 
         FiniteTaskPtr pTasksB = pTasks->begin<FiniteTask>("Setting-up Session");
         HVSessionPtr sess = hv->sessionOpen( parm, pTasksB );
@@ -203,6 +204,8 @@ int main( int argc, char ** argv ) {
         // Goto powered off state
         std::map< std::string, std::string > args;
         sess->start( &args );
+        sleepMs(10000);
+        sess->close();
 
         //cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;
 
