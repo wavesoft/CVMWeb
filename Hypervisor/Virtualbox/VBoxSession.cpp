@@ -251,7 +251,8 @@ void VBoxSession::CreateVM() {
     }
 
     // Store VBox UUID
-    parameters->set("vboxid", toks["UUID"]);
+    std::string uuid = toks["UUID"];
+    parameters->set("vboxid", uuid);
 
 
     // Attach an IDE controller
@@ -1114,6 +1115,11 @@ int VBoxSession::mountDisk ( const std::string & controller,
     string kk, kv;
     int ans;
 
+    // Switch multiAttach to false if we are not using 'hdd' type
+    if (multiAttach && (type.compare("hdd") != 0)) {
+        multiAttach = false;
+    }
+
     // Calculate the name of the disk slot
     std::string DISK_SLOT = controller + " (" + port + ", " + device + ")";
 
@@ -1135,7 +1141,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
             // Otherwise unmount the existing disk
             args.str("");
             args << "storageattach "
-                << uuid
+                << parameters->get("vboxid")
                 << " --storagectl " << controller
                 << " --port "       << port
                 << " --device "     << device
@@ -1176,7 +1182,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
     // (B.1) Try to attach disk to the SATA controller using full path
     args.str("");
     args << "storageattach "
-        << uuid
+        << parameters->get("vboxid")
         << " --storagectl " << controller
         << " --port "       << port
         << " --device "     << device
@@ -1192,15 +1198,19 @@ int VBoxSession::mountDisk ( const std::string & controller,
 
     // If we are using multi-attach, try to mount by UUID if mounting
     // by filename has failed
-    if (multiAttach) {
+    if (multiAttach && !masterDiskUUID.empty()) {
 
         // If it was OK, just return
-        if (ans == 0) return HVE_OK;
+        if (ans == 0) {
+            // Update mounted medium info
+            machine->set( DISK_SLOT, diskFile );
+            return HVE_OK;
+        }
         
         // (B.2) Try to attach disk to the SATA controller using UUID (For older VirtualBox versions)
         args.str("");
         args << "storageattach "
-            << uuid
+            << parameters->get("vboxid")
             << " --storagectl " << controller
             << " --port "       << port
             << " --device "     << device
@@ -1211,6 +1221,11 @@ int VBoxSession::mountDisk ( const std::string & controller,
         // Execute
         ans = this->wrapExec(args.str(), &lines);
 
+    }
+
+    // Update mounted medium info if it was OK
+    if (ans == HVE_OK) {
+        machine->set( DISK_SLOT, diskFile );
     }
 
     // Retun last execution result
