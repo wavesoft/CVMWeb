@@ -67,6 +67,9 @@ public:
     /////////////////////////
     // HVInstance Overloads
     /////////////////////////
+
+    virtual HVSessionPtr    sessionOpen         ( const ParameterMapPtr& parameters, const FiniteTaskPtr& pf );
+
     virtual int             getType             ( ) { return HV_VIRTUALBOX; };
     virtual int             loadSessions        ( const FiniteTaskPtr & pf = FiniteTaskPtr() );
     virtual bool            waitTillReady       ( const FiniteTaskPtr & pf = FiniteTaskPtr(), const UserInteractionPtr & ui = UserInteractionPtr() );

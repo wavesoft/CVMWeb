@@ -675,6 +675,24 @@ HVSessionPtr VBoxInstance::sessionByVBID ( const std::string& virtualBoxGUID ) {
     CRASH_REPORT_END;
 }
 
+HVSessionPtr VBoxInstance::sessionOpen ( const ParameterMapPtr& parameters, const FiniteTaskPtr & pf ) {
+
+    // Call parent function to open session
+    HVSessionPtr  sess = HVInstance::sessionOpen(parameters,pf);
+    VBoxSessionPtr vbs = boost::static_pointer_cast<VBoxSession>( sess );
+
+    // Set progress feedack object
+    vbs->FSMUseProgress( pf, "Updating VM information" );
+
+    // Open session
+    vbs->open();
+
+    // Return instance
+    return vbs;
+
+}
+
+
 /**
  * Load session state from VirtualBox
  */

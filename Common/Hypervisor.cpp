@@ -40,6 +40,7 @@
 #include "floppyIO.h"
 
 #include "Hypervisor/Virtualbox/VBoxCommon.h"
+#include "Hypervisor/Virtualbox/VBoxSession.h"
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -441,50 +442,33 @@ int HVInstance::cernVMCached( std::string version, std::string * filename ) {
 }
 
 /**
- * Download an arbitrary file and validate it against a checksum
- * file, both provided as URLs
+ * Reusable chunk of code to download a SHA256 checksum file
  */
-int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string & checksumURL, std::string * filename, const FiniteTaskPtr & pf, const int retries ) {
-    CRASH_REPORT_BEGIN;
+int __downloadChecksum( const std::string & checksumURL, const std::string & sOutChecksum, 
+                        const VariableTaskPtr& pfDownload, const FiniteTaskPtr & pf,
+                        const DownloadProviderPtr& downloadProvider,
+                        const int retries, std::string * sChecksumString ) {
+
     char linebuf[CHECKSUM_LENGTH+1];
+    bool bChecksumOK = false;
     int ans;
-
-    // Calculate filename and full URL hash
-    std::string     sOutFilenameHash;
-    std::string     sOutFilename = getURLFilename(fileURL);
-    sha256_buffer( fileURL, &sOutFilenameHash );
-
-    // Calculate full path for the output file
-    sOutFilename = dirData + "/" + sOutFilenameHash + "-" + sOutFilename;
-
-    // Calculate full path for the checksum file
-    std::string     sOutChecksum = sOutFilename + ".sha256";
-    std::string     sChecksumString = "";
-
-    // Prepare progress objects
-    VariableTaskPtr   pfDownload;
-    if (pf) pf->setMax(5);
-
-    // Flags for downloading components
-    bool            bChecksumOK = false;
-    bool            bFileOK = false;
 
     // Start checksum file download and validation
     if (pf) pf->doing("Preparing checksum information");
     for (int i=0; i<retries; i++) {
+externalContinue:
 
         // (1) If file does not exist, download it
         if (!file_exists(sOutChecksum)) {
 
-            // Create a download sub-task (only once)
-            if (pf && !pfDownload) pfDownload = pf->begin<VariableTask>("Downloading checksum file");
+            // Restart VariableTaskPtr
+            if (pfDownload) pfDownload->restart("Downloading checksum file");
 
             // Download file
             ans = downloadProvider->downloadFile( checksumURL, sOutChecksum, pfDownload );
             if (ans != HVE_OK) {
                 // Invalid contents. Erase and re-download
                 if (pf) pf->doing("Error while downloading. Will retry.");
-                if (pfDownload) pfDownload->restart("Re-trying download of checksum file");
                 ::remove( sOutChecksum.c_str());
                 continue;
             }
@@ -499,20 +483,19 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
             if (!ifs.good()) {
                 // Could not open file. That's a fatal error
                 if (pf) pf->fail("Unable to read local checksum file", HVE_IO_ERROR);
-                if (pfDownload) pfDownload->restart("Re-trying download of checksum file");
                 return HVE_IO_ERROR;
             }
 
             // Read 64 characters 
-            ifs.readsome(linebuf,CHECKSUM_LENGTH);
+            ifs.getline(linebuf, CHECKSUM_LENGTH+1);
             linebuf[CHECKSUM_LENGTH] = 0;
-            sChecksumString = linebuf;
+            *sChecksumString = linebuf;
+            ifs.close();
 
             // Validate the length of the checksum
-            if (sChecksumString.length() < CHECKSUM_LENGTH) {
+            if (sChecksumString->length() < CHECKSUM_LENGTH) {
                 // Invalid contents. Erase and re-download
                 if (pf) pf->doing("Checksum length not validated. Re-downloading");
-                if (pfDownload) pfDownload->restart("Re-trying download of checksum file");
                 ::remove( sOutChecksum.c_str());
                 continue;
             }
@@ -520,12 +503,11 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
             // Validate the integrity of the checksum buffer
             const std::string allowedChars = "0123456789abcdef";
             for (int j=0; j<CHECKSUM_LENGTH; j++) {
-                if (allowedChars.find(sChecksumString[j]) == std::string::npos) {
+                if (allowedChars.find( (*sChecksumString)[j] ) == std::string::npos) {
                     // Invalid contents. Erase and re-download
                     if (pf) pf->doing("Checksum contents not validated. Re-downloading");
-                    if (pfDownload) pfDownload->restart("Re-trying download of checksum file");
                     ::remove( sOutChecksum.c_str());
-                    continue;
+                    goto externalContinue;
                 }
             }
 
@@ -546,8 +528,21 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
         if (pf) pf->done("Checksum data obtained");
     }
 
-    // Release download provider
-    if (pfDownload) pfDownload.reset();
+    // Return OK
+    return HVE_OK;
+
+}
+
+/**
+ * Reusable chunk of code to download a SHA256 checksum file
+ */
+int __downloadFile( const std::string & fileURL, const std::string & sOutFilename, 
+                    const VariableTaskPtr& pfDownload, const FiniteTaskPtr & pf,
+                    const DownloadProviderPtr& downloadProvider, const std::string& sChecksumString,
+                    const int retries ) {
+
+    bool bFileOK = false;
+    int ans;
 
     // Start actual file download and validation
     if (pf) pf->doing("Preparing file download");
@@ -556,15 +551,14 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
         // (3) If file does not exist, download it
         if (!file_exists(sOutFilename)) {
 
-            // Create a download sub-task (only once)
-            if (pf && !pfDownload) pfDownload = pf->begin<VariableTask>("Downloading file");
+            // Restart VariableTaskPtr
+            if (pfDownload) pfDownload->restart("Downloading file");
 
             // Download file
             ans = downloadProvider->downloadFile( fileURL, sOutFilename, pfDownload );
             if (ans != HVE_OK) {
                 // Invalid contents. Erase and re-download
                 if (pf) pf->doing("Error while downloading. Will retry.");
-                if (pfDownload) pfDownload->restart("Re-trying download of file");
                 ::remove( sOutFilename.c_str());
                 continue;
             }
@@ -579,10 +573,9 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
             sha256_file( sOutFilename, &sChecksumFile );
 
             // Compare checksums
-            if (sChecksumFile.compare( sChecksumString ) == 0) {
+            if (sChecksumFile.compare( sChecksumString ) != 0) {
                 // Invalid contents. Erase and re-download
                 if (pf) pf->doing("Downloaded file checksum invalid. Re-downloading.");
-                if (pfDownload) pfDownload->restart("Re-trying download of file");
                 ::remove( sOutFilename.c_str());
                 continue;
             }
@@ -603,6 +596,51 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
     } else {
         if (pf) pf->done("File downloaded");
     }
+
+    // Return OK
+    return HVE_OK;
+
+}
+
+/**
+ * Download an arbitrary file and validate it against a checksum
+ * file, both provided as URLs
+ */
+int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string & checksumURL, std::string * filename, const FiniteTaskPtr & pf, const int retries ) {
+    CRASH_REPORT_BEGIN;
+    int ans;
+
+    // Calculate filename and full URL hash
+    std::string     sOutFilenameHash;
+    std::string     sOutFilename = getURLFilename(fileURL);
+    sha256_buffer( fileURL, &sOutFilenameHash );
+
+    // Calculate full path for the output file
+    sOutFilename = dirData + "/cache/" + sOutFilenameHash + "-" + sOutFilename;
+
+    // Calculate full path for the checksum file
+    std::string     sOutChecksum = sOutFilename + ".sha256";
+    std::string     sChecksumString = "";
+
+    // Prepare progress objects
+    VariableTaskPtr   pfDownload;
+    if (pf) pf->setMax(5);
+
+    // Download checksum
+    pfDownload = pf->begin<VariableTask>("Downloading Checksum");    
+    ans = __downloadChecksum(
+            checksumURL, sOutChecksum, pfDownload, pf, this->downloadProvider,
+            retries, &sChecksumString
+        );
+    if (ans != HVE_OK) return ans;
+
+    // Download file
+    pfDownload = pf->begin<VariableTask>("Downloading file");    
+    ans = __downloadFile(
+            fileURL, sOutFilename, pfDownload, pf, this->downloadProvider,
+            sChecksumString, retries
+        );
+    if (ans != HVE_OK) return ans;
 
     // Update the string
     if (pf) pf->complete("File download completed");
@@ -619,7 +657,6 @@ int HVInstance::downloadFileURL ( const std::string & fileURL, const std::string
  */
 int HVInstance::downloadFile ( const std::string & fileURL, const std::string & checksumString, std::string * filename, const FiniteTaskPtr & pf, const int retries ) {
     CRASH_REPORT_BEGIN;
-    char linebuf[CHECKSUM_LENGTH+1];
     int ans;
 
     // Calculate filename and full URL hash
@@ -628,69 +665,19 @@ int HVInstance::downloadFile ( const std::string & fileURL, const std::string & 
     sha256_buffer( fileURL, &sOutFilenameHash );
 
     // Calculate full path for the output file
-    sOutFilename = dirData + "/" + sOutFilenameHash + "-" + sOutFilename;
+    sOutFilename = dirData + "/cache/" + sOutFilenameHash + "-" + sOutFilename;
 
     // Prepare progress objects
     VariableTaskPtr   pfDownload;
     if (pf) pf->setMax(3);
 
-    // Flags for downloading components
-    bool            bFileOK = false;
-
-    // Start actual file download and validation
-    if (pf) pf->doing("Preparing file download");
-    for (int i=0; i<retries; i++) {
-
-        // (3) If file does not exist, download it
-        if (!file_exists(sOutFilename)) {
-
-            // Create a download sub-task (only once)
-            if (pf && !pfDownload) pfDownload = pf->begin<VariableTask>("Downloading file");
-
-            // Download file
-            ans = downloadProvider->downloadFile( fileURL, sOutFilename, pfDownload );
-            if (ans != HVE_OK) {
-                // Invalid contents. Erase and re-download
-                if (pf) pf->doing("Error while downloading. Will retry.");
-                if (pfDownload) pfDownload->restart("Re-trying download of file");
-                ::remove( sOutFilename.c_str());
-                continue;
-            }
-
-        }
-
-        // (4) File exists, validate contents
-        if (file_exists(sOutFilename)) {
-
-            // Calculate checksum
-            std::string     sChecksumFile = "";
-            sha256_file( sOutFilename, &sChecksumFile );
-
-            // Compare checksums
-            if (sChecksumFile.compare( checksumString ) == 0) {
-                // Invalid contents. Erase and re-download
-                if (pf) pf->doing("Downloaded file checksum invalid. Re-downloading.");
-                if (pfDownload) pfDownload->restart("Re-trying download of file");
-                ::remove( sOutFilename.c_str());
-                continue;
-            }
-
-            // Looks good
-            if (pf) pf->done("Downloaded file in place");
-            bFileOK = true;
-            break;
-        }
-
-    }
-
-    // Check if we ran out of retries while trying 
-    if (!bFileOK) {
-        if (pf) pf->fail("Unable to download file", HVE_IO_ERROR);
-        ::remove( sOutFilename.c_str());
-        return HVE_IO_ERROR;
-    } else {
-        if (pf) pf->done("File downloaded");
-    }
+    // Download file
+    pfDownload = pf->begin<VariableTask>("Downloading file");    
+    ans = __downloadFile(
+            fileURL, sOutFilename, pfDownload, pf, this->downloadProvider,
+            checksumString, retries
+        );
+    if (ans != HVE_OK) return ans;
 
     // Update the string
     if (pf) pf->complete("File download completed");
@@ -700,6 +687,118 @@ int HVInstance::downloadFile ( const std::string & fileURL, const std::string & 
     return HVE_OK;
     CRASH_REPORT_END;
 }
+
+/**
+ * Download a gzip-compressed arbitrary file and validate it's extracted
+ * contents against a checksum string specified in parameter
+ */
+int HVInstance::downloadFileGZ ( const std::string & fileURL, const std::string & checksumString, std::string * filename, const FiniteTaskPtr & pf, const int retries ) {
+    CRASH_REPORT_BEGIN;
+    int ans;
+
+    // Calculate filename and full URL hash
+    std::string     sOutFilenameHash;
+    std::string     sOutFilename = getURLFilename(fileURL);
+    sha256_buffer( fileURL, &sOutFilenameHash );
+
+    // Strip-out .gz from the extension and store it to a different file
+    std::string     sExtractedFilename = sOutFilename;
+    size_t gzPos;
+    if ( (gzPos = sExtractedFilename.find(".gz")) != std::string::npos )
+        sExtractedFilename = sExtractedFilename.substr(0, gzPos);
+
+    // Calculate full path for the output and extract file
+    sOutFilename = dirData + "/cache/" + sOutFilenameHash + "-" + sOutFilename;
+    sExtractedFilename = dirData + "/cache/" + sOutFilenameHash + "-" + sExtractedFilename;
+
+    // Prepare progress objects
+    VariableTaskPtr pfDownload;
+    if (pf) pf->setMax(3);
+
+    // File OK flag
+    bool            bFileOK = false;
+
+    // Start actual file download and validation
+    pfDownload = pf->begin<VariableTask>("Downloading file");
+    for (int i=0; i<retries; i++) {
+
+        // (1) If no file exists, download compressed file
+        if ( !file_exists(sExtractedFilename) && !file_exists(sOutFilename) ) {
+
+            // Restart VariableTaskPtr
+            if (pfDownload) pfDownload->restart("Downloading compressed file");
+
+            // Download file
+            ans = downloadProvider->downloadFile( fileURL, sOutFilename, pfDownload );
+            if (ans != HVE_OK) {
+                // Invalid contents. Erase and re-download
+                if (pf) pf->doing("Error while downloading. Will retry.");
+                ::remove( sOutFilename.c_str());
+                continue;
+            }
+
+        }
+
+        // (2) If input file exists, but no extracted file exists, decompress
+        if ( !file_exists(sExtractedFilename) && file_exists(sOutFilename) ) {
+
+            // Decompress GZip file
+            if (pf) pf->doing("Extracting file");
+            decompressFile( sOutFilename, sExtractedFilename );
+
+        }
+
+        // (3) If extracted AND source file exists, validate checksum and delete source file
+        if ( file_exists(sExtractedFilename) && file_exists(sOutFilename) ) {
+
+            // Calculate checksum
+            std::string     sChecksumFile = "";
+            sha256_file( sExtractedFilename, &sChecksumFile );
+
+            // Compare checksums
+            if (sChecksumFile.compare( checksumString ) != 0) {
+                // Invalid contents. Erase and re-download
+                if (pf) pf->doing("Extracted file checksum invalid. Re-downloading.");
+                ::remove( sExtractedFilename.c_str());
+                continue;
+            }
+
+            // It was extracted. Remove compressed, downloaded file
+            ::remove( sOutFilename.c_str());
+
+        }
+
+        // (4) If only extracted file exists, it means that validation was successful
+        if ( file_exists(sExtractedFilename) && !file_exists(sOutFilename) ) {
+
+            // We are good
+            if (pf) pf->done("Downloaded file in place");
+            bFileOK = true;
+            break;
+
+        }
+
+    }
+
+    // Check if we ran out of retries while trying 
+    if (!bFileOK) {
+        if (pf) pf->fail("Unable to download file", HVE_IO_ERROR);
+        ::remove( sOutFilename.c_str());
+        ::remove( sExtractedFilename.c_str());
+        return HVE_IO_ERROR;
+    } else {
+        if (pf) pf->done("File downloaded");
+    }
+
+    // Update the string
+    if (pf) pf->complete("File downloaded");
+    *filename = sOutFilename;
+    
+    // Return OK
+    return HVE_OK;
+    CRASH_REPORT_END;
+}
+
 
 /**
  * Download the specified CernVM version
@@ -904,7 +1003,7 @@ int HVInstance::sessionValidate ( const ParameterMapPtr& parameters ) {
 /**
  * Open or reuse a hypervisor session
  */
-HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) { 
+HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters, const FiniteTaskPtr & pf ) { 
     CRASH_REPORT_BEGIN;
     
     // Default unsetted pointer used for invalid responses
@@ -948,8 +1047,7 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters ) {
     sess->parameters->fromParameters( parameters );
     sess->parameters->set("key", keyHash); // (Replace with it's crypto-hash version)
 
-    // Open session and store it to the openSesions store
-    sess->open( );
+    // Store it on open sessions
     openSessions.push_back( sess );
     
     // Return the handler

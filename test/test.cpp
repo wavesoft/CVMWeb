@@ -167,10 +167,8 @@ int main( int argc, char ** argv ) {
     fsm.FSMThreadStop();
     */
 
-    cout << getURLFilename( "https://mail.google.com/intl/en/mail/help/about.html?edit_test=41&name=john#inbox" ) << endl;
-    return 1;
-
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
+    pTasks->setMax(2);
 
     // Setup callbacks
     pTasks->onStarted( boost::bind(&cb_started, _1) );
@@ -188,14 +186,15 @@ int main( int argc, char ** argv ) {
         cout << "HV Version: " << hv->version.verString << endl;
 
         // Wait until hypervisor is ready
-        hv->waitTillReady( pTasks );
+        FiniteTaskPtr pTasksA = pTasks->begin<FiniteTask>("Initializing Hypervisor");
+        hv->waitTillReady( pTasksA );
         
         ParameterMapPtr parm = boost::make_shared<ParameterMap>();
-        parm->set("name", "LHC@Home");
+        parm->set("name", "LHC@Home 3.0");
         parm->set("key", "awesome13");
-        parm->set("vboxid", "883bacbf-daf3-4307-a66d-6001b0b29b36");
 
-        HVSessionPtr sess = hv->sessionOpen( parm );
+        FiniteTaskPtr pTasksB = pTasks->begin<FiniteTask>("Setting-up Session");
+        HVSessionPtr sess = hv->sessionOpen( parm, pTasksB );
         if (!sess) {
             cerr << "Session could not be oppened!" << endl;
             return 1;

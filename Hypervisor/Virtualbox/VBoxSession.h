@@ -52,6 +52,7 @@ public:
             FSM_STATE(5, 107,108);  // Saved
             FSM_STATE(6, 109,111);  // Paused
             FSM_STATE(7, 110,106);  // Running
+            FSM_STATE(8, 210,208);  // Exists
 
             // 100: INITIALIZE HYPERVISOR
             FSM_HANDLER(100, &VBoxSession::Initialize,              101);
@@ -64,8 +65,10 @@ public:
                 FSM_HANDLER(103, &VBoxSession::CureError,           101);       // Try to recover error and recheck state
 
             // 104: CREATE SEQUENCE
-            FSM_HANDLER(104, &VBoxSession::CreateVM,                210);       // Allocate VM
-                FSM_HANDLER(210, &VBoxSession::ConfigNetwork,       202);       // Configure the network devices
+            FSM_HANDLER(104, &VBoxSession::CreateVM,                8);         // Create new VM
+
+            // 210: CONFIGURE SEQUENCE
+            FSM_HANDLER(210, &VBoxSession::ConfigNetwork,           202);       // Configure the network devices
                 FSM_HANDLER(202, &VBoxSession::DownloadMedia,       203);       // Download required media files
                 FSM_HANDLER(203, &VBoxSession::ConfigureVMBoot,     204);       // Configure Boot media
                 FSM_HANDLER(204, &VBoxSession::ConfigureVMScratch,  201);       // Configure Scratch storage
@@ -73,8 +76,10 @@ public:
 
             // 105: DESTROY SEQUENCE
             FSM_HANDLER(105, &VBoxSession::ReleaseVMScratch,        207);       // Release Scratch storage
-                FSM_HANDLER(207, &VBoxSession::ReleaseVMBoot,       208);       // Release Boot Media
-                FSM_HANDLER(208, &VBoxSession::DestroyVM,           3);         // Configure API Disks
+                FSM_HANDLER(207, &VBoxSession::ReleaseVMBoot,       8);         // Release Boot Media
+
+            // 208: CLEANUP SEQUENCE
+            FSM_HANDLER(208, &VBoxSession::DestroyVM,               3);         // Destroy VM
 
             // 106: POWEROFF SEQUENCE
             FSM_HANDLER(106, &VBoxSession::PoweroffVM,              209);       // Power off the VM
@@ -198,13 +203,25 @@ protected:
                                                   int retries = 4, 
                                                   int timeout = SYSEXEC_TIMEOUT );
 
+    /**
+     * Destroy and unregister VM
+     */
+    int                     destroyVM           ( );
+
+    /**
+     * (Re-)Mount a disk on the specified controller
+     * This function automatically unmounts a previously attached disk if the filenames
+     * do not match.
+     */
+    int                     mountDisk           ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const std::string & file, bool multiAttach = false );
+
     void                    errorOccured        ( const std::string & str, int errNo );
 
     int                     getMachineUUID      ( std::string mname, std::string * ans_uuid,  int flags );
     std::string             getDataFolder       ();
     int                     getHostOnlyAdapter  ( std::string * adapterName, const FiniteTaskPtr & fp = FiniteTaskPtr() );
     std::map<std::string, 
-        std::string>        getMachineInfo      ( int timeout = SYSEXEC_TIMEOUT );
+        std::string>        getMachineInfo      ( int retries = 2, int timeout = SYSEXEC_TIMEOUT );
     int                     startVM             ();
     int                     controlVM           ( std::string how, int timeout = SYSEXEC_TIMEOUT );
 

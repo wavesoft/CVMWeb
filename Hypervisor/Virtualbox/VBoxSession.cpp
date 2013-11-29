@@ -19,6 +19,8 @@
  */
 
 #include "VBoxSession.h"
+#include "VBoxInstance.h"
+
 #include "CVMGlobals.h"
 
 using namespace std;
@@ -129,30 +131,54 @@ void VBoxSession::Initialize() {
 void VBoxSession::UpdateSession() {
     FSMDoing("Loading session information");
 
-    // Get VM status
+    // If VBoxID is missing, directly go to 'destroyed'
+    if (!parameters->contains("vboxid")) {
+        FSMSkew(3);
+        return;
+    }
+
+    // Query VM status and fetch local state variable
     map<string, string> info = getMachineInfo();
+    int localState = local->getNum<int>("initialized",0);
+
+    // Store machine info
+    machine->fromMap( &info );
 
     // If we got an error, the VM is missing
     if (info.find(":ERROR:") != info.end()) {
         FSMSkew(3); // Destroyed state
+
     } else {
         // Route according to state
         if (info.find("State") != info.end()) {
-            string state = info["State"];
-            if (state.find("running") != string::npos) {
-                FSMSkew(7); // Running state
-            } else if (state.find("paused") != string::npos) {
-                FSMSkew(6); // Paused state
-            } else if (state.find("saved") != string::npos) {
-                FSMSkew(5); // Saved state
-            } else if (state.find("aborted") != string::npos) {
-                FSMSkew(4); // Aborted is also a 'powered-off' state
-            } else if (state.find("powered off") != string::npos) {
-                FSMSkew(4); // Powered off state
+
+            // Check if we are not initialized
+            if (localState == 0) {
+
+                // We are not initialized, so just switch to 'exists' state and
+                // let it be re-initialized.
+                FSMSkew(8);
+
             } else {
-                // UNKNOWN STATE //
-                CVMWA_LOG("ERROR", "Unknown state");
+
+                string state = info["State"];
+                if (state.find("running") != string::npos) {
+                    FSMSkew(7); // Running state
+                } else if (state.find("paused") != string::npos) {
+                    FSMSkew(6); // Paused state
+                } else if (state.find("saved") != string::npos) {
+                    FSMSkew(5); // Saved state
+                } else if (state.find("aborted") != string::npos) {
+                    FSMSkew(4); // Aborted is also a 'powered-off' state
+                } else if (state.find("powered off") != string::npos) {
+                    FSMSkew(4); // Powered off state
+                } else {
+                    // UNKNOWN STATE //
+                    CVMWA_LOG("ERROR", "Unknown state");
+                }
+                
             }
+
         } else {
             // ERROR //
             CVMWA_LOG("ERROR", "Missing state info");
@@ -194,7 +220,6 @@ void VBoxSession::CreateVM() {
     ostringstream args;
     vector<string> lines;
     map<string, string> toks;
-    string uuid;
     int ans;
 
     // Extract flags
@@ -214,17 +239,68 @@ void VBoxSession::CreateVM() {
     // Execute and handle errors
     ans = this->wrapExec(args.str(), &lines);
     if (ans != 0) {
-        errorOccured("Unable to create a new virtual machine", HVE_EXTERNAL_ERROR);
+        errorOccured("Unable to create a new virtual machine", HVE_CREATE_ERROR);
         return;
     }
     
     // Parse output
     toks = tokenize( &lines, ':' );
     if (toks.find("UUID") == toks.end()) {
-        errorOccured("Unable to detect the VirtualBox ID of the newly allocated VM", HVE_EXTERNAL_ERROR);
+        errorOccured("Unable to detect the VirtualBox ID of the newly allocated VM", HVE_CREATE_ERROR);
         return;
     }
-    uuid = toks["UUID"];
+
+    // Store VBox UUID
+    parameters->set("vboxid", toks["UUID"]);
+
+
+    // Attach an IDE controller
+    args.str("");
+    args << "storagectl "
+        << uuid
+        << " --name "       << "IDE"
+        << " --add "        << "ide";
+    
+    ans = this->wrapExec(args.str(), NULL);
+    if (ans != 0) {
+        // Destroy VM
+        destroyVM();
+        // Trigger Error
+        errorOccured("Unable to attach a new IDE controller", HVE_CREATE_ERROR);
+        return;
+    }
+
+    // Attach a SATA controller
+    args.str("");
+    args << "storagectl "
+        << uuid
+        << " --name "       << "SATA"
+        << " --add "        << "sata";
+    
+    ans = this->wrapExec(args.str(), NULL);
+    if (ans != 0) {
+        // Destroy VM
+        destroyVM();
+        // Trigger Error
+        errorOccured("Unable to attach a new SATA controller", HVE_CREATE_ERROR);
+        return;
+    }
+
+    // Attach a floppy controller
+    args.str("");
+    args << "storagectl "
+        << uuid
+        << " --name "       << FLOPPYIO_CONTROLLER
+        << " --add "        << "floppy";
+    
+    ans = this->wrapExec(args.str(), NULL);
+    if (ans != 0) {
+        // Destroy VM
+        destroyVM();
+        // Trigger Error
+        errorOccured("Unable to attach a new SATA controller", HVE_CREATE_ERROR);
+        return;
+    }
 
 
     FSMDone("Session initialized");
@@ -299,6 +375,9 @@ void VBoxSession::ConfigureVM() {
         errorOccured("Unable to modify the Virtual Machine", HVE_EXTERNAL_ERROR);
         return;
     }
+
+    // We are initialized
+    local->set("initialized","1");
 
     FSMDone("Virtual Machine configured");
 }
@@ -412,13 +491,28 @@ void VBoxSession::DownloadMedia() {
             return;
         }
 
-        // Download boot disk
-        ans = hypervisor->downloadFile(
-                        urlFilename,
-                        checksum,
-                        &sFilename,
-                        pf->begin<FiniteTask>("Downloading disk image")
-                    );
+        // Check if we should download a compressed file
+        FiniteTaskPtr pfDownload;
+        string urlFilenamePart = getURLFilename(urlFilename);
+        if (pf) pfDownload = pf->begin<FiniteTask>("Downloading CernVM ISO");
+        if (urlFilenamePart.find(".gz") != std::string::npos) {
+            // Download compressed disk
+            ans = hypervisor->downloadFileGZ(
+                            urlFilename,
+                            checksum,
+                            &sFilename,
+                            pfDownload
+                        );
+        } else {
+            // Download boot disk
+            ans = hypervisor->downloadFile(
+                            urlFilename,
+                            checksum,
+                            &sFilename,
+                            pfDownload
+                        );
+        }
+
 
         // Validate result
         if (ans != HVE_OK) {
@@ -447,11 +541,13 @@ void VBoxSession::DownloadMedia() {
                                 + ".cernvm." + parameters->get("cernvmArch", "x86_64") + ".iso";
 
         // Download boot disk
+        FiniteTaskPtr pfDownload;
+        if (pf) pfDownload = pf->begin<FiniteTask>("Downloading CernVM ISO");
         ans = hypervisor->downloadFileURL(
                         urlFilename,
                         urlFilename + ".sha256",
                         &sFilename,
-                        pf->begin<FiniteTask>("Downloading CernVM ISO")
+                        pfDownload
                     );
 
         // Validate result
@@ -476,8 +572,63 @@ void VBoxSession::DownloadMedia() {
  */
 void VBoxSession::ConfigureVMBoot() {
     FSMDoing("Preparing boot medium");
-    
-    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+    int ans;
+
+    // Extract flags
+    int flags = parameters->getNum<int>("flags", 0);
+
+    // ------------------------------------------------
+    // MODE 1 : Disk image mode
+    // ------------------------------------------------
+    if ((flags & HVF_DEPLOYMENT_HDD) != 0) {
+
+        // Get disk path
+        string bootDisk = local->get("bootDisk");
+
+        // Mount hdd in boot controller using multi-attach mode
+        ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "hdd",
+                         bootDisk, true );
+
+        // Check result
+        if (ans == HVE_ALREADY_EXISTS) {
+            FSMDone("Boot medium already in place");
+            return;
+        } else if (ans == HVE_DELETE_ERROR) {
+            errorOccured("Unable to unmount previously mounted boot medium", ans);
+            return;
+        } else if (ans != HVE_OK) {
+            errorOccured("Unable to mount the boot medium", ans);
+            return;
+        }
+
+    }
+
+    // ------------------------------------------------
+    // MODE 2 : Micro-CernVM Mode
+    // ------------------------------------------------
+    else {
+
+        // Get disk path
+        string bootISO = local->get("bootISO");
+
+        // Mount hdd in boot controller using multi-attach mode
+        ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "dvddrive",
+                         bootISO, true );
+
+        // Check result
+        if (ans == HVE_ALREADY_EXISTS) {
+            FSMDone("Boot medium already in place");
+            return;
+        } else if (ans == HVE_DELETE_ERROR) {
+            errorOccured("Unable to unmount previously mounted boot medium", ans);
+            return;
+        } else if (ans != HVE_OK) {
+            errorOccured("Unable to mount the boot medium", ans);
+            return;
+        }
+
+    }
+
 
     FSMDone("Boot medium prepared");
 }
@@ -557,6 +708,9 @@ void VBoxSession::PrepareVMBoot() {
  */
 void VBoxSession::DestroyVM() {
     FSMDoing("Destryoing VM");
+
+    // We are not initialized any more
+    local->set("initialized","0");
 
     FSMDone("VM Destroyed");
 }
@@ -871,6 +1025,30 @@ int VBoxSession::wrapExec ( std::string cmd, std::vector<std::string> * stdoutLi
 }
 
 /**
+ * Destroy and unregister VM
+ */
+int VBoxSession::destroyVM () {
+    // Destroy session
+    ostringstream args;
+    int ans;
+
+    // Unregister and destroy all VM resources
+    args.str("");
+    args << "unregistervm"
+        << " " << parameters->get("vboxid")
+        << " --delete";
+    
+    // Execute and handle errors
+    ans = this->wrapExec(args.str(), NULL);
+    if (ans != 0) {
+        errorOccured("Unable to destroy the Virtual Machine", HVE_EXTERNAL_ERROR);
+        return HVE_EXTERNAL_ERROR;
+    }
+
+    return HVE_OK;
+}
+
+/**
  * Update error info and switch to error state
  */
 void VBoxSession::errorOccured ( const std::string & str, int errNo ) {
@@ -920,12 +1098,126 @@ std::string VBoxSession::getUserData ( ) {
 }
 
 /**
- * Return the UUID of a VM with the specified name and flags. If no
- * such VM exists, allocate a slot for a new one and return that ID.
+ * (Re-)Mount a disk on the specified controller
+ * This function automatically unmounts a previously attached disk if the filenames
+ * do not match.
  */
-int VBoxSession::getMachineUUID ( std::string mname, std::string * ans_uuid,  int flags ) {
-    return HVE_NOT_IMPLEMENTED;
+int VBoxSession::mountDisk ( const std::string & controller, 
+                             const std::string & port, 
+                             const std::string & device, 
+                             const std::string & type,
+                             const std::string & diskFile, 
+                             bool multiAttach ) {
+
+    vector<string> lines;
+    ostringstream args;
+    string kk, kv;
+    int ans;
+
+    // Calculate the name of the disk slot
+    std::string DISK_SLOT = controller + " (" + port + ", " + device + ")";
+
+    // (A) Unmount previously mounted disk if it's not what we want
+    if (machine->contains( DISK_SLOT )) {
+        
+        // Split on '('
+        // (Line contents is something like "IDE (1, 0): image.vmdk (UUID: ...)")
+        getKV( machine->get(DISK_SLOT), &kk, &kv, '(', 0 );
+        kk = kk.substr(0, kk.length()-1);
+
+        if (kk.compare( diskFile ) == 0) {
+
+            // If the file is the one we want, we are done            
+            return HVE_ALREADY_EXISTS;
+
+        } else {
+
+            // Otherwise unmount the existing disk
+            args.str("");
+            args << "storageattach "
+                << uuid
+                << " --storagectl " << controller
+                << " --port "       << port
+                << " --device "     << device
+                << " --medium "     << "none";
+
+            // Execute and handle errors
+            ans = this->wrapExec(args.str(), &lines);
+            if (ans != 0) return HVE_DELETE_ERROR;
+
+        }
+
+    }
+
+    // Prepare two locations where we can find the disk: By filename and by UUID.
+    // That's because before some version VirtualBox we need the disk UUID, while for others we need the full path
+    string masterDiskPath = "\"" + diskFile + "\"";
+    string masterDiskUUID = "";
+    
+    // If we are doing multi-attach, try to use UUID-based mounting
+    if (multiAttach) {
+        // Get a list of the disks in order to properly compute multi-attach 
+        vector< map< string, string > > disks = boost::static_pointer_cast<VBoxInstance>(hypervisor)->getDiskList();
+        for (vector< map<string, string> >::iterator i = disks.begin(); i != disks.end(); i++) {
+            map<string, string> disk = *i;
+            // Look of the master disk of what we are using
+            if ( (disk.find("Type") != disk.end()) && (disk.find("Parent UUID") != disk.end()) && (disk.find("Location") != disk.end()) && (disk.find("UUID") != disk.end()) ) {
+                // Check if all the component maches
+                if ( (disk["Type"].compare("multiattach") == 0) && (disk["Parent UUID"].compare("base") == 0) && samePath(disk["Location"],diskFile) ) {
+                    // Use the master UUID instead of the filename
+                    CVMWA_LOG("Info", "Found master with UUID " << disk["UUID"]);
+                    masterDiskUUID = "{" + disk["UUID"] + "}";
+                    break;
+                }
+            }
+        }
+    }
+
+    // (B.1) Try to attach disk to the SATA controller using full path
+    args.str("");
+    args << "storageattach "
+        << uuid
+        << " --storagectl " << controller
+        << " --port "       << port
+        << " --device "     << device
+        << " --type "       << type
+        << " --medium "     <<  masterDiskPath;
+
+    // Append multiattach flag if we are instructed to do so
+    if (multiAttach)
+        args << " --mtype " << "multiattach";
+
+    // Execute
+    ans = this->wrapExec(args.str(), &lines);
+
+    // If we are using multi-attach, try to mount by UUID if mounting
+    // by filename has failed
+    if (multiAttach) {
+
+        // If it was OK, just return
+        if (ans == 0) return HVE_OK;
+        
+        // (B.2) Try to attach disk to the SATA controller using UUID (For older VirtualBox versions)
+        args.str("");
+        args << "storageattach "
+            << uuid
+            << " --storagectl " << controller
+            << " --port "       << port
+            << " --device "     << device
+            << " --type "       << type
+            << " --mtype "      << "multiattach"
+            << " --medium "     <<  masterDiskUUID;
+
+        // Execute
+        ans = this->wrapExec(args.str(), &lines);
+
+    }
+
+    // Retun last execution result
+    return ans;
+
 }
+
 
 /**
  * Return the folder where we can store the VM disks.
@@ -1147,13 +1439,13 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
 /**
  * Return the properties of the VM.
  */
-std::map<std::string, std::string> VBoxSession::getMachineInfo ( int timeout ) {
+std::map<std::string, std::string> VBoxSession::getMachineInfo ( int retries, int timeout ) {
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
     
     /* Perform property update */
-    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, 4, timeout);
+    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, retries, timeout);
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
         return dat;

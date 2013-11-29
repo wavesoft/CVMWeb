@@ -226,6 +226,7 @@ public:
         // Open sub-groups
         userData = parameters->subgroup("user-data");
         local = parameters->subgroup("local");
+        machine = parameters->subgroup("machine");
         
         // Populate local variables
         this->uuid = parameters->get("uuid");
@@ -269,6 +270,7 @@ public:
 
     ParameterMapPtr         parameters;
     ParameterMapPtr         userData;
+    ParameterMapPtr         machine;
     ParameterMapPtr         local;
 
     ////////////////////////////////////////
@@ -454,12 +456,12 @@ public:
     /**
      * Open a session using the specified input parameters
      */
-    HVSessionPtr            sessionOpen         ( const ParameterMapPtr& parameters );
+    virtual HVSessionPtr    sessionOpen         ( const ParameterMapPtr& parameters, const FiniteTaskPtr& pf );
 
     /**
      * Validate a session using the specified input parameters
      */
-    int                     sessionValidate     ( const ParameterMapPtr& parameters );
+    virtual int             sessionValidate     ( const ParameterMapPtr& parameters );
 
     ////////////////////////////////////////
     // Overridable functions
@@ -522,6 +524,13 @@ public:
      * string specified in parameter
      */
     int                     downloadFile        ( const std::string & fileURL, const std::string & checksumString, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), const int retries = 2 );
+    
+    /**
+     * Download a gzip-compressed arbitrary file and validate it's extracted
+     * contents against a checksum string specified in parameter
+     */
+    int                     downloadFileGZ      ( const std::string & fileURL, const std::string & checksumString, std::string * filename, const FiniteTaskPtr & pf = FiniteTaskPtr(), const int retries = 2 );
+
 
     /**
      * Return the cached disk image for the specified CernVM version
