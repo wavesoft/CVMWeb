@@ -291,7 +291,11 @@ std::string getAppDataPath() {
 int getKV( string line, string * key, string * value, unsigned char delim, int offset ) {
     CRASH_REPORT_BEGIN;
     size_t a = line.find( delim, offset );
-    if (a == string::npos) return 0;
+    if (a == string::npos) {
+        *key = line;
+        *value = "";
+        return 0;
+    }
     *key = line.substr(offset, a-offset);
     size_t b = a+1;
     while ( (b<line.length()) && ((line[b] == ' ') || (line[b] == '\t')) ) b++;

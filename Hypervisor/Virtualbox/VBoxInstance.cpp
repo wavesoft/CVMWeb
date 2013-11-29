@@ -730,8 +730,6 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
             CVMWA_LOG("Warning", "Missing 'name' in file " << sessName );
         } else if (!sessConfig->contains("uuid")) {
             CVMWA_LOG("Warning", "Missing 'uuid' in file " << sessName );
-        } else if (!sessConfig->contains("vboxid")) {
-            CVMWA_LOG("Warning", "Missing 'vboxid' in file " << sessName );
         } else {
             // Store session with the given UUID
             sessions[ sessConfig->get("uuid") ] = boost::make_shared< VBoxSession >( 

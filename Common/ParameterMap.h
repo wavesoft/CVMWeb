@@ -161,7 +161,7 @@ public:
     /**
      * Return true if the specified parameter exists
      */
-    bool						contains 		( const std::string& name );
+    bool						contains 		( const std::string& name, const bool useBlank = false );
 
     /**
      * Delete a parameter

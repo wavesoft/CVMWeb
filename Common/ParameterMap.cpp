@@ -217,9 +217,14 @@ std::vector< std::string > ParameterMap::enumKeys ( ) {
 /**
  * Return true if the specified parameter exists
  */
-bool ParameterMap::contains ( const std::string& name ) {
+bool ParameterMap::contains ( const std::string& name, const bool useBlank ) {
     CRASH_REPORT_BEGIN;
-    return (parameters->find(prefix + name) != parameters->end());
+    bool ans = (parameters->find(prefix + name) != parameters->end());
+    if ( ans && useBlank ) {
+        return !(*parameters)[prefix+name].empty();
+    } else {
+        return ans;
+    }
     CRASH_REPORT_END;
 }
 

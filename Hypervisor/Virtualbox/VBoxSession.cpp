@@ -688,7 +688,7 @@ void VBoxSession::ReleaseVMBoot() {
     #ifdef GUESTADD_USE
     string additionsISO = boost::static_pointer_cast<VBoxInstance>(hypervisor)->hvGuestAdditions;
     if ( ((flags & HVF_GUEST_ADDITIONS) != 0) && !additionsISO.empty() ) {
-        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "hdd", false );
+        unmountDisk( GUESTADD_CONTROLLER, GUESTADD_PORT, GUESTADD_DEVICE, "hdd", false );
     }
     #endif
 
@@ -744,7 +744,7 @@ void VBoxSession::ConfigureVMScratch() {
 
         // Everything worked as expected.
         // Update disk file path in the scratch disk controller
-        machine->set(SCRATCH_DSK, vmDisk);
+        machine->set(SCRATCH_DSK, vmDisk + " (UUID:)");
 
         FSMDone("Scratch storage prepared");
     } else {
@@ -905,15 +905,16 @@ void VBoxSession::DestroyVM() {
     FSMDoing("Destryoing VM");
     int ans;
 
-    // We are not initialized any more
-    local->set("initialized","0");
-
     // Destroy VM
     ans = destroyVM();
     if (ans != HVE_OK) {
         errorOccured("Unable to destroy the VM", ans);
         return;
     }
+
+    // Reset properties
+    local->set("initialized","0");
+    parameters->erase("vboxid");
 
     FSMDone("VM Destroyed");
 }
@@ -1368,7 +1369,7 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
     std::string DISK_SLOT = controller + " (" + port + ", " + device + ")";
 
     // Unmount disk only if it's already mounted
-    if (machine->contains( DISK_SLOT )) {
+    if (machine->contains( DISK_SLOT, true )) {
 
         // Otherwise unmount the existing disk
         args.str("");
@@ -1394,8 +1395,8 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
             // Convert string names so we can use
             // the same string names everywhere.
             std::string umType = type;
-            if (umType.compare("hdd")) umType="disk";
-            if (umType.compare("dvddrive")) umType="dvd";
+            if (umType.compare("hdd") == 0) umType="disk";
+            if (umType.compare("dvddrive") == 0) umType="dvd";
 
             // Close and unregister medium
             args.str("");
@@ -1514,7 +1515,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         // If it was OK, just return
         if (ans == 0) {
             // Update mounted medium info
-            machine->set( DISK_SLOT, diskFile );
+            machine->set( DISK_SLOT, diskFile + " (UUID:)" );
             return HVE_OK;
         }
         
@@ -1536,7 +1537,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
 
     // Update mounted medium info if it was OK
     if (ans == HVE_OK) {
-        machine->set( DISK_SLOT, diskFile );
+        machine->set( DISK_SLOT, diskFile + " (UUID:)" );
     }
 
     // Retun last execution result
