@@ -205,6 +205,8 @@ int main( int argc, char ** argv ) {
         std::map< std::string, std::string > args;
         sess->start( &args );
         sleepMs(10000);
+        sess->pause();
+        sleepMs(10000);
         sess->close();
 
         //cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;
