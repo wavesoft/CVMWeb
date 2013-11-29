@@ -92,6 +92,12 @@ public:
     int                     installExtPack      ( const DownloadProviderPtr & downloadProvider, const FiniteTaskPtr & pf = FiniteTaskPtr() );
     HVSessionPtr            sessionByVBID       ( const std::string& virtualBoxGUID );
 
+    /////////////////////////
+    // Global properties
+    /////////////////////////
+
+    std::string             hvGuestAdditions;
+
 private:
 
     /////////////////////////
@@ -99,7 +105,6 @@ private:
     /////////////////////////
 
     LocalConfigPtr          hvConfig;
-    std::string             hvGuestAdditions;
     bool                    sessionLoaded;
     
 };

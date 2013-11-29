@@ -164,6 +164,11 @@ public:
     bool						contains 		( const std::string& name );
 
     /**
+     * Delete a parameter
+     */
+    void						erase  			( const std::string& name );
+
+    /**
      * Update all the parameters from the specified map
      */
     void						fromMap			( std::map< std::string, std::string> * map, bool clearBefore = false );

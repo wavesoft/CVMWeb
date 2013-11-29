@@ -215,7 +215,20 @@ protected:
      */
     int                     mountDisk           ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const std::string & file, bool multiAttach = false );
 
+    /**
+     * Unmount a medium from the VirtulaBox Instance
+     */
+    int                     unmountDisk         ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const bool deleteFile = false );
+
+    /**
+     * Forward the fact that an error has occured somewhere in the FSM handling
+     */
     void                    errorOccured        ( const std::string & str, int errNo );
+
+    /**
+     * Shorthand function for calling controlVM actions with predefined vboxid
+     */
+    int                     controlVM           ( std::string how, int timeout = SYSEXEC_TIMEOUT );
 
     int                     getMachineUUID      ( std::string mname, std::string * ans_uuid,  int flags );
     std::string             getDataFolder       ();
@@ -223,7 +236,6 @@ protected:
     std::map<std::string, 
         std::string>        getMachineInfo      ( int retries = 2, int timeout = SYSEXEC_TIMEOUT );
     int                     startVM             ();
-    int                     controlVM           ( std::string how, int timeout = SYSEXEC_TIMEOUT );
 
     ////////////////////////////////////
     // Local variables

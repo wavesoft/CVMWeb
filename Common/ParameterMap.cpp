@@ -59,6 +59,17 @@ void ParameterMap::set ( const std::string& kname, std::string value ) {
 }
 
 /**
+ * Delete a parameter
+ */
+void ParameterMap::erase ( const std::string& name ) {
+    CRASH_REPORT_BEGIN;
+    std::map<std::string, std::string>::iterator e = parameters->find(prefix+name);
+    if (e != parameters->end())
+        parameters->erase(e);
+    CRASH_REPORT_END;
+}
+
+/**
  * Set a string parameter only if the value is missing.
  * This does not trigger the commitChanges function.
  */

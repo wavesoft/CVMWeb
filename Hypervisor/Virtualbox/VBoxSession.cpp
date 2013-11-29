@@ -369,7 +369,6 @@ void VBoxSession::ConfigureVM() {
         args << " --natpf1 "            << "guestapi,tcp,127.0.0.1," << local->get("apiPort") << ",," << parameters->get("apiPort");
     }
 
-
     // Execute and handle errors
     ans = this->wrapExec(args.str(), &lines);
     if (ans != 0) {
@@ -592,8 +591,7 @@ void VBoxSession::ConfigureVMBoot() {
 
         // Check result
         if (ans == HVE_ALREADY_EXISTS) {
-            FSMDone("Boot medium already in place");
-            return;
+            FSMDoing("Boot medium already in place");
         } else if (ans == HVE_DELETE_ERROR) {
             errorOccured("Unable to unmount previously mounted boot medium", ans);
             return;
@@ -612,14 +610,13 @@ void VBoxSession::ConfigureVMBoot() {
         // Get disk path
         string bootISO = local->get("bootISO");
 
-        // Mount hdd in boot controller using multi-attach mode
+        // Mount dvddrive in boot controller without multi-attach
         ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "dvddrive",
-                         bootISO, true );
+                         bootISO, false );
 
         // Check result
         if (ans == HVE_ALREADY_EXISTS) {
-            FSMDone("Boot medium already in place");
-            return;
+            FSMDoing("Boot medium already in place");
         } else if (ans == HVE_DELETE_ERROR) {
             errorOccured("Unable to unmount previously mounted boot medium", ans);
             return;
@@ -630,6 +627,31 @@ void VBoxSession::ConfigureVMBoot() {
 
     }
 
+    // ----------------------------------------------
+    // Check if we should attach guest additions ISO
+    // ----------------------------------------------
+    #ifdef GUESTADD_USE
+    // Get guest additions ISO file
+    string additionsISO = boost::static_pointer_cast<VBoxInstance>(hypervisor)->hvGuestAdditions;
+    if ( ((flags & HVF_GUEST_ADDITIONS) != 0) && !additionsISO.empty() ) {
+        
+        // Mount dvddrive in guest additions controller without multi-attach
+        ans = mountDisk( GUESTADD_CONTROLLER, GUESTADD_PORT, GUESTADD_DEVICE, "dvddrive",
+                         additionsISO, false );
+
+        // Check result
+        if (ans == HVE_ALREADY_EXISTS) {
+            FSMDoing("Guest additions already in place");
+        } else if (ans == HVE_DELETE_ERROR) {
+            errorOccured("Unable to unmount previously mounted boot medium", ans);
+            return;
+        } else if (ans != HVE_OK) {
+            errorOccured("Unable to mount the boot medium", ans);
+            return;
+        }
+
+    }
+    #endif
 
     FSMDone("Boot medium prepared");
 }
@@ -641,7 +663,24 @@ void VBoxSession::ConfigureVMBoot() {
  */
 void VBoxSession::ReleaseVMBoot() {
     FSMDoing("Releasing boot medium");
-    cout << "- ReleaseVMBoot" << endl;
+
+    // Extract flags
+    int flags = parameters->getNum<int>("flags", 0);
+
+    // Unmount boot disk (don't delete)
+    if ((flags & HVF_DEPLOYMENT_HDD) != 0) {
+        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "hdd", false );
+    } else {
+        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "dvddrive", false );
+    }
+
+    // If we have guest additions, unmount that ISO too
+    #ifdef GUESTADD_USE
+    string additionsISO = boost::static_pointer_cast<VBoxInstance>(hypervisor)->hvGuestAdditions;
+    if ( ((flags & HVF_GUEST_ADDITIONS) != 0) && !additionsISO.empty() ) {
+        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "hdd", false );
+    }
+    #endif
 
     FSMDone("Boot medium released");
 }
@@ -653,9 +692,55 @@ void VBoxSession::ReleaseVMBoot() {
  */
 void VBoxSession::ConfigureVMScratch() {
     FSMDoing("Preparing scatch storage");
-    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+    ostringstream args;
+    int ans;
 
-    FSMDone("Scratch storage prepared");
+    // Check if we have a scratch disk attached to the machine
+    if (!machine->contains(SCRATCH_DSK)) {
+
+        // Create a hard disk for this VM
+        string vmDisk = getTmpFile(".vdi", this->getDataFolder());
+
+        // (4) Create disk
+        args.str("");
+        args << "createhd"
+            << " --filename "   << "\"" << vmDisk << "\""
+            << " --size "       << parameters->get("disk");
+
+        // Execute and handle errors
+        ans = this->wrapExec(args.str(), NULL);
+        if (ans != 0) {
+            errorOccured("Unable to allocate a scratch disk", HVE_EXTERNAL_ERROR);
+            return;
+        }
+
+        // Attach disk to the SATA controller
+        args.str("");
+        args << "storageattach "
+            << parameters->get("vboxid")
+            << " --storagectl " << SCRATCH_CONTROLLER
+            << " --port "       << SCRATCH_PORT
+            << " --device "     << SCRATCH_DEVICE
+            << " --type "       << "hdd"
+            << " --setuuid "    << "\"\"" 
+            << " --medium "     << "\"" << vmDisk << "\"";
+
+        // Execute and handle errors
+        ans = this->wrapExec(args.str(), NULL);
+        if (ans != 0) {
+            errorOccured("Unable to attach the scratch disk", HVE_EXTERNAL_ERROR);
+            return;
+        }
+
+        // Everything worked as expected.
+        // Update disk file path in the scratch disk controller
+        machine->set(SCRATCH_DSK, vmDisk);
+
+        FSMDone("Scratch storage prepared");
+    } else {
+        FSMDone("Scratch disk already exists");
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -665,6 +750,9 @@ void VBoxSession::ConfigureVMScratch() {
  */
 void VBoxSession::ReleaseVMScratch() {
     FSMDoing("Releasing scratch storage");
+
+    // Unmount boot disk (and delete)
+    unmountDisk( SCRATCH_CONTROLLER, SCRATCH_PORT, SCRATCH_DEVICE, "hdd", true );
 
     FSMDone("Scratch storage released");
 }
@@ -677,6 +765,83 @@ void VBoxSession::ReleaseVMScratch() {
 void VBoxSession::ConfigureVMAPI() {
     FSMDoing("Preparing VM API medium");
 
+    // Extract flags
+    int flags = parameters->getNum<int>("flags", 0);
+    std::string sFilename;
+    int ans;
+
+    // ------------------------------------------------
+    // MODE 1 : Floppy-IO Contextualization
+    // ------------------------------------------------
+    if ((flags & HVF_FLOPPY_IO) != 0) {
+
+        // Unmount/remove previous VMAPI floppy
+        ans = unmountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, "floppy", true );
+        if (ans != HVE_OK) {
+            errorOccured("Unable detach previously attached context floppy", HVE_EXTERNAL_ERROR);
+            return;
+        }
+
+        // Create a new floppy disk
+        ans = hypervisor->buildFloppyIO( getUserData(), &sFilename );
+        if (ans != HVE_OK) {
+            errorOccured("Unable to create a contextualization floppy disk", HVE_EXTERNAL_ERROR);
+            return;
+        }
+
+        // Mount the new floppy disk
+        ans = mountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, "floppy",
+                         sFilename, false );
+
+        // Check result
+        if (ans == HVE_ALREADY_EXISTS) {
+            FSMDoing("Contextualization floppy already in place");
+        } else if (ans == HVE_DELETE_ERROR) {
+            errorOccured("Unable to unmount previously mounted contextualization floppy", ans);
+            return;
+        } else if (ans != HVE_OK) {
+            errorOccured("Unable to mount the contextualization floppy", ans);
+            return;
+        }
+
+    }
+
+    // ------------------------------------------------
+    // MODE 2 : ContextISO Contextualization
+    // ------------------------------------------------
+    else {
+
+        // Unmount/remove previous VMAPI iso
+        ans = unmountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, "dvddrive", true );
+        if (ans != HVE_OK) {
+            errorOccured("Unable detach previously attached context iso", HVE_EXTERNAL_ERROR);
+            return;
+        }
+
+        // Create a new iso disk
+        ans = hypervisor->buildContextISO( getUserData(), &sFilename );
+        if (ans != HVE_OK) {
+            errorOccured("Unable to create a contextualization iso", HVE_EXTERNAL_ERROR);
+            return;
+        }
+
+        // Mount the new iso disk
+        ans = mountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, "dvddrive",
+                         sFilename, false );
+
+        // Check result
+        if (ans == HVE_ALREADY_EXISTS) {
+            FSMDoing("Contextualization iso already in place");
+        } else if (ans == HVE_DELETE_ERROR) {
+            errorOccured("Unable to unmount previously mounted contextualization iso", ans);
+            return;
+        } else if (ans != HVE_OK) {
+            errorOccured("Unable to mount the contextualization iso", ans);
+            return;
+        }
+
+    }
+
     FSMDone("VM API medium prepared");
 }
 
@@ -687,6 +852,25 @@ void VBoxSession::ConfigureVMAPI() {
  */
 void VBoxSession::ReleaseVMAPI() {
     FSMDoing("Releasing VM API medium");
+
+    // Extract flags
+    int flags = parameters->getNum<int>("flags", 0);
+
+    // ------------------------------------------------
+    // MODE 1 : Floppy-IO Contextualization
+    // ------------------------------------------------
+    if ((flags & HVF_FLOPPY_IO) != 0) {
+        // Unmount context floppy (and delete)
+        unmountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, "floppy", true );
+    }
+
+    // ------------------------------------------------
+    // MODE 2 : ContextISO Contextualization
+    // ------------------------------------------------
+    else {
+        // Unmount context disk (and delete)
+        unmountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, "dvddrive", true );
+    }
 
     FSMDone("VM API medium released");
 }
@@ -709,9 +893,17 @@ void VBoxSession::PrepareVMBoot() {
  */
 void VBoxSession::DestroyVM() {
     FSMDoing("Destryoing VM");
+    int ans;
 
     // We are not initialized any more
     local->set("initialized","0");
+
+    // Destroy VM
+    ans = destroyVM();
+    if (ans != HVE_OK) {
+        errorOccured("Unable to destroy the VM", ans);
+        return;
+    }
 
     FSMDone("VM Destroyed");
 }
@@ -724,6 +916,13 @@ void VBoxSession::DestroyVM() {
 void VBoxSession::PoweroffVM() {
     FSMDoing("Powering VM off");
 
+    // Poweroff VM
+    int ans = controlVM("poweroff");
+    if (ans != HVE_OK) {
+        errorOccured("Unable to poweroff the VM", ans);
+        return;
+    }
+
     FSMDone("VM Powered off");
 }
 
@@ -734,6 +933,13 @@ void VBoxSession::PoweroffVM() {
  */
 void VBoxSession::DiscardVMState() {
     FSMDoing("Discarding saved VM state");
+
+    // Discard vm state
+    int ans = this->wrapExec("discardstate " + parameters->get("vboxid"), NULL);
+    if (ans != 0) {
+        errorOccured("Unable to discard the saved VM state", ans);
+        return;
+    }
 
     FSMDone("Saved VM state discarted");
 }
@@ -746,6 +952,13 @@ void VBoxSession::DiscardVMState() {
 void VBoxSession::StartVM() {
     FSMDoing("Starting VM");
 
+    // Start VM
+    int ans = this->wrapExec("startvm " + parameters->get("vboxid"), NULL);
+    if (ans != 0) {
+        errorOccured("Unable to start the VM", ans);
+        return;
+    }
+
     FSMDone("VM Started");
 }
 
@@ -756,6 +969,13 @@ void VBoxSession::StartVM() {
  */
 void VBoxSession::SaveVMState() {
     FSMDoing("Saving VM state");
+
+    // Save VM state
+    int ans = controlVM("savestate");
+    if (ans != HVE_OK) {
+        errorOccured("Unable save the VM state", ans);
+        return;
+    }
 
     FSMDone("VM State saved");
 }
@@ -768,6 +988,13 @@ void VBoxSession::SaveVMState() {
 void VBoxSession::PauseVM() {
     FSMDoing("Pausing the VM");
 
+    // Pause VM
+    int ans = controlVM("pause");
+    if (ans != HVE_OK) {
+        errorOccured("Unable to pause the VM", ans);
+        return;
+    }
+
     FSMDone("VM Paused");
 }
 
@@ -779,6 +1006,13 @@ void VBoxSession::PauseVM() {
 void VBoxSession::ResumeVM() {
     FSMDoing("Resuming VM");
 
+    // Resume VM
+    int ans = controlVM("resume");
+    if (ans != HVE_OK) {
+        errorOccured("Unable to resume the VM", ans);
+        return;
+    }
+
     FSMDone("VM Resumed");
 }
 
@@ -789,6 +1023,9 @@ void VBoxSession::ResumeVM() {
  */
 void VBoxSession::FatalErrorSink() {
     FSMDoing("Session unable to continue. Cleaning-up");
+
+    // Destroy everything
+    destroyVM();
 
     FSMDone("Session cleaned-up");
 }
@@ -1099,6 +1336,63 @@ std::string VBoxSession::getUserData ( ) {
 }
 
 /**
+ * Unmount a medium from the VirtulaBox Instance
+ */
+int VBoxSession::unmountDisk ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const bool deleteFile ) {
+    CRASH_REPORT_BEGIN;
+    ostringstream args;
+    string kk, kv;
+    int ans;
+
+    // Calculate the name of the disk slot
+    std::string DISK_SLOT = controller + " (" + port + ", " + device + ")";
+
+    // Unmount disk only if it's already mounted
+    if (machine->contains( DISK_SLOT )) {
+
+        // Otherwise unmount the existing disk
+        args.str("");
+        args << "storageattach "
+            << parameters->get("vboxid")
+            << " --storagectl " << controller
+            << " --port "       << port
+            << " --device "     << device
+            << " --medium "     << "none";
+
+        // Execute and handle errors
+        ans = this->wrapExec(args.str(), NULL);
+        if (ans != HVE_OK) return ans;
+
+        // If we are also asked to erase the file, do it now
+        if (deleteFile) {
+
+            // Split on '('
+            // (Line contents is something like "IDE (1, 0): image.vmdk (UUID: ...)")
+            getKV( machine->get(DISK_SLOT), &kk, &kv, '(', 0 );
+            kk = kk.substr(0, kk.length()-1);
+
+            // Close and unregister medium
+            args.str("");
+            args << "closemedium " << type << " "
+                << "\"" << kk << "\"";
+
+            // Execute and handle errors
+            ans = this->wrapExec(args.str(), NULL);
+            if (ans != HVE_OK) return ans;
+
+            // Remove file
+            ::remove( kk.c_str() );
+
+        }
+
+    }
+
+    // Already done
+    return HVE_OK;
+
+}
+
+/**
  * (Re-)Mount a disk on the specified controller
  * This function automatically unmounts a previously attached disk if the filenames
  * do not match.
@@ -1139,17 +1433,8 @@ int VBoxSession::mountDisk ( const std::string & controller,
         } else {
 
             // Otherwise unmount the existing disk
-            args.str("");
-            args << "storageattach "
-                << parameters->get("vboxid")
-                << " --storagectl " << controller
-                << " --port "       << port
-                << " --device "     << device
-                << " --medium "     << "none";
-
-            // Execute and handle errors
-            ans = this->wrapExec(args.str(), &lines);
-            if (ans != 0) return HVE_DELETE_ERROR;
+            ans = unmountDisk( controller, port, device, type, false );
+            if (ans != HVE_OK) return HVE_DELETE_ERROR;
 
         }
 
@@ -1238,7 +1523,28 @@ int VBoxSession::mountDisk ( const std::string & controller,
  * Return the folder where we can store the VM disks.
  */
 std::string VBoxSession::getDataFolder ( ) {
-    return "";
+    CRASH_REPORT_BEGIN;
+
+    // If we already have a path, return it
+    if (!this->dataPath.empty())
+        return this->dataPath;
+
+    // Find configuration folder
+    if (machine->contains("Config file")) {
+        string settingsFolder = machine->get("Config file");
+
+        // Strip quotation marks
+        if ((settingsFolder[0] == '"') || (settingsFolder[0] == '\''))
+            settingsFolder = settingsFolder.substr( 1, settingsFolder.length() - 2);
+
+        // Strip the settings file (leave path) and store it on dataPath
+        this->dataPath = stripComponent( settingsFolder );
+    }
+
+    // Return folder
+    return this->dataPath;
+
+    CRASH_REPORT_END;
 }
 
 /**
@@ -1482,5 +1788,9 @@ int VBoxSession::startVM ( ) {
  * Send control commands to the VM.
  */
 int VBoxSession::controlVM ( std::string how, int timeout ) {
-    return HVE_NOT_IMPLEMENTED;
+    CRASH_REPORT_BEGIN;
+    int ans = this->wrapExec("controlvm " + parameters->get("vboxid") + " " + how, NULL, NULL, 4, timeout);
+    if (ans != 0) return HVE_CONTROL_ERROR;
+    return 0;
+    CRASH_REPORT_END;
 }
