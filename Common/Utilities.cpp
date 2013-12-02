@@ -111,6 +111,45 @@ sharedMutex __nmutex_get( std::string name ) {
 }
 
 /**
+ * Return a singleton with default SysExec Config
+ */
+const SysExecConfig config;
+const SysExecConfig& SysExecConfig::Default() { return config; }
+
+/**
+ * Register an error string for handling and return a copy of this object
+ */
+SysExecConfig& SysExecConfig::handleErrString( const std::string& message, int errorCode ) {
+    errStrings[message] = errorCode;
+    return *this;
+}
+
+/**
+ * Change retries and return this class reference
+ */
+SysExecConfig& SysExecConfig::setRetries( int r ) { 
+    retries = r; 
+    return *this; 
+};
+
+/**
+ * Change retries and return this class reference
+ */
+SysExecConfig& SysExecConfig::setTimeout( int t ) { 
+    timeout = t;
+    return *this; 
+};
+
+/**
+ * Change retries and return this class reference
+ */
+SysExecConfig& SysExecConfig::setGUI( bool gui ) { 
+    this->gui = gui; 
+    return *this;
+};
+
+
+/**
  * Release memory from the named mutexes already acquired
  */
 void flushNamedMutexes() {
@@ -666,7 +705,7 @@ void abortSysExec() {
 /**
  * Cross-platform exec and return function (called by sysExec())
  */
-int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, int timeout, bool gui ) {
+int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, const SysExecConfig& config ) {
     CRASH_REPORT_BEGIN;
     try {
 #ifndef _WIN32
@@ -780,7 +819,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             }
 
             /* Abort if it takes way too long */
-            if ( sysExecAborted || ((getMillis() - startTime) > timeout) ) {
+            if ( sysExecAborted || ((getMillis() - startTime) > config.timeout) ) {
 
                 // Close pipes
                 close(outfd[0]); close(errfd[0]);
@@ -870,7 +909,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
 
     // Prepare flags depending on what we want to display
     DWORD cwFlags = 0;
-    if (gui) {
+    if (config.gui) {
         siStartInfo.wShowWindow = SW_SHOWNORMAL;
     } else {
         siStartInfo.wShowWindow = SW_HIDE;
@@ -922,7 +961,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
         }
         
         /* Check for timeout */
-        if ((getMillis() - startTime) > timeout) {
+        if ((getMillis() - startTime) > config.timeout) {
             CVMWA_LOG("Debug", "Timed out");
             *rawStderr = "ERROR: Timed out";
             ret = 254;
@@ -967,7 +1006,7 @@ int __sysExec( string app, string cmdline, vector<string> * stdoutList, string *
             ans = WaitForSingleObject( piProcInfo.hProcess, SYSEXEC_SLEEP_DELAY );
         
             /* Check for timeout */
-            if ((getMillis() - startTime) > timeout) {
+            if ((getMillis() - startTime) > config.timeout) {
                 CVMWA_LOG("Debug", "Timed out");
                 *rawStderr = "ERROR: Timed out";
                 ret = 254;
@@ -1041,7 +1080,7 @@ int sysExecAsync( string app, string cmdline ) {
 /**
  * Cross-platform exec function with retry functionality
  */
-int sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderrAns, int retries, int timeout, bool gui ) {
+int sysExec( const string& app, const string& cmdline, vector<string> * stdoutList, string * rawStderrAns, const SysExecConfig& config ) {
     CRASH_REPORT_BEGIN;
     string stdError;
     int res = 252;
@@ -1053,11 +1092,11 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
     }
 
     // Start the retry loop
-    for (int tries = 0; tries < retries; tries++ ) {
+    for (int tries = 0; tries < config.retries; tries++ ) {
         
         // Call the wrapper function
         CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
-        res = __sysExec( app, cmdline, stdoutList, &stdError, timeout, gui );
+        res = __sysExec( app, cmdline, stdoutList, &stdError, config );
         CVMWA_LOG("Debug", "Exec EXIT_CODE: " << res);
 
         // Check for "Error" in the stderr
@@ -1073,7 +1112,7 @@ int sysExec( string app, string cmdline, vector<string> * stdoutList, string * r
             break;
         } else {
             // Wait and retry
-            CVMWA_LOG( "Info", "Going to retry in " << SYSEXEC_RETRY_DELAY << "ms. Try " << (tries+1) << "/" << retries  );
+            CVMWA_LOG( "Info", "Going to retry in " << SYSEXEC_RETRY_DELAY << "ms. Try " << (tries+1) << "/" << config.retries  );
             sleepMs( SYSEXEC_RETRY_DELAY );
         }
     }

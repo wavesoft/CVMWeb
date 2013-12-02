@@ -48,10 +48,14 @@ map<string, string> VBoxInstance::getMachineInfo( std::string uuid, int timeout 
     map<string, string> dat;
     string err;
     
-    /* Perform property update */
+    // Local exec config
+    SysExecConfig config(execConfig);
+    config.timeout = timeout;
+
+    // Perform property update
     int ans;
     NAMED_MUTEX_LOCK( uuid );
-    ans = this->exec("showvminfo "+uuid, &lines, &err, 4, timeout );
+    ans = this->exec("showvminfo "+uuid, &lines, &err, config );
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
@@ -72,9 +76,9 @@ map<string, string> VBoxInstance::getAllProperties( string uuid ) {
     vector<string> lines;
     string errOut;
 
-    /* Get guest properties */
+    // Get guest properties
     NAMED_MUTEX_LOCK( uuid );
-    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, 4, 2000 ) == 0) {
+    if (this->exec( "guestproperty enumerate "+uuid, &lines, &errOut, execConfig ) == 0) {
         for (vector<string>::iterator it = lines.begin(); it < lines.end(); ++it) {
             string line = *it;
 
@@ -182,7 +186,7 @@ std::string VBoxInstance::getProperty( std::string uuid, std::string name ) {
     /* Invoke property query */
     int ans;
     NAMED_MUTEX_LOCK( uuid );
-    ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, 2, 2000);
+    ans = this->exec("guestproperty get "+uuid+" \""+name+"\"", &lines, &err, execConfig);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return "";
     if (lines.empty()) return "";
@@ -231,15 +235,15 @@ int VBoxInstance::getCapabilities ( HVINFO_CAPS * caps ) {
     string err;
     int v;
     
-    /* List the CPUID information */
+    // List the CPUID information
     int ans;
     NAMED_MUTEX_LOCK("generic");
-    ans = this->exec("list hostcpuids", &lines, &err, 2);
+    ans = this->exec("list hostcpuids", &lines, &err, execConfig);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
     if (lines.empty()) return HVE_EXTERNAL_ERROR;
     
-    /* Process lines */
+    // Process lines
     for (vector<string>::iterator i = lines.begin(); i != lines.end(); i++) {
         string line = *i;
         if (trimSplit( &line, &parts, " \t", " \t") == 0) continue;
@@ -279,7 +283,7 @@ int VBoxInstance::getCapabilities ( HVINFO_CAPS * caps ) {
         }
     }
     
-    /* Update flags */
+    // Update flags
     caps->cpu.hasVM = false; // Needs MSR to detect
     caps->cpu.hasVT = 
         ( (caps->cpu.featuresA & 0x20) != 0 ) || // Intel 'vmx'
@@ -287,19 +291,19 @@ int VBoxInstance::getCapabilities ( HVINFO_CAPS * caps ) {
     caps->cpu.has64bit =
         ( (caps->cpu.featuresC & 0x20000000) != 0 ); // Long mode 'lm'
         
-    /* List the system properties */
+    // List the system properties
     NAMED_MUTEX_LOCK("generic");
-    ans = this->exec("list systemproperties", &lines, &err, 2);
+    ans = this->exec("list systemproperties", &lines, &err, execConfig);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return HVE_QUERY_ERROR;
     if (lines.empty()) return HVE_EXTERNAL_ERROR;
 
-    /* Default limits */
+    // Default limits
     caps->max.cpus = 1;
     caps->max.memory = 1024;
     caps->max.disk = 2048;
     
-    /* Tokenize into the data map */
+    // Tokenize into the data map
     parseLines( &lines, &data, ":", " \t", 0, 1 );
     if (data.find("Maximum guest RAM size") != data.end()) 
         caps->max.memory = ston<int>(data["Maximum guest RAM size"]);
@@ -308,7 +312,7 @@ int VBoxInstance::getCapabilities ( HVINFO_CAPS * caps ) {
     if (data.find("Maximum guest CPU count") != data.end()) 
         caps->max.cpus = ston<int>(data["Maximum guest CPU count"]);
     
-    /* Ok! */
+    // Ok!
     return HVE_OK;
     CRASH_REPORT_END;
 };
@@ -322,15 +326,15 @@ std::vector< std::map< std::string, std::string > > VBoxInstance::getDiskList() 
     std::vector< std::map< std::string, std::string > > resMap;
     string err;
 
-    /* List the running VMs in the system */
+    // List the running VMs in the system
     int ans;
     NAMED_MUTEX_LOCK("generic");
-    ans = this->exec("list hdds", &lines, &err, 2, 2000);
+    ans = this->exec("list hdds", &lines, &err, execConfig);
     NAMED_MUTEX_UNLOCK;
     if (ans != 0) return resMap;
     if (lines.empty()) return resMap;
 
-    /* Tokenize lists */
+    // Tokenize lists
     resMap = tokenizeList( &lines, ':' );
     return resMap;
     CRASH_REPORT_END;
@@ -741,7 +745,7 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
 
     // List the running VMs in the system
     int ans;
-    ans = this->exec("list vms", &lines, &err, 2, 2000);
+    ans = this->exec("list vms", &lines, &err, execConfig);
     if (ans != 0) return HVE_QUERY_ERROR;
 
     // Forward progress
@@ -868,7 +872,7 @@ bool VBoxInstance::hasExtPack() {
     vector<string> lines;
     string err;
     NAMED_MUTEX_LOCK("generic");
-    this->exec("list extpacks", &lines, &err, 2, 2000);
+    this->exec("list extpacks", &lines, &err, execConfig);
     NAMED_MUTEX_UNLOCK;
     for (std::vector<std::string>::iterator l = lines.begin(); l != lines.end(); l++) {
         if (l->find("Oracle VM VirtualBox Extension Pack") != string::npos) {
@@ -893,6 +897,9 @@ int VBoxInstance::installExtPack( const DownloadProviderPtr & downloadProvider, 
     string requestBuf;
     string checksum;
     string err;
+
+    // Local exec config
+    SysExecConfig config(execConfig);
 
     // Notify extension pack installation
     if (pf) {
@@ -972,7 +979,7 @@ int VBoxInstance::installExtPack( const DownloadProviderPtr & downloadProvider, 
     // Install extpack on virtualbox
     if (pf) pf->doing("Installing extension pack");
     NAMED_MUTEX_LOCK("generic");
-    res = this->exec( "extpack install \"" + tmpExtpackFile + "\"", NULL, &err, 2, SYSEXEC_TIMEOUT, true );
+    res = this->exec( "extpack install \"" + tmpExtpackFile + "\"", NULL, &err, config.setGUI(true) );
     NAMED_MUTEX_UNLOCK;
     if (res != HVE_OK) {
         if (pf) pf->fail("Extension pack failed to install", HVE_EXTERNAL_ERROR);

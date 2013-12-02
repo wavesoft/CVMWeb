@@ -144,6 +144,56 @@ typedef boost::function< void (const std::string&, const int, const std::string&
 typedef boost::function<void ( const boost::shared_array<uint8_t>&, const size_t)>   callbackData;
 typedef boost::function<void ( const size_t, const size_t, const std::string& )>     callbackProgress;
 
+/* Parameters for the SysExec Function */
+class SysExecConfig {
+public:
+
+    /**
+     * Global function to return the default sysExec configuration
+     */
+    static const SysExecConfig& Default();
+
+    /**
+     * Default Constructor
+     */
+    SysExecConfig( int v_retries = 1, int v_timeout = SYSEXEC_TIMEOUT, bool v_gui = false )
+        : retries(v_retries), timeout(v_timeout), gui(v_gui), errStrings() { };
+
+    /**
+     * Copy Constructor
+     */
+    SysExecConfig( const SysExecConfig& src )
+        : retries(src.retries), timeout(src.timeout), gui(src.gui), errStrings(src.errStrings) { };
+
+    /**
+     * Funtion to register an error handler
+     *
+     * This function registers
+     */
+    SysExecConfig&              handleErrString( const std::string& message, int errorCode );
+
+    /**
+     * Change retries and return this class reference
+     */
+    SysExecConfig&              setRetries( int r );
+
+    /**
+     * Change retries and return this class reference
+     */
+    SysExecConfig&              setTimeout( int t );
+
+    /**
+     * Change retries and return this class reference
+     */
+    SysExecConfig&              setGUI( bool gui );
+
+    int                         retries; 
+    int                         timeout;
+    bool                        gui;
+    std::map<std::string,int>   errStrings;
+
+};
+
 /**
  * Allocate a new GUID
  */
@@ -209,7 +259,12 @@ int                                                 md5_bin         ( std::strin
  * 
  * This function will wait for the command to finish and it will return it's exit code
  */
-int                                                 sysExec         ( std::string app, std::string cmdline, std::vector<std::string> * stdoutList, std::string * rawStderr, int retries = 1, int timeout = SYSEXEC_TIMEOUT, bool gui = false );
+int                                                 sysExec         ( const std::string& app, 
+                                                                      const std::string& cmdline, 
+                                                                      std::vector<std::string> * stdoutList, 
+                                                                      std::string * rawStderr, 
+                                                                      const SysExecConfig& config
+                                                                    );
 
 /**
  * Platform-independant function to execute the given command-line without

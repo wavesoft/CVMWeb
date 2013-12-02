@@ -511,7 +511,7 @@ public:
      * Execute the hypervisor binary, appending the specified argument list.
      * This command just encapsulates a sysExec function
      */
-    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries = 2, int timeout = SYSEXEC_TIMEOUT, bool gui = false );
+    int                     exec                ( std::string args, std::vector<std::string> * stdoutList, std::string * stderrMsg, const SysExecConfig& config );
 
     /**
      * Download an arbitrary file and validate it against a checksum

@@ -41,7 +41,7 @@
 class VBoxInstance : public HVInstance {
 public:
 
-    VBoxInstance( std::string fRoot, std::string fBin, std::string fIso ) : HVInstance() {
+    VBoxInstance( std::string fRoot, std::string fBin, std::string fIso ) : HVInstance(), execConfig() {
 
         // Populate variables
         this->sessionLoaded = false;
@@ -55,7 +55,7 @@ public:
         // Detect and update VirtualBox Version
         std::vector< std::string > out;
         std::string err;
-        this->exec("--version", &out, &err);
+        this->exec("--version", &out, &err, execConfig);
 
         // If we got some output, extract version numbers
         if (out.size() > 0)
@@ -106,7 +106,10 @@ private:
 
     LocalConfigPtr          hvConfig;
     bool                    sessionLoaded;
-    
+
+    // Default sysExecConfig
+    SysExecConfig           execConfig;
+
 };
 
 #endif /* end of include guard: VBoxInstance_H */

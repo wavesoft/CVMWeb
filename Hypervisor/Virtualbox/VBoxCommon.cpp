@@ -139,6 +139,9 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInterac
         pf->setMax(5);
     }
 
+    // Initialize sysExec Configuration
+    SysExecConfig sysExecConfig();
+
     ////////////////////////////////////
     // Contact the information point
     ////////////////////////////////////
@@ -347,7 +350,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInterac
 
             CVMWA_LOG( "Info", "Attaching" << tmpHypervisorInstall );
             if (installerPf) installerPf->doing("Mouting hypervisor DMG disk");
-            res = sysExec("/usr/bin/hdiutil", "attach " + tmpHypervisorInstall, &lines, &errorMsg);
+            res = sysExec("/usr/bin/hdiutil", "attach " + tmpHypervisorInstall, &lines, &errorMsg, sysExecConfig);
             if (res != 0) {
                 if (tries<retries) {
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
@@ -374,12 +377,12 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInterac
     
             if (installerPf) installerPf->doing("Starting installer");
             CVMWA_LOG( "Info", "Installing using " << dskVolume << "/" << data[kInstallerName]  );
-            res = sysExec("/usr/bin/open", "-W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg);
+            res = sysExec("/usr/bin/open", "-W " + dskVolume + "/" + data[kInstallerName], NULL, &errorMsg, sysExecConfig);
             if (res != 0) {
 
                 CVMWA_LOG( "Info", "Detaching" );
                 if (installerPf) installerPf->doing("Unmounting DMG");
-                res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
+                res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg, sysExecConfig);
                 if (tries<retries) {
                     CVMWA_LOG( "Info", "Going for retry. Trials " << tries << "/" << retries << " used." );
                     if (installerPf) installerPf->doing("Restarting installer");
@@ -399,7 +402,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInterac
 
             CVMWA_LOG( "Info", "Detaching" );
             if (installerPf) installerPf->doing("Cleaning-up");
-            res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg);
+            res = sysExec("/usr/bin/hdiutil", "detach " + dskDev, NULL, &errorMsg, sysExecConfig);
             if (installerPf) {
                 installerPf->done("Cleaning-up completed");
                 installerPf->complete("Installed hypervisor");

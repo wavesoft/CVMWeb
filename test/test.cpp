@@ -168,7 +168,6 @@ int main( int argc, char ** argv ) {
     */
 
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
-    pTasks->setMax(2);
 
     // Setup callbacks
     pTasks->onStarted( boost::bind(&cb_started, _1) );
@@ -181,6 +180,15 @@ int main( int argc, char ** argv ) {
 
     // Detect and instantiate hypervisor
     HVInstancePtr hv = detectHypervisor();
+    if (!hv) {
+        pTasks->restart("Installing hypervisor");
+        installHypervisor( DownloadProvider::Default(), UserInteraction::Default(), pTasks);
+        hv = detectHypervisor();
+    }
+
+    pTasks->restart("Creating the VM");
+    pTasks->setMax(2);
+
     if (hv) {
         cout << "HV Binary: " << hv->hvBinary << endl;
         cout << "HV Version: " << hv->version.verString << endl;
@@ -206,6 +214,10 @@ int main( int argc, char ** argv ) {
         sess->start( &args );
         sleepMs(10000);
         sess->pause();
+        sleepMs(10000);
+        sess->close();
+        sleepMs(10000);
+        sess->hibernate();
         sleepMs(10000);
         sess->close();
 

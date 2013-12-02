@@ -133,6 +133,7 @@ void VBoxSession::UpdateSession() {
 
     // If VBoxID is missing, directly go to 'destroyed'
     if (!parameters->contains("vboxid")) {
+        FSMDone("Session updated");
         FSMSkew(3);
         return;
     }
@@ -247,7 +248,7 @@ void VBoxSession::CreateVM() {
         << " --register";
     
     // Execute and handle errors
-    ans = this->wrapExec(args.str(), &lines);
+    ans = this->wrapExec(args.str(), &lines, NULL, execConfig);
     if (ans != 0) {
         errorOccured("Unable to create a new virtual machine", HVE_CREATE_ERROR);
         return;
@@ -272,7 +273,7 @@ void VBoxSession::CreateVM() {
         << " --name "       << "IDE"
         << " --add "        << "ide";
     
-    ans = this->wrapExec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
     if (ans != 0) {
         // Destroy VM
         destroyVM();
@@ -288,7 +289,7 @@ void VBoxSession::CreateVM() {
         << " --name "       << "SATA"
         << " --add "        << "sata";
     
-    ans = this->wrapExec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
     if (ans != 0) {
         // Destroy VM
         destroyVM();
@@ -304,7 +305,7 @@ void VBoxSession::CreateVM() {
         << " --name "       << FLOPPYIO_CONTROLLER
         << " --add "        << "floppy";
     
-    ans = this->wrapExec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
     if (ans != 0) {
         // Destroy VM
         destroyVM();
@@ -380,7 +381,7 @@ void VBoxSession::ConfigureVM() {
     }
 
     // Execute and handle errors
-    ans = this->wrapExec(args.str(), &lines);
+    ans = this->wrapExec(args.str(), &lines, NULL, execConfig);
     if (ans != 0) {
         errorOccured("Unable to modify the Virtual Machine", HVE_EXTERNAL_ERROR);
         return;
@@ -476,6 +477,7 @@ void VBoxSession::ConfigNetwork() {
  */
 void VBoxSession::DownloadMedia() {
     FiniteTaskPtr pf = FSMBegin<FiniteTask>("Downloading required media");
+    if (pf) pf->setMax(1);
 
     // Extract flags
     int flags = parameters->getNum<int>("flags", 0);
@@ -501,7 +503,7 @@ void VBoxSession::DownloadMedia() {
             return;
         }
 
-        // Check if we should download a compressed file
+        // Check if we are downloading a compressed file
         FiniteTaskPtr pfDownload;
         string urlFilenamePart = getURLFilename(urlFilename);
         if (pf) pfDownload = pf->begin<FiniteTask>("Downloading CernVM ISO");
@@ -596,7 +598,7 @@ void VBoxSession::ConfigureVMBoot() {
         string bootDisk = local->get("bootDisk");
 
         // Mount hdd in boot controller using multi-attach mode
-        ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "hdd",
+        ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, T_HDD,
                          bootDisk, true );
 
         // Check result
@@ -621,7 +623,7 @@ void VBoxSession::ConfigureVMBoot() {
         string bootISO = local->get("bootISO");
 
         // Mount dvddrive in boot controller without multi-attach
-        ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "dvddrive",
+        ans = mountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, T_DVD,
                          bootISO, false );
 
         // Check result
@@ -646,7 +648,7 @@ void VBoxSession::ConfigureVMBoot() {
     if ( ((flags & HVF_GUEST_ADDITIONS) != 0) && !additionsISO.empty() ) {
         
         // Mount dvddrive in guest additions controller without multi-attach
-        ans = mountDisk( GUESTADD_CONTROLLER, GUESTADD_PORT, GUESTADD_DEVICE, "dvddrive",
+        ans = mountDisk( GUESTADD_CONTROLLER, GUESTADD_PORT, GUESTADD_DEVICE, T_DVD,
                          additionsISO, false );
 
         // Check result
@@ -679,16 +681,16 @@ void VBoxSession::ReleaseVMBoot() {
 
     // Unmount boot disk (don't delete)
     if ((flags & HVF_DEPLOYMENT_HDD) != 0) {
-        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "hdd", false );
+        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, T_HDD, false );
     } else {
-        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, "dvddrive", false );
+        unmountDisk( BOOT_CONTROLLER, BOOT_PORT, BOOT_DEVICE, T_DVD, false );
     }
 
     // If we have guest additions, unmount that ISO too
     #ifdef GUESTADD_USE
     string additionsISO = boost::static_pointer_cast<VBoxInstance>(hypervisor)->hvGuestAdditions;
     if ( ((flags & HVF_GUEST_ADDITIONS) != 0) && !additionsISO.empty() ) {
-        unmountDisk( GUESTADD_CONTROLLER, GUESTADD_PORT, GUESTADD_DEVICE, "hdd", false );
+        unmountDisk( GUESTADD_CONTROLLER, GUESTADD_PORT, GUESTADD_DEVICE, T_DVD, false );
     }
     #endif
 
@@ -718,11 +720,14 @@ void VBoxSession::ConfigureVMScratch() {
             << " --size "       << parameters->get("disk");
 
         // Execute and handle errors
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
         if (ans != 0) {
             errorOccured("Unable to allocate a scratch disk", HVE_EXTERNAL_ERROR);
             return;
         }
+
+        // Generate a new uuid
+        std::string diskGUID = newGUID();
 
         // Attach disk to the SATA controller
         args.str("");
@@ -732,11 +737,11 @@ void VBoxSession::ConfigureVMScratch() {
             << " --port "       << SCRATCH_PORT
             << " --device "     << SCRATCH_DEVICE
             << " --type "       << "hdd"
-            << " --setuuid "    << "\"\"" 
+            << " --setuuid "    << diskGUID
             << " --medium "     << "\"" << vmDisk << "\"";
 
         // Execute and handle errors
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
         if (ans != 0) {
             errorOccured("Unable to attach the scratch disk", HVE_EXTERNAL_ERROR);
             return;
@@ -744,7 +749,7 @@ void VBoxSession::ConfigureVMScratch() {
 
         // Everything worked as expected.
         // Update disk file path in the scratch disk controller
-        machine->set(SCRATCH_DSK, vmDisk + " (UUID:)");
+        machine->set(SCRATCH_DSK, vmDisk + " (UUID: " + diskGUID + ")");
 
         FSMDone("Scratch storage prepared");
     } else {
@@ -762,9 +767,30 @@ void VBoxSession::ReleaseVMScratch() {
     FSMDoing("Releasing scratch storage");
 
     // Unmount boot disk (and delete)
-    unmountDisk( SCRATCH_CONTROLLER, SCRATCH_PORT, SCRATCH_DEVICE, "hdd", true );
+    unmountDisk( SCRATCH_CONTROLLER, SCRATCH_PORT, SCRATCH_DEVICE, T_HDD, true );
 
     FSMDone("Scratch storage released");
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Check if the mounted VMAPI disk has not changed
+ */
+void VBoxSession::CheckVMAPI() {
+    FSMDoing("Checking VM API medium");
+
+    // Get VMAPI Contents and re-generate the VMAPI Data
+    std::string data = getUserData();
+    std::string dataRef = local->get("vmapi_contents", "");
+
+    // Check if data are not the same
+    if (data.compare(dataRef) != 0) {
+        FSMDone("VM API medium has changed. Destroying and re-starting the VM");
+        FSMSkew(107);
+    }
+
+    FSMDone("VM API medium does not need to be modified");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -786,21 +812,25 @@ void VBoxSession::ConfigureVMAPI() {
     if ((flags & HVF_FLOPPY_IO) != 0) {
 
         // Unmount/remove previous VMAPI floppy
-        ans = unmountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, "floppy", true );
+        ans = unmountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, T_FLOPPY, true );
         if (ans != HVE_OK) {
             errorOccured("Unable detach previously attached context floppy", HVE_EXTERNAL_ERROR);
             return;
         }
 
+        // Prepare and store the VMAPI data
+        std::string data = getUserData();
+        local->set("vmapi_contents", data);
+
         // Create a new floppy disk
-        ans = hypervisor->buildFloppyIO( getUserData(), &sFilename );
+        ans = hypervisor->buildFloppyIO( data, &sFilename );
         if (ans != HVE_OK) {
             errorOccured("Unable to create a contextualization floppy disk", HVE_EXTERNAL_ERROR);
             return;
         }
 
         // Mount the new floppy disk
-        ans = mountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, "floppy",
+        ans = mountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, T_FLOPPY,
                          sFilename, false );
 
         // Check result
@@ -822,21 +852,25 @@ void VBoxSession::ConfigureVMAPI() {
     else {
 
         // Unmount/remove previous VMAPI iso
-        ans = unmountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, "dvddrive", true );
+        ans = unmountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, T_DVD, true );
         if (ans != HVE_OK) {
             errorOccured("Unable detach previously attached context iso", HVE_EXTERNAL_ERROR);
             return;
         }
 
+        // Prepare and store the VMAPI data
+        std::string data = getUserData();
+        local->set("vmapi_contents", data);
+
         // Create a new iso disk
-        ans = hypervisor->buildContextISO( getUserData(), &sFilename );
+        ans = hypervisor->buildContextISO( data, &sFilename );
         if (ans != HVE_OK) {
             errorOccured("Unable to create a contextualization iso", HVE_EXTERNAL_ERROR);
             return;
         }
 
         // Mount the new iso disk
-        ans = mountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, "dvddrive",
+        ans = mountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, T_DVD,
                          sFilename, false );
 
         // Check result
@@ -871,7 +905,7 @@ void VBoxSession::ReleaseVMAPI() {
     // ------------------------------------------------
     if ((flags & HVF_FLOPPY_IO) != 0) {
         // Unmount context floppy (and delete)
-        unmountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, "floppy", true );
+        unmountDisk( FLOPPYIO_CONTROLLER, FLOPPYIO_PORT, FLOPPYIO_DEVICE, T_FLOPPY, true );
     }
 
     // ------------------------------------------------
@@ -879,7 +913,7 @@ void VBoxSession::ReleaseVMAPI() {
     // ------------------------------------------------
     else {
         // Unmount context disk (and delete)
-        unmountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, "dvddrive", true );
+        unmountDisk( CONTEXT_CONTROLLER, CONTEXT_PORT, CONTEXT_DEVICE, T_DVD, true );
     }
 
     FSMDone("VM API medium released");
@@ -946,7 +980,7 @@ void VBoxSession::DiscardVMState() {
     FSMDoing("Discarding saved VM state");
 
     // Discard vm state
-    int ans = this->wrapExec("discardstate " + parameters->get("vboxid"), NULL);
+    int ans = this->wrapExec("discardstate " + parameters->get("vboxid"), NULL, NULL, execConfig);
     if (ans != 0) {
         errorOccured("Unable to discard the saved VM state", ans);
         return;
@@ -969,9 +1003,9 @@ void VBoxSession::StartVM() {
 
     // Start VM
     if ((flags & HVF_HEADFUL) != 0) {
-        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type gui", NULL);
+        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type gui", NULL, NULL, execConfig);
     } else {
-        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type headless", NULL);
+        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type headless", NULL, NULL, execConfig);
     }
 
     // Handle errors
@@ -1279,8 +1313,8 @@ void VBoxSession::hvStop () {
  * Wrapper to call the appropriate function in the hypervisor and
  * automatically pass the session ID for us.
  */
-int VBoxSession::wrapExec ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, int retries, int timeout ) {
-    return this->hypervisor->exec(cmd, stdoutList, stderrMsg, retries, timeout );
+int VBoxSession::wrapExec ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, const SysExecConfig& config ) {
+    return this->hypervisor->exec(cmd, stdoutList, stderrMsg, config );
 }
 
 /**
@@ -1298,7 +1332,7 @@ int VBoxSession::destroyVM () {
         << " --delete";
     
     // Execute and handle errors
-    ans = this->wrapExec(args.str(), NULL);
+    ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
     if (ans != 0) {
         errorOccured("Unable to destroy the Virtual Machine", HVE_EXTERNAL_ERROR);
         return HVE_EXTERNAL_ERROR;
@@ -1359,7 +1393,11 @@ std::string VBoxSession::getUserData ( ) {
 /**
  * Unmount a medium from the VirtulaBox Instance
  */
-int VBoxSession::unmountDisk ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const bool deleteFile ) {
+int VBoxSession::unmountDisk ( const std::string & controller, 
+                               const std::string & port, 
+                               const std::string & device, 
+                               const VBoxDiskType & dtype, 
+                               const bool deleteFile ) {
     CRASH_REPORT_BEGIN;
     ostringstream args;
     string kk, kv;
@@ -1367,6 +1405,12 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
 
     // Calculate the name of the disk slot
     std::string DISK_SLOT = controller + " (" + port + ", " + device + ")";
+
+    // String-ify the disk type
+    std::string type;
+    if (dtype == T_HDD) type="disk";
+    else if (dtype == T_DVD) type="dvd";
+    else if (dtype == T_FLOPPY) type="floppy";
 
     // Unmount disk only if it's already mounted
     if (machine->contains( DISK_SLOT, true )) {
@@ -1381,7 +1425,7 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
             << " --medium "     << "none";
 
         // Execute and handle errors
-        ans = this->wrapExec(args.str(), NULL);
+        ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
         if (ans != HVE_OK) return ans;
 
         // If we are also asked to erase the file, do it now
@@ -1392,25 +1436,22 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
             getKV( machine->get(DISK_SLOT), &kk, &kv, '(', 0 );
             kk = kk.substr(0, kk.length()-1);
 
-            // Convert string names so we can use
-            // the same string names everywhere.
-            std::string umType = type;
-            if (umType.compare("hdd") == 0) umType="disk";
-            if (umType.compare("dvddrive") == 0) umType="dvd";
-
             // Close and unregister medium
             args.str("");
-            args << "closemedium " << umType << " "
-                << "\"" << kk << "\"";
+            args << "closemedium " << type << " "
+                << "\"" << kk << "\" --delete";
 
             // Execute and handle errors
-            ans = this->wrapExec(args.str(), NULL);
+            ans = this->wrapExec(args.str(), NULL, NULL, execConfig);
             if (ans != HVE_OK) return ans;
 
             // Remove file
             ::remove( kk.c_str() );
 
         }
+
+        // Remove file from the mounted devices list
+        machine->erase( DISK_SLOT );
 
     }
 
@@ -1427,7 +1468,7 @@ int VBoxSession::unmountDisk ( const std::string & controller, const std::string
 int VBoxSession::mountDisk ( const std::string & controller, 
                              const std::string & port, 
                              const std::string & device, 
-                             const std::string & type,
+                             const VBoxDiskType & dtype,
                              const std::string & diskFile, 
                              bool multiAttach ) {
 
@@ -1437,9 +1478,15 @@ int VBoxSession::mountDisk ( const std::string & controller,
     int ans;
 
     // Switch multiAttach to false if we are not using 'hdd' type
-    if (multiAttach && (type.compare("hdd") != 0)) {
+    if (multiAttach && (dtype != T_HDD)) {
         multiAttach = false;
     }
+
+    // String-ify the disk type
+    std::string type;
+    if (dtype == T_HDD) type="hdd";
+    else if (dtype == T_DVD) type="dvddrive";
+    else if (dtype == T_FLOPPY) type="floppy";
 
     // Calculate the name of the disk slot
     std::string DISK_SLOT = controller + " (" + port + ", " + device + ")";
@@ -1460,7 +1507,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         } else {
 
             // Otherwise unmount the existing disk
-            ans = unmountDisk( controller, port, device, type, false );
+            ans = unmountDisk( controller, port, device, dtype, false );
             if (ans != HVE_OK) return HVE_DELETE_ERROR;
 
         }
@@ -1491,6 +1538,9 @@ int VBoxSession::mountDisk ( const std::string & controller,
         }
     }
 
+    // Generate a new uuid
+    std::string diskGUID = newGUID();
+
     // (B.1) Try to attach disk to the SATA controller using full path
     args.str("");
     args << "storageattach "
@@ -1499,6 +1549,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         << " --port "       << port
         << " --device "     << device
         << " --type "       << type
+        << " --setuuid "    << diskGUID
         << " --medium "     <<  masterDiskPath;
 
     // Append multiattach flag if we are instructed to do so
@@ -1506,7 +1557,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         args << " --mtype " << "multiattach";
 
     // Execute
-    ans = this->wrapExec(args.str(), &lines);
+    ans = this->wrapExec(args.str(), &lines, NULL, execConfig);
 
     // If we are using multi-attach, try to mount by UUID if mounting
     // by filename has failed
@@ -1515,7 +1566,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         // If it was OK, just return
         if (ans == 0) {
             // Update mounted medium info
-            machine->set( DISK_SLOT, diskFile + " (UUID:)" );
+            machine->set( DISK_SLOT, diskFile + " (UUID: " + diskGUID + ")" );
             return HVE_OK;
         }
         
@@ -1528,16 +1579,17 @@ int VBoxSession::mountDisk ( const std::string & controller,
             << " --device "     << device
             << " --type "       << type
             << " --mtype "      << "multiattach"
+            << " --setuuid "    << diskGUID
             << " --medium "     <<  masterDiskUUID;
 
         // Execute
-        ans = this->wrapExec(args.str(), &lines);
+        ans = this->wrapExec(args.str(), &lines, NULL, execConfig);
 
     }
 
     // Update mounted medium info if it was OK
     if (ans == HVE_OK) {
-        machine->set( DISK_SLOT, diskFile + " (UUID:)" );
+        machine->set( DISK_SLOT, diskFile + " (UUID: " + diskGUID + ")" );
     }
 
     // Retun last execution result
@@ -1594,7 +1646,7 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
 
     // Check if we already have host-only interfaces
     if (fp) fp->doing("Enumerating host-only adapters");
-    int ans = this->wrapExec("list hostonlyifs", &lines);
+    int ans = this->wrapExec("list hostonlyifs", &lines, NULL, execConfig);
     if (ans != 0) {
         if (fp) fp->fail("Unable to enumerate the host-only adapters", HVE_QUERY_ERROR);
         return HVE_QUERY_ERROR;
@@ -1606,7 +1658,7 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
 
         // Create adapter
         if (fp) fp->doing("Creating missing host-only adapter");
-        ans = this->wrapExec("hostonlyif create", NULL, NULL, 2);
+        ans = this->wrapExec("hostonlyif create", NULL, NULL, execConfig);
         if (ans != 0) {
             if (fp) fp->fail("Unable to create a host-only adapter", HVE_CREATE_ERROR);
             return HVE_CREATE_ERROR;
@@ -1614,7 +1666,7 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
     
         // Repeat check
         if (fp) fp->doing("Validating created host-only adapter");
-        ans = this->wrapExec("list hostonlyifs", &lines, NULL, 2);
+        ans = this->wrapExec("list hostonlyifs", &lines, NULL, execConfig);
         if (ans != 0) {
             if (fp) fp->fail("Unable to enumerate the host-only adapters", HVE_QUERY_ERROR);
             return HVE_QUERY_ERROR;
@@ -1641,7 +1693,7 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
 
     // Dump the DHCP server states
     if (fp) fp->doing("Checking for DHCP server in the interface");
-    ans = this->wrapExec("list dhcpservers", &lines);
+    ans = this->wrapExec("list dhcpservers", &lines, NULL, execConfig);
     if (ans != 0) {
         if (fp) fp->fail("Unable to enumerate the host-only adapters", HVE_QUERY_ERROR);
         return HVE_QUERY_ERROR;
@@ -1712,13 +1764,13 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
                             " --netmask " + iface["NetworkMask"] +
                             " --lowerip " + ipMin +
                             " --upperip " + ipMax
-                             , NULL, NULL, 2);
+                             , NULL, NULL, execConfig);
                         if (ans != 0) continue;
                     
                     }
                     
                     // Check if we can enable the server
-                    ans = this->wrapExec("dhcpserver modify --ifname \"" + ifName + "\" --enable", NULL);
+                    ans = this->wrapExec("dhcpserver modify --ifname \"" + ifName + "\" --enable", NULL, NULL, execConfig);
                     if (ans == 0) {
                         hasDHCP = true;
                         break;
@@ -1765,7 +1817,7 @@ int VBoxSession::getHostOnlyAdapter ( std::string * adapterName, const FiniteTas
             " --lowerip " + ipMin +
             " --upperip " + ipMax +
             " --enable"
-             , NULL);
+             , NULL, NULL, execConfig);
 
         if (ans != 0) {
             if (fp) fp->fail("Unable to add a DHCP server on the interface", HVE_CREATE_ERROR);
@@ -1791,9 +1843,14 @@ std::map<std::string, std::string> VBoxSession::getMachineInfo ( int retries, in
     CRASH_REPORT_BEGIN;
     vector<string> lines;
     map<string, string> dat;
+
+    // Local SysExecConfig
+    SysExecConfig config(execConfig);
+    config.retries = retries;
+    config.timeout = timeout;
     
     /* Perform property update */
-    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, retries, timeout);
+    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, config);
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
         return dat;
@@ -1816,7 +1873,12 @@ int VBoxSession::startVM ( ) {
  */
 int VBoxSession::controlVM ( std::string how, int timeout ) {
     CRASH_REPORT_BEGIN;
-    int ans = this->wrapExec("controlvm " + parameters->get("vboxid") + " " + how, NULL, NULL, 4, timeout);
+
+    // Local SysExecConfig
+    SysExecConfig config(execConfig);
+    config.timeout = timeout;
+
+    int ans = this->wrapExec("controlvm " + parameters->get("vboxid") + " " + how, NULL, NULL, config);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
     CRASH_REPORT_END;

@@ -34,12 +34,21 @@
 #include <boost/regex.hpp>
 
 /**
+ * Mount/Unmount disk constants
+ */
+enum VBoxDiskType {
+    T_HDD,      // Hard disk
+    T_DVD,      // DVD-ROM Drive
+    T_FLOPPY    // A Floppy disk drive
+};
+
+/**
  * Virtualbox Session, built around a Finite-State-Machine model
  */
 class VBoxSession : public SimpleFSM, public HVSession {
 public:
 
-    VBoxSession( ParameterMapPtr param, HVInstancePtr hv ) : SimpleFSM(), HVSession(param, hv) {
+    VBoxSession( ParameterMapPtr param, HVInstancePtr hv ) : SimpleFSM(), HVSession(param, hv), execConfig() {
 
         FSM_REGISTRY(1,             // Entry point is on '1'
         {
@@ -49,7 +58,7 @@ public:
             FSM_STATE(2, 102,112);  // Error
             FSM_STATE(3, 104);      // Destroyed
             FSM_STATE(4, 105,108);  // Power off
-            FSM_STATE(5, 107,108);  // Saved
+            FSM_STATE(5, 107,211);  // Saved
             FSM_STATE(6, 109,111);  // Paused
             FSM_STATE(7, 110,106);  // Running
             FSM_STATE(8, 210,208);  // Exists
@@ -84,6 +93,9 @@ public:
             // 106: POWEROFF SEQUENCE
             FSM_HANDLER(106, &VBoxSession::PoweroffVM,              209);       // Power off the VM
                 FSM_HANDLER(209, &VBoxSession::ReleaseVMAPI,        4);         // Release the VM API media
+
+            // 211: CHECK VMAPI STATE
+            FSM_HANDLER(211, &VBoxSession::CheckVMAPI,              206);       // Check if we can resume from current VMAPI Data of we should restart
 
             // 107: DISCARD STATE SEQUENCE
             FSM_HANDLER(107, &VBoxSession::DiscardVMState,          209);       // Discard saved state of the VM
@@ -143,6 +155,7 @@ public:
     void ResumeVM();
     void FatalErrorSink();
     void ConfigNetwork();
+    void CheckVMAPI();
 
     /////////////////////////////////////
     // HVSession Implementation
@@ -199,9 +212,8 @@ protected:
      */
     int                     wrapExec            ( std::string cmd, 
                                                   std::vector<std::string> * stdoutList, 
-                                                  std::string * stderrMsg = NULL, 
-                                                  int retries = 4, 
-                                                  int timeout = SYSEXEC_TIMEOUT );
+                                                  std::string * stderrMsg, 
+                                                  const SysExecConfig& config );
 
     /**
      * Destroy and unregister VM
@@ -213,12 +225,12 @@ protected:
      * This function automatically unmounts a previously attached disk if the filenames
      * do not match.
      */
-    int                     mountDisk           ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const std::string & file, bool multiAttach = false );
+    int                     mountDisk           ( const std::string & controller, const std::string & port, const std::string & device, const VBoxDiskType& type, const std::string & file, bool multiAttach = false );
 
     /**
      * Unmount a medium from the VirtulaBox Instance
      */
-    int                     unmountDisk         ( const std::string & controller, const std::string & port, const std::string & device, const std::string & type, const bool deleteFile = false );
+    int                     unmountDisk         ( const std::string & controller, const std::string & port, const std::string & device, const VBoxDiskType& type, const bool deleteFile = false );
 
     /**
      * Forward the fact that an error has occured somewhere in the FSM handling
@@ -270,6 +282,9 @@ protected:
     std::map<
         std::string,
         std::string >       unsyncedProperties;
+
+    /*  Default sysExecConfig */
+    SysExecConfig           execConfig;
 
 };
 

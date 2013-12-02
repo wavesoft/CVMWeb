@@ -906,12 +906,12 @@ int HVInstance::diskImageDownload( std::string url, std::string checksum, std::s
 /**
  * Cross-platform exec and return for the hypervisor control binary
  */
-int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrMsg, int retries, int timeout, bool gui ) {
+int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrMsg, const SysExecConfig& config ) {
     CRASH_REPORT_BEGIN;
     int execRes = 0;
 
     /* If retries is negative, do not monitor the execution */
-    if (retries < 0) {
+    if (config.retries < 0) {
 
         /* Execute asynchronously */
         execRes = sysExecAsync( this->hvBinary, args );
@@ -920,7 +920,7 @@ int HVInstance::exec( string args, vector<string> * stdoutList, string * stderrM
     
         /* Execute */
         string execError;
-        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, retries, timeout, gui );
+        execRes = sysExec( this->hvBinary, args, stdoutList, &execError, config );
         if (stderrMsg != NULL) *stderrMsg = execError;
 
         /* Store the last error occured */
