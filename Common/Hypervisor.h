@@ -227,6 +227,7 @@ public:
         userData = parameters->subgroup("user-data");
         local = parameters->subgroup("local");
         machine = parameters->subgroup("machine");
+        properties = parameters->subgroup("properties");
         
         // Populate local variables
         this->uuid = parameters->get("uuid");
@@ -269,6 +270,7 @@ public:
     int                     internalID;
 
     ParameterMapPtr         parameters;
+    ParameterMapPtr         properties;
     ParameterMapPtr         userData;
     ParameterMapPtr         machine;
     ParameterMapPtr         local;

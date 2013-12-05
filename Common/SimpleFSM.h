@@ -78,8 +78,9 @@ public:
 	 */
 	SimpleFSM() : fsmtPaused(true), fsmThread(NULL), fsmtPauseMutex(), fsmtPauseChanged(),
 			  	  fsmwState(NULL), fsmwStateWaiting(false), fsmwStateMutex(), fsmwStateChanged(),
-				  fsmInsideHandler(false), fsmProgress(), fsmGotoMutex(), fsmTargetState(0),
-				  fsmCurrentPath(), fsmRootNode(NULL), fsmCurrentNode(), fsmNodes(), fsmTmpRouteLinks()
+				  fsmInsideHandler(false), fsmProgress(), fsmGotoMutex(), fsmTargetState(0), 
+				  fsmwWaitCond(), fsmwWaitMutex(), fsmCurrentPath(), fsmRootNode(NULL), fsmCurrentNode(), 
+				  fsmNodes(), fsmTmpRouteLinks()
 				  { };
 
 	/**
@@ -121,7 +122,17 @@ public:
 	/**
 	 * Wait for FSM to reach the specified state
 	 */
-	void 							FSMWaitFor		( int state, int timeout = 0 );
+	void 							FSMWaitFor			( int state, int timeout = 0 );
+
+	/**
+	 * Wait for FSM to complete an active tasm
+	 */
+	void  							FSMWaitInactive		( int timeout = 0 );
+
+	/**
+	 * Check if the FSM is actively working in a node
+	 */
+	bool 							FSMActive			( );
 
 	/**
 	 * Public progress feedback instance used by actions
@@ -190,6 +201,8 @@ private:
 	bool 							fsmwStateWaiting;
 	boost::mutex 					fsmwStateMutex;
 	boost::condition_variable 		fsmwStateChanged;
+	boost::mutex 					fsmwWaitMutex;
+	boost::condition_variable 		fsmwWaitCond;
 
 	// Mutex for FSMGoto
 	boost::mutex  					fsmGotoMutex;

@@ -262,27 +262,6 @@ protected:
     int                     errorCount;
     unsigned long           errorTimestamp;
 
-
-    ////////////////////////////////////
-    // State variables
-    // ----------------
-    // All the following variables must
-    // be saved/restored on context 
-    // switches.
-    ////////////////////////////////////
-
-    /* RDP and API Ports */
-    int                     rdpPort;
-    int                     localApiPort;
-    
-    /* Offline properties map (for optimizing performance) */
-    std::map<
-        std::string,
-        std::string >       properties;
-    std::map<
-        std::string,
-        std::string >       unsyncedProperties;
-
     /*  Default sysExecConfig */
     SysExecConfig           execConfig;
 

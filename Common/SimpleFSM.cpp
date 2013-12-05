@@ -331,6 +331,9 @@ void SimpleFSM::FSMThreadLoop() {
 
 			};
 
+			// Unlock people waiting for completion
+			fsmwWaitCond.notify_all();
+
 			// After the above loop, we have drained the
 			// event queue. Enter paused state and wait
 			// to be notified when this changes.
@@ -458,7 +461,7 @@ void SimpleFSM::FSMFail ( const std::string & message, const int errorCode ) {
 /**
  * Wait until the FSM reaches the specified state
  */
-void SimpleFSM::FSMWaitFor	( int state, int timeout ) {
+void SimpleFSM::FSMWaitFor ( int state, int timeout ) {
 
 	// Find the state
 	std::map<int,FSMNode>::iterator pt;
@@ -483,6 +486,28 @@ void SimpleFSM::FSMWaitFor	( int state, int timeout ) {
     boost::unique_lock<boost::mutex> lock(fsmwStateMutex);
     fsmwStateChanged.wait(lock);
 
+}
+
+/**
+ * Wait for FSM to complete an active tasm
+ */
+void SimpleFSM::FSMWaitInactive ( int timeout ) {
+
+	// Wait until we are no longer active
+	{
+	    boost::unique_lock<boost::mutex> lock(fsmwWaitMutex);		
+		while (!FSMActive()) {
+			fsmwWaitCond.wait(lock);
+		}
+	}
+
+}
+
+/**
+ * Check if FSM is busy navigating through a path
+ */
+bool SimpleFSM::FSMActive ( ) {
+	return !fsmCurrentPath.empty();
 }
 
 /**

@@ -131,7 +131,7 @@ void VBoxSession::UpdateSession() {
     FSMDoing("Loading session information");
 
     // If VBoxID is missing, directly go to 'destroyed'
-    if (!parameters->contains("vboxid")) {
+    if (!local->contains("vboxid")) {
         FSMSkew(3);
         FSMDone("Session has no virtualbox reflection");
         return;
@@ -269,7 +269,7 @@ void VBoxSession::CreateVM() {
 
     // Store VBox UUID
     std::string uuid = toks["UUID"];
-    parameters->set("vboxid", uuid);
+    local->set("vboxid", uuid);
 
 
     // Attach an IDE controller
@@ -341,10 +341,13 @@ void VBoxSession::ConfigureVM() {
     int flags = parameters->getNum<int>("flags", 0);
 
     // Find a random free port for VRDE
-    int rdpPort = (rand() % 0xFBFF) + 1024;
-    while (isPortOpen( "127.0.0.1", rdpPort ))
+    int rdpPort = local->getNum<int>("rdpPort", 0);
+    if (rdpPort == 0) {
         rdpPort = (rand() % 0xFBFF) + 1024;
-    parameters->setNum<int>("rdpPort", rdpPort);
+        while (isPortOpen( "127.0.0.1", rdpPort ))
+            rdpPort = (rand() % 0xFBFF) + 1024;
+        local->setNum<int>("rdpPort", rdpPort);
+    }
 
     /* Pick the boot medium depending on the mount type */
     string bootMedium = "dvd";
@@ -353,7 +356,7 @@ void VBoxSession::ConfigureVM() {
     // Modify VM to match our needs
     args.str("");
     args << "modifyvm "
-        << parameters->get("vboxid")
+        << local->get("vboxid")
         << " --cpus "                   << parameters->get("cpus", "2")
         << " --memory "                 << parameters->get("memory", "1024")
         << " --cpuexecutioncap "        << parameters->get("executionCap", "80")
@@ -380,7 +383,7 @@ void VBoxSession::ConfigureVM() {
     // Setup network
     if ((flags & HVF_DUAL_NIC) != 0) {
         // Create two adapters if DUAL_NIC is specified
-        args << " --nic2 "              << "hostonly" << " --hostonlyadapter2 \"" << parameters->get("hostonlyif") << "\"";
+        args << " --nic2 "              << "hostonly" << " --hostonlyadapter2 \"" << local->get("hostonlyif") << "\"";
     } else {
         // Otherwise create a NAT rule
         args << " --natpf1 "            << "guestapi,tcp,127.0.0.1," << local->get("apiPort") << ",," << parameters->get("apiPort");
@@ -422,7 +425,7 @@ void VBoxSession::ConfigNetwork() {
         // =============================================================================== //
 
         // Don't touch the host-only interface if we have one already defined
-        if (!parameters->contains("hostonlyif")) {
+        if (!local->contains("hostonlyif")) {
 
             // Lookup for the adapter
             string ifHO;
@@ -433,7 +436,11 @@ void VBoxSession::ConfigNetwork() {
             }
 
             // Store the host-only adapter name
-            parameters->set("hostonlyif", ifHO);
+            local->set("hostonlyif", ifHO);
+
+            // Store the API Port info
+            local->set("apiPort", parameters->get("apiPort"));
+            local->set("apiHost", "127.0.0.1");
 
         } else {
 
@@ -464,8 +471,9 @@ void VBoxSession::ConfigNetwork() {
             while (isPortOpen( "127.0.0.1", localApiPort ))
                 localApiPort = (rand() % 0xFBFF) + 1024;
 
-            // Store the NAT info
+            // Store the API Port info
             local->setNum<int>("apiPort", localApiPort);
+            local->set("apiHost", "127.0.0.1");
 
         }
 
@@ -738,7 +746,7 @@ void VBoxSession::ConfigureVMScratch() {
         // Attach disk to the SATA controller
         args.str("");
         args << "storageattach "
-            << parameters->get("vboxid")
+            << local->get("vboxid")
             << " --storagectl " << SCRATCH_CONTROLLER
             << " --port "       << SCRATCH_PORT
             << " --device "     << SCRATCH_DEVICE
@@ -983,7 +991,7 @@ void VBoxSession::DiscardVMState() {
     FSMDoing("Discarding saved VM state");
 
     // Discard vm state
-    int ans = this->wrapExec("discardstate " + parameters->get("vboxid"), NULL, NULL, execConfig);
+    int ans = this->wrapExec("discardstate " + local->get("vboxid"), NULL, NULL, execConfig);
     if (ans != 0) {
         errorOccured("Unable to discard the saved VM state", ans);
         return;
@@ -1006,9 +1014,9 @@ void VBoxSession::StartVM() {
 
     // Start VM
     if ((flags & HVF_HEADFUL) != 0) {
-        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type gui", NULL, NULL, execConfig);
+        ans = this->wrapExec("startvm " + local->get("vboxid") + " --type gui", NULL, NULL, execConfig);
     } else {
-        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type headless", NULL, NULL, execConfig);
+        ans = this->wrapExec("startvm " + local->get("vboxid") + " --type headless", NULL, NULL, execConfig);
     }
 
     // Handle errors
@@ -1205,7 +1213,7 @@ int VBoxSession::start ( std::map<std::string,std::string> *userData ) {
 /**
  * Change the execution cap of the VM
  */
-int VBoxSession::setExecutionCap ( int cap) {
+int VBoxSession::setExecutionCap ( int cap ) {
     return HVE_NOT_IMPLEMENTED;
 }
 
@@ -1213,14 +1221,15 @@ int VBoxSession::setExecutionCap ( int cap) {
  * Set a property to the VM
  */
 int VBoxSession::setProperty ( std::string name, std::string key ) {
-    return HVE_NOT_IMPLEMENTED;
+    properties->set(name, key);
+    return HVE_OK;
 }
 
 /**
  * Get a property of the VM
  */
 std::string VBoxSession::getProperty ( std::string name ) {
-    return "";
+    return properties->get(name);
 }
 
 /**
@@ -1228,7 +1237,33 @@ std::string VBoxSession::getProperty ( std::string name ) {
  * in order to get the VM's display.
  */
 std::string VBoxSession::getRDPAddress ( ) {
+    std::ostringstream oss;
+    oss << "127.0.0.1:" << local->get("rdpPort");
+    return oss.str();
+}
+
+/**
+ * Return hypervisor-specific extra information
+ */
+std::string VBoxSession::getExtraInfo ( int extraInfo ) {
+    CRASH_REPORT_BEGIN;
+
+    if (extraInfo == EXIF_VIDEO_MODE) {
+        CVMWA_LOG("Debug", "Getting video mode")
+        map<string, string> info = this->getMachineInfo( 2000 );
+        
+        for (std::map<string, string>::iterator it=info.begin(); it!=info.end(); ++it) {
+            string pname = (*it).first;
+            string pvalue = (*it).second;
+            CVMWA_LOG("Debug", "getMachineInfo(): '" << pname << "' = '" << pvalue << "'");
+        }
+        
+        if (info.find("Video mode") != info.end())
+            return info["Video mode"];
+    }
+
     return "";
+    CRASH_REPORT_END;
 }
 
 /**
@@ -1236,23 +1271,14 @@ std::string VBoxSession::getRDPAddress ( ) {
  * in order to interact with the VM instance.
  */
 std::string VBoxSession::getAPIHost ( ) {
-    return "";
-}
-
-/**
- * Return hypervisor-specific extra information
- */
-std::string VBoxSession::getExtraInfo ( int extraInfo ) {
-    return "";
+    return local->get("apiHost");
 }
 
 /**
  * Return port number allocated for the API
- *
- * TODO: Wha??
  */
 int VBoxSession::getAPIPort ( ) {
-    return HVE_NOT_IMPLEMENTED;
+    return local->getNum<int>("apiPort");
 }
 
 /**
@@ -1260,7 +1286,15 @@ int VBoxSession::getAPIPort ( ) {
  * appropriate state change event callbacks
  */
 int VBoxSession::update ( ) {
-    return HVE_NOT_IMPLEMENTED;
+
+    // Wait until the FSM is not doing anything
+    FSMWaitInactive();
+
+    // Goto Update
+    FSMGoto( 101 );
+
+    // It was OK
+    return HVE_OK;
 }
 
 /**
@@ -1289,6 +1323,9 @@ void VBoxSession::abort ( ) {
  * has been forcefully destroyed from an external source.
  */
 void VBoxSession::hvNotifyDestroyed () {
+
+    // Stop the FSM thread
+    FSMThreadStop();
 
 }
 
@@ -1331,7 +1368,7 @@ int VBoxSession::destroyVM () {
     // Unregister and destroy all VM resources
     args.str("");
     args << "unregistervm"
-        << " " << parameters->get("vboxid")
+        << " " << local->get("vboxid")
         << " --delete";
     
     // Execute and handle errors
@@ -1343,7 +1380,7 @@ int VBoxSession::destroyVM () {
 
     // Reset properties
     local->set("initialized","0");
-    parameters->erase("vboxid");
+    local->erase("vboxid");
 
     return HVE_OK;
 }
@@ -1425,7 +1462,7 @@ int VBoxSession::unmountDisk ( const std::string & controller,
         // Otherwise unmount the existing disk
         args.str("");
         args << "storageattach "
-            << parameters->get("vboxid")
+            << local->get("vboxid")
             << " --storagectl " << controller
             << " --port "       << port
             << " --device "     << device
@@ -1551,7 +1588,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
     // (B.1) Try to attach disk to the SATA controller using full path
     args.str("");
     args << "storageattach "
-        << parameters->get("vboxid")
+        << local->get("vboxid")
         << " --storagectl " << controller
         << " --port "       << port
         << " --device "     << device
@@ -1580,7 +1617,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         // (B.2) Try to attach disk to the SATA controller using UUID (For older VirtualBox versions)
         args.str("");
         args << "storageattach "
-            << parameters->get("vboxid")
+            << local->get("vboxid")
             << " --storagectl " << controller
             << " --port "       << port
             << " --device "     << device
@@ -1857,7 +1894,7 @@ std::map<std::string, std::string> VBoxSession::getMachineInfo ( int retries, in
     config.timeout = timeout;
     
     /* Perform property update */
-    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, config);
+    int ans = this->wrapExec("showvminfo "+this->local->get("vboxid"), &lines, NULL, config);
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
         return dat;
@@ -1885,7 +1922,7 @@ int VBoxSession::controlVM ( std::string how, int timeout ) {
     SysExecConfig config(execConfig);
     config.timeout = timeout;
 
-    int ans = this->wrapExec("controlvm " + parameters->get("vboxid") + " " + how, NULL, NULL, config);
+    int ans = this->wrapExec("controlvm " + local->get("vboxid") + " " + how, NULL, NULL, config);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
     CRASH_REPORT_END;
