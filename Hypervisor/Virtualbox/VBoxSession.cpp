@@ -102,6 +102,57 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
     CRASH_REPORT_END;
 };
 
+/**
+ * Parse VirtualBox Log file in order to get the launched process PID
+ */
+int getPIDFromFile( std::string logPath ) {
+    int pid = 0;
+
+    /* Locate Logfile */
+    string logFile = logPath + "/VBox.log";
+    CVMWA_LOG("Debug", "Looking for PID in " << logFile );
+    if (!file_exists(logFile)) return 0;
+
+    /* Open input stream */
+    ifstream fIn(logFile.c_str(), ifstream::in);
+    
+    /* Read as few bytes as possible */
+    string inBufferLine;
+    size_t iStart, iEnd, i1, i2;
+    char inBuffer[1024];
+    while (!fIn.eof()) {
+
+        // Read line
+        fIn.getline( inBuffer, 1024 );
+
+        // Handle it via higher-level API
+        inBufferLine.assign( inBuffer );
+        if ((iStart = inBufferLine.find("Process ID:")) != string::npos) {
+
+            // Pick the appropriate ending
+            iEnd = inBufferLine.length();
+            i1 = inBufferLine.find("\r");
+            i2 = inBufferLine.find("\n");
+            if (i1 < iEnd) iEnd=i1;
+            if (i2 < iEnd) iEnd=i2;
+
+            // Extract string
+            inBufferLine = inBufferLine.substr( iStart+12, iEnd-iStart );
+
+            // Convert to integer
+            pid = ston<int>( inBufferLine );
+            break;
+        }
+    }
+
+    CVMWA_LOG("Debug", "PID extracted from file: " << pid );
+
+    // Close and return PID
+    fIn.close();
+    return pid;
+
+}
+
 /////////////////////////////////////
 /////////////////////////////////////
 ////
@@ -131,7 +182,7 @@ void VBoxSession::UpdateSession() {
     FSMDoing("Loading session information");
 
     // If VBoxID is missing, directly go to 'destroyed'
-    if (!local->contains("vboxid")) {
+    if (!parameters->contains("vboxid")) {
         FSMSkew(3);
         FSMDone("Session has no virtualbox reflection");
         return;
@@ -269,7 +320,7 @@ void VBoxSession::CreateVM() {
 
     // Store VBox UUID
     std::string uuid = toks["UUID"];
-    local->set("vboxid", uuid);
+    parameters->set("vboxid", uuid);
 
 
     // Attach an IDE controller
@@ -356,7 +407,7 @@ void VBoxSession::ConfigureVM() {
     // Modify VM to match our needs
     args.str("");
     args << "modifyvm "
-        << local->get("vboxid")
+        << parameters->get("vboxid")
         << " --cpus "                   << parameters->get("cpus", "2")
         << " --memory "                 << parameters->get("memory", "1024")
         << " --cpuexecutioncap "        << parameters->get("executionCap", "80")
@@ -746,7 +797,7 @@ void VBoxSession::ConfigureVMScratch() {
         // Attach disk to the SATA controller
         args.str("");
         args << "storageattach "
-            << local->get("vboxid")
+            << parameters->get("vboxid")
             << " --storagectl " << SCRATCH_CONTROLLER
             << " --port "       << SCRATCH_PORT
             << " --device "     << SCRATCH_DEVICE
@@ -991,7 +1042,7 @@ void VBoxSession::DiscardVMState() {
     FSMDoing("Discarding saved VM state");
 
     // Discard vm state
-    int ans = this->wrapExec("discardstate " + local->get("vboxid"), NULL, NULL, execConfig);
+    int ans = this->wrapExec("discardstate " + parameters->get("vboxid"), NULL, NULL, execConfig);
     if (ans != 0) {
         errorOccured("Unable to discard the saved VM state", ans);
         return;
@@ -1014,9 +1065,9 @@ void VBoxSession::StartVM() {
 
     // Start VM
     if ((flags & HVF_HEADFUL) != 0) {
-        ans = this->wrapExec("startvm " + local->get("vboxid") + " --type gui", NULL, NULL, execConfig);
+        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type gui", NULL, NULL, execConfig);
     } else {
-        ans = this->wrapExec("startvm " + local->get("vboxid") + " --type headless", NULL, NULL, execConfig);
+        ans = this->wrapExec("startvm " + parameters->get("vboxid") + " --type headless", NULL, NULL, execConfig);
     }
 
     // Handle errors
@@ -1025,6 +1076,16 @@ void VBoxSession::StartVM() {
         return;
     }
 
+    // Load machine info
+    map<string, string> info = getMachineInfo();
+    if (info.find(":ERROR:") == info.end()) {
+        machine->fromMap( &info, true );
+    }
+
+    // Get PID from the log file
+    local->setNum<int>("pid", getPIDFromFile( machine->get("Log folder") ));
+
+    // We are done
     FSMDone("VM Started");
 }
 
@@ -1368,7 +1429,7 @@ int VBoxSession::destroyVM () {
     // Unregister and destroy all VM resources
     args.str("");
     args << "unregistervm"
-        << " " << local->get("vboxid")
+        << " " << parameters->get("vboxid")
         << " --delete";
     
     // Execute and handle errors
@@ -1462,7 +1523,7 @@ int VBoxSession::unmountDisk ( const std::string & controller,
         // Otherwise unmount the existing disk
         args.str("");
         args << "storageattach "
-            << local->get("vboxid")
+            << parameters->get("vboxid")
             << " --storagectl " << controller
             << " --port "       << port
             << " --device "     << device
@@ -1588,7 +1649,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
     // (B.1) Try to attach disk to the SATA controller using full path
     args.str("");
     args << "storageattach "
-        << local->get("vboxid")
+        << parameters->get("vboxid")
         << " --storagectl " << controller
         << " --port "       << port
         << " --device "     << device
@@ -1617,7 +1678,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
         // (B.2) Try to attach disk to the SATA controller using UUID (For older VirtualBox versions)
         args.str("");
         args << "storageattach "
-            << local->get("vboxid")
+            << parameters->get("vboxid")
             << " --storagectl " << controller
             << " --port "       << port
             << " --device "     << device
@@ -1894,7 +1955,7 @@ std::map<std::string, std::string> VBoxSession::getMachineInfo ( int retries, in
     config.timeout = timeout;
     
     /* Perform property update */
-    int ans = this->wrapExec("showvminfo "+this->local->get("vboxid"), &lines, NULL, config);
+    int ans = this->wrapExec("showvminfo "+this->parameters->get("vboxid"), &lines, NULL, config);
     if (ans != 0) {
         dat[":ERROR:"] = ntos<int>( ans );
         return dat;
@@ -1922,7 +1983,7 @@ int VBoxSession::controlVM ( std::string how, int timeout ) {
     SysExecConfig config(execConfig);
     config.timeout = timeout;
 
-    int ans = this->wrapExec("controlvm " + local->get("vboxid") + " " + how, NULL, NULL, config);
+    int ans = this->wrapExec("controlvm " + parameters->get("vboxid") + " " + how, NULL, NULL, config);
     if (ans != 0) return HVE_CONTROL_ERROR;
     return 0;
     CRASH_REPORT_END;
