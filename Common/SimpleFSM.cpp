@@ -261,11 +261,18 @@ void SimpleFSM::FSMGoto(int state) {
 	// If we have progress feedback, update the max
 	if (fsmProgress) {
 
-		// Update max tasks that needs to be done
-        fsmProgress->setMax( fsmCurrentPath.size(), false );
+		// Count the actual tasks in the path (skipping state nodes)
+		int pathCount = 0;
+		for (std::list<FSMNode*>::iterator j= fsmCurrentPath.begin(); j!=fsmCurrentPath.end(); ++j) {
+			FSMNode* node = *j;
+			if (node->handler) pathCount++;
+		}
 
-		// Display the reset message
-        fsmProgress->restart( fsmProgressResetMsg );
+		// Restart progress
+        fsmProgress->restart( fsmProgressResetMsg, false );
+
+		// Update max tasks that will be passed through
+        fsmProgress->setMax( pathCount, false );
 
 	}
 
@@ -332,7 +339,6 @@ void SimpleFSM::FSMThreadLoop() {
 
 	} catch (boost::thread_interrupted &e) {
 		CVMWA_LOG("Debug", "Thread interrupted");
-		std::cout << "(( INTERRUPTED ))" << std::endl;
 
 	}
 

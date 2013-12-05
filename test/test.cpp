@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <math.h>
 
 #include <boost/bind.hpp>
 
@@ -38,9 +39,23 @@ void cb_error( const std::string& message, const int errorCode ) {
     cout << "[ERROR] : " << message << " (#" << errorCode << ")" << endl;
 }
 
+void show_pbar( double progress, int charCount ) {
+    char *buff = new char[charCount+1];
+    memset( buff, '.', charCount );
+
+    int v = (int)( progress * (double)charCount );
+    memset( buff, '=', v );
+    buff[charCount] = '\0';
+    cout << " |" << buff << "| ";
+    delete[] buff;
+    cout << setiosflags(ios::fixed) << setprecision(2) << (progress * 100.0) << " %" << std::endl;
+}
+
 void cb_progress( const std::string& message, const double progress ) {
     cout << "[-----] : " << message << " (" << (progress * 100) << " %)" << endl;
+    show_pbar(progress, 80);
 }
+
 
 void doProgress( const ProgressTaskPtr & pTaskPtr = ProgressTaskPtr() );
 void doProgress( const ProgressTaskPtr & pTaskPtr) {
@@ -194,16 +209,18 @@ int main( int argc, char ** argv ) {
         cout << "HV Version: " << hv->version.verString << endl;
 
         // Wait until hypervisor is ready
-        FiniteTaskPtr pTasksA = pTasks->begin<FiniteTask>("Initializing Hypervisor");
-        hv->waitTillReady( pTasksA );
+        //FiniteTaskPtr pTasksA = pTasks->begin<FiniteTask>("Initializing Hypervisor");
+        pTasks->restart("Waiting till VM is ready");
+        hv->waitTillReady( pTasks ); // pTasksA );
         
         ParameterMapPtr parm = boost::make_shared<ParameterMap>();
         parm->set("name", "LHC@Home 3.0");
         parm->set("key", "awesome13");
         parm->set("flags", "5");
 
-        FiniteTaskPtr pTasksB = pTasks->begin<FiniteTask>("Setting-up Session");
-        HVSessionPtr sess = hv->sessionOpen( parm, pTasksB );
+        //FiniteTaskPtr pTasksB = pTasks->begin<FiniteTask>("Setting-up Session");
+        pTasks->restart("Oppening VM Session");
+        HVSessionPtr sess = hv->sessionOpen( parm, pTasks );
         if (!sess) {
             cerr << "Session could not be oppened!" << endl;
             return 1;
@@ -211,14 +228,19 @@ int main( int argc, char ** argv ) {
 
         // Goto powered off state
         std::map< std::string, std::string > args;
+        pTasks->restart("Starting");
         sess->start( &args );
         sleepMs(10000);
+        pTasks->restart("Pausing");
         sess->pause();
         sleepMs(10000);
+        pTasks->restart("Closing");
         sess->close();
         sleepMs(10000);
+        pTasks->restart("Hibernating");
         sess->hibernate();
-        sleepMs(10000);
+        sleepMs(20000);
+        pTasks->restart("Closing");
         sess->close();
 
         //cout << boost::static_pointer_cast<VBoxSession>(sess)->getUserData() << endl;

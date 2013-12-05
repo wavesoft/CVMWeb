@@ -28,6 +28,7 @@
  * Mark the task as completed
  */
 void ProgressTask::complete ( const std::string& message ) {
+//	std::cout << "  complete(" << message << ")" << std::endl;
     std::string msg = message;
 
 	// Build empty message
@@ -72,6 +73,7 @@ void ProgressTask::fail ( const std::string& message, const int errorCode ) {
  * Forward a message without any progress update
  */
 void ProgressTask::doing ( const std::string& message ) {
+//	std::cout << "  doing(" << message << ")" << std::endl;
 
 	// Notify started
 	_notifyStarted( message );
@@ -95,7 +97,8 @@ void ProgressTask::_notifyCompleted ( const std::string& message ) {
 	// Store the last message
 	lastMessage = message;
 
-	// Fire events
+	// Call all the progress callbacks
+	fireProgress( message, 1.0 );
 	fireCompleted( message );
 
 	// Propagate event
@@ -271,6 +274,7 @@ double FiniteTask::getProgress ( ) {
  * Set maximum number of tasks
  */
 void FiniteTask::setMax ( size_t maxTasks, bool triggerUpdate ) {
+//	std::cout << "  setMax(" << maxTasks << ", " << triggerUpdate << ")" << std::endl;
 
 	// Get the size of the array
 	size_t len = tasks.size();
@@ -296,6 +300,7 @@ void FiniteTask::setMax ( size_t maxTasks, bool triggerUpdate ) {
  * Mark the task as completed
  */
 void FiniteTask::done( const std::string& message ) {
+//	std::cout << "  done(" << message << ")" << std::endl;
 
 	// Notify started
 	_notifyStarted( message );
@@ -365,6 +370,7 @@ FiniteTask::begin( const std::string& message ) {
 void FiniteTask::restart ( const std::string& message, bool triggerUpdate ) {
 
     // Reset state
+	if (completed) started = false;
     completed = false;
     taskIndex = 0;
 
@@ -387,7 +393,10 @@ void FiniteTask::restart ( const std::string& message, bool triggerUpdate ) {
 	}
 
     // Fire update
-    if (triggerUpdate) _notifyUpdate( message );
+    if (triggerUpdate) {
+    	if (!started) _notifyStarted( message );
+    	_notifyUpdate( message );
+    }
 
 }
 
@@ -434,6 +443,7 @@ double VariableTask::getProgress ( ) {
  * Set max value
  */
 void VariableTask::setMax ( size_t maxValue, bool triggerUpdate ) {
+//	std::cout << "  setMax(" << maxValue << ", " << triggerUpdate << ")" << std::endl;
 
 	// Update max value
 	max = maxValue;
@@ -471,14 +481,18 @@ void VariableTask::setMessage ( const std::string& message ) {
  */
 void VariableTask::restart ( const std::string& message, bool triggerUpdate ) {
 
-    // Reset state
+    // Reset states
+	if (completed) started = false;
     completed = false;
 
     // Reset progress
     current = 0;
 
     // Fire update
-    if (triggerUpdate) _notifyUpdate( message );
+    if (triggerUpdate) {
+    	if (!started) _notifyStarted( message );
+    	_notifyUpdate( message );
+    }
 
 }
 
@@ -521,10 +535,17 @@ double BooleanTask::getProgress ( ) {
  * Reset the state to non-completed
  */
 void BooleanTask::restart ( const std::string& message, bool triggerUpdate ) {
+
+	// Reset state
+	if (completed) started = false;
 	completed = false;
 
     // Notify update
-    if (triggerUpdate) _notifyUpdate( message );
+    if (triggerUpdate) {
+    	if (!started) _notifyStarted( message );
+    	_notifyUpdate( message );
+    }
+
 }
 
 /**

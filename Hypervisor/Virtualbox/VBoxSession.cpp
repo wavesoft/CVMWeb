@@ -118,7 +118,6 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
 void VBoxSession::Initialize() {
     FSMDoing("Initializing session");
 
-    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 
     FSMDone("Session initialized");
 }
@@ -133,8 +132,8 @@ void VBoxSession::UpdateSession() {
 
     // If VBoxID is missing, directly go to 'destroyed'
     if (!parameters->contains("vboxid")) {
-        FSMDone("Session updated");
         FSMSkew(3);
+        FSMDone("Session has no virtualbox reflection");
         return;
     }
 
@@ -158,6 +157,7 @@ void VBoxSession::UpdateSession() {
         }
 
         FSMSkew(3); // Destroyed state
+        FSMDone("Virtualbox instance has gone away");
 
     } else {
         // Route according to state
@@ -169,20 +169,26 @@ void VBoxSession::UpdateSession() {
                 // We are not initialized, so just switch to 'exists' state and
                 // let it be re-initialized.
                 FSMSkew(8);
+                FSMDone("Session is not initialized");
 
             } else {
 
                 string state = info["State"];
                 if (state.find("running") != string::npos) {
                     FSMSkew(7); // Running state
+                    FSMDone("Session is running");
                 } else if (state.find("paused") != string::npos) {
                     FSMSkew(6); // Paused state
+                    FSMDone("Session is paused");
                 } else if (state.find("saved") != string::npos) {
                     FSMSkew(5); // Saved state
+                    FSMDone("Session is saved");
                 } else if (state.find("aborted") != string::npos) {
                     FSMSkew(4); // Aborted is also a 'powered-off' state
+                    FSMDone("Session is aborted");
                 } else if (state.find("powered off") != string::npos) {
                     FSMSkew(4); // Powered off state
+                    FSMDone("Session is powered off");
                 } else {
                     // UNKNOWN STATE //
                     CVMWA_LOG("ERROR", "Unknown state");
@@ -786,8 +792,9 @@ void VBoxSession::CheckVMAPI() {
 
     // Check if data are not the same
     if (data.compare(dataRef) != 0) {
-        FSMDone("VM API medium has changed. Destroying and re-starting the VM");
         FSMSkew(107);
+        FSMDone("VM API medium has changed. Destroying and re-starting the VM");
+        return;
     }
 
     FSMDone("VM API medium does not need to be modified");
@@ -946,10 +953,6 @@ void VBoxSession::DestroyVM() {
         return;
     }
 
-    // Reset properties
-    local->set("initialized","0");
-    parameters->erase("vboxid");
-
     FSMDone("VM Destroyed");
 }
 
@@ -1101,8 +1104,8 @@ int VBoxSession::open ( ) {
     // Start the FSM thread
     FSMThreadStart();
 
-    // Goto Initialize
-    FSMGoto(100);
+    // Goto SessionUpdate
+    FSMGoto(101);
 
     // We are good
     return HVE_SCHEDULED;
@@ -1337,6 +1340,10 @@ int VBoxSession::destroyVM () {
         errorOccured("Unable to destroy the Virtual Machine", HVE_EXTERNAL_ERROR);
         return HVE_EXTERNAL_ERROR;
     }
+
+    // Reset properties
+    local->set("initialized","0");
+    parameters->erase("vboxid");
 
     return HVE_OK;
 }
