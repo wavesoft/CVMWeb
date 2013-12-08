@@ -24,6 +24,12 @@
 #include <iostream>
 
 /**
+ * Void function FSMEnteringState
+ */
+void SimpleFSM::FSMEnteringState( const int state ) {
+}
+
+/**
  * Reset FSM registry variables
  */
 void SimpleFSM::FSMRegistryBegin() {
@@ -158,12 +164,14 @@ bool SimpleFSM::FSMContinue( bool inThread ) {
 
 	// Skip state nodes
 	while ((!next->handler) && !fsmCurrentPath.empty()) {
+		FSMEnteringState( next->id );
 		next = fsmCurrentPath.front();
         fsmCurrentPath.pop_front();
 	}
 
 	// Change current node
 	fsmCurrentNode = next;
+	FSMEnteringState( next->id );
 
 	// Call handler
 	if (!_callHandler(next, inThread)) 

@@ -80,6 +80,37 @@ public:
 
 	};
 
+	/**
+	 * Empty the parameter set
+	 *
+	 * This function will remove only the parameters under the
+	 * current prefix.
+	 */
+	virtual void 				clear			( );
+
+	/**
+	 * Clean the entire parameter set
+	 *
+	 * This function will remove all the parameters in the dictionary
+	 * that will also affect subgroup children.
+	 */
+	virtual void 				clearAll		( );
+
+	/**
+	 * Return a string parameter value
+	 */
+    virtual std::string         get             ( const std::string& name, std::string defaultValue = "" );
+
+    /**
+     * Set a string parameter
+     */
+    virtual void                set             ( const std::string& name, std::string value );
+
+    /**
+     * Delete a parameter
+     */
+    virtual void				erase  			( const std::string& name );
+
 	/** 
 	 * Lock updates
 	 *
@@ -96,32 +127,6 @@ public:
 	 * changed since the time the lock() function was called.
 	 */
 	void 						unlock 			( );
-
-	/**
-	 * Empty the parameter set
-	 *
-	 * This function will remove only the parameters under the
-	 * current prefix.
-	 */
-	void 						clear			( );
-
-	/**
-	 * Clean the entire parameter set
-	 *
-	 * This function will remove all the parameters in the dictionary
-	 * that will also affect subgroup children.
-	 */
-	void 						clearAll		( );
-
-	/**
-	 * Return a string parameter value
-	 */
-    std::string                 get             ( const std::string& name, std::string defaultValue = "" );
-
-    /**
-     * Set a string parameter
-     */
-    void                        set             ( const std::string& name, std::string value );
 
     /**
      * Set a string parameter only if there is no value already
@@ -164,11 +169,6 @@ public:
     bool						contains 		( const std::string& name, const bool useBlank = false );
 
     /**
-     * Delete a parameter
-     */
-    void						erase  			( const std::string& name );
-
-    /**
      * Update all the parameters from the specified map
      */
     void						fromMap			( std::map< std::string, std::string> * map, bool clearBefore = false );
@@ -182,6 +182,11 @@ public:
      * Store all the parameters to the specified map
      */
     void						toMap			( std::map< std::string, std::string> * map, bool clearBefore = false );
+
+    /**
+     * Synchronize the contents with a possibly underlaying system
+     */
+    bool 						sync 			( );
 
    	/**
    	 * Overload bracket operator

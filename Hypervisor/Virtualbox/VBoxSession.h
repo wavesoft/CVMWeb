@@ -43,6 +43,18 @@ enum VBoxDiskType {
 };
 
 /**
+ * VirtualBox Session State
+ */
+enum VBoxSessionState {
+    SS_MISSING,
+    SS_AVAILABLE,
+    SS_POWEROFF,
+    SS_SAVED,
+    SS_PAUSED,
+    SS_RUNNING
+};
+
+/**
  * Virtualbox Session, built around a Finite-State-Machine model
  */
 class VBoxSession : public SimpleFSM, public HVSession {
@@ -200,6 +212,11 @@ public:
      *  Compile the user data and return it's string representation
      */
     std::string             getUserData         ();
+
+    /**
+     * Override to get notified when state is changed
+     */
+    void                    FSMEnteringState    ( const int state );
 
 protected:
 

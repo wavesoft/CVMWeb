@@ -76,7 +76,7 @@ LocalConfigPtr LocalConfig::forRuntime( const std::string& name ) {
 /**
  * Create custom configuration file from the given map file
  */
-LocalConfig::LocalConfig ( std::string path, std::string name ) : ParameterMap() {
+LocalConfig::LocalConfig ( std::string path, std::string name ) : ParameterMap(), keysDeleted(), timeLoaded(0), timeModified(0) {
     CRASH_REPORT_BEGIN;
 
     // Prepare names
@@ -85,6 +85,10 @@ LocalConfig::LocalConfig ( std::string path, std::string name ) : ParameterMap()
 
     // Load parameters in the parameters map
     this->loadMap( name, parameters.get() );
+
+    // Update time it was loaded and modified
+    time(&timeLoaded);
+    time(&timeModified);
 
     CRASH_REPORT_END;
 }
@@ -347,6 +351,9 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     CRASH_REPORT_END;
 }
 
+/**
+ * Create a full path from the given config file name
+ */
 std::string LocalConfig::getPath( std::string configFile ) {
     CRASH_REPORT_BEGIN;
     std::string file = this->configDir + "/" + configFile;
@@ -354,6 +361,9 @@ std::string LocalConfig::getPath( std::string configFile ) {
     CRASH_REPORT_END;
 }
 
+/**
+ * Check if the specified config file exists
+ */
 bool LocalConfig::exists ( std::string configFile ) {
     CRASH_REPORT_BEGIN;
     std::string file = this->configDir + "/" + configFile;
@@ -361,6 +371,9 @@ bool LocalConfig::exists ( std::string configFile ) {
     CRASH_REPORT_END;
 }
 
+/**
+ * Get the time the file was last modified
+ */
 time_t LocalConfig::getLastModified ( std::string configFile ) {
     CRASH_REPORT_BEGIN;
     std::string file = this->configDir + "/" + configFile;
@@ -380,30 +393,173 @@ time_t LocalConfig::getLastModified ( std::string configFile ) {
     CRASH_REPORT_END;
 }
 
-void LocalConfig::commitChanges ( ) {
+/**
+ * Override the erase function so we can keep track of the 
+ * changes done in the buffer.
+ */
+void LocalConfig::erase ( const std::string& name ) {
     CRASH_REPORT_BEGIN;
 
-    // Save changes to file
-    this->save();
+    // Update time modified
+    time(&timeModified);
+
+    // Erase key
+    ParameterMap::erase(name);
+
+    // Store it on 'deleted keys'
+    if (std::find(keysDeleted.begin(), keysDeleted.end(), prefix+name) == keysDeleted.end())
+        keysDeleted.push_back(prefix + name);
 
     CRASH_REPORT_END;
 }
 
+/**
+ * Override the set function so we can keep track of the changes
+ * done in the buffer.
+ */
+void LocalConfig::set ( const std::string& name, std::string value ) {
+    CRASH_REPORT_BEGIN;
+
+    // Update time modified
+    time(&timeModified);
+
+    // Update key value
+    ParameterMap::set(name, value);
+
+    // Find and erase key from 'deleted'
+    std::list<std::string>::iterator iItem = std::find(keysDeleted.begin(), keysDeleted.end(), prefix+name);
+    if (iItem != keysDeleted.end())
+        keysDeleted.erase(iItem);
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Override the commitChanges function from ParameterMap so we can
+ * synchronize the changes with the disk.
+ */
+void LocalConfig::commitChanges ( ) {
+    CRASH_REPORT_BEGIN;
+
+    // Synchronize changes with the disk
+    this->sync();
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Save parameter map to the disk, replacing any previous contents
+ */
 bool LocalConfig::save ( ) {
     CRASH_REPORT_BEGIN;
 
     // Save map to file
     return this->saveMap( configName, parameters.get() );
 
+    // Update the time it was loaded (since the moment
+    // we wrote something we have replaced it's contents)
+    time(&timeLoaded);
+
+    // Reset 'keysDeleted'
+    keysDeleted.clear();
+
     CRASH_REPORT_END;
 }
 
+/**
+ * Load parameter map from file, replacing any local changes
+ */
 bool LocalConfig::load ( ) {
     CRASH_REPORT_BEGIN;
 
-    // Save map to file
+    // Load map from file
     return this->loadMap( configName, parameters.get() );
 
+    // Update the time it was loaded
+    time(&timeLoaded);
+
+    // Reset 'keysDeleted'
+    keysDeleted.clear();
 
     CRASH_REPORT_END;
+}
+
+/**
+ * Synchronize map contents with the file contents
+ * Conflicts are resolved using 'our' changes as favoured.
+ */
+bool LocalConfig::sync ( ) {
+
+    // Load the time the file was modified
+    time_t fileModified = getLastModified( configName + ".conf" );
+
+    // Check for missing modifications
+    if (timeModified <= timeLoaded) {
+        if (fileModified > timeLoaded) {
+
+            // [1] Memory : No changes
+            //       Disk : Changed
+            //         DO : Load from disk
+            return this->load();
+
+        } else {
+
+            // [2] Memory : No changes
+            //       Disk : No changes
+            //         DO : We are synced
+            return true;
+
+        }
+    }
+
+    // [3] Memory : Changed
+    //       Disk : No changes
+    //         DO : Replace disk contents
+    if (fileModified <= timeLoaded) {
+        return this->save();
+    }
+
+    // [4] Memory : Changed
+    //       Disk : Changed
+    //         DO : Do DIFF, preferring 'ours'
+
+    // Load file map in a new dictionary
+    std::map<std::string, std::string> map;
+    if (!this->loadMap( configName, &map ))
+        return false;
+
+    // Erase keys from file from which the erase() function was called
+    for (std::list<std::string>::iterator it = keysDeleted.begin(); it != keysDeleted.end(); ++it) {
+        std::map<std::string, std::string>::iterator jt = map.find(*it);
+        if (jt != map.end()) map.erase(jt);
+    }
+
+    // Reset 'keysDeleted'
+    keysDeleted.clear();
+
+    // Update the parameters that still exist in the config file and add new ones if they are missing.
+    for (std::map<std::string, std::string>::iterator it = parameters->begin(); it != parameters->end(); ++it) {
+        std::string key = (*it).first;
+        std::string value = (*it).second;
+
+        // Update field
+        map[key] = value;
+        
+    }
+
+    // Import new keys found in the config file
+    for (std::map<std::string, std::string>::iterator it = map.begin(); it != map.end(); ++it) {
+        std::string key = (*it).first;
+        std::string value = (*it).second;
+
+        // Update missing
+        if (parameters->find(key) == parameters->end())
+            (*parameters)[key] = value;
+
+    }
+
+    // Save file contents
+    this->saveMap( configName, &map );
+
+
 }

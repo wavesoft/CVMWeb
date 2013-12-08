@@ -24,7 +24,6 @@
 
 #include "Common/ProgressFeedback.h"
 #include "Common/Hypervisor.h"
-#include "VBoxStateStore.h"
 
 // Where to mount the bootable CD-ROM
 #define BOOT_CONTROLLER     "IDE"

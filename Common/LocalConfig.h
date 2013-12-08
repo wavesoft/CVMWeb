@@ -132,6 +132,23 @@ public:
      */
     bool                        load            ( );
 
+    /**
+     * Synchronize file contents with the disk
+     */
+    virtual bool                sync            ( );
+
+    /**
+     * Override the erase function so we can keep track of the 
+     * changes done in the buffer.
+     */
+    virtual void                erase           ( const std::string& name );
+
+    /**
+     * Override the set function so we can keep track of the changes
+     * done in the buffer.
+     */
+    virtual void                set             ( const std::string& name, std::string value );
+
 private:
 
     /**
@@ -153,6 +170,21 @@ private:
      * Used by the runtime() function to implement singleton template
      */
     static LocalConfigPtr       runtimeConfigSingleton;
+
+    /**
+     * The time the parameter map was loaded (for synchronization).
+     */
+    time_t                      timeLoaded;
+
+    /**
+     * The time the parameter map was last modified (and not commited).
+     */
+    time_t                      timeModified;
+
+    /**
+     * Parameters erased from file
+     */
+    std::list<std::string>      keysDeleted;
 
 protected:
     

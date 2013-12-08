@@ -101,13 +101,7 @@ template<typename T> T ParameterMap::getNum ( const std::string& kname, T defaul
  */
 template<typename T> void ParameterMap::setNum ( const std::string& kname, T value ) {
     CRASH_REPORT_BEGIN;
-    std::string name = prefix + kname;
-    (*parameters)[name] = ntos<T>( value );
-    if (!locked) {
-        commitChanges();
-    } else {
-        changed = true;
-    }
+    set( kname, ntos<T>(value) );
     CRASH_REPORT_END;
 }
 
@@ -318,6 +312,22 @@ bool ParameterMap::getBool ( const std::string& name, bool defaultValue ) {
     std::string v = get(name, "");
     if (v.empty()) return defaultValue;
     return ((v[0] == 'y') || (v[0] == 't') || (v[0] == '1'));
+}
+
+/**
+ * Synchronize file contents with the dictionary contents
+ */
+bool ParameterMap::sync ( ) {
+
+    // If we have parent, forward to the root element
+    if (parent) {
+        return parent->sync();
+    }
+
+    // Otherwise succeed - we can't sync anything
+    // one way or another.
+    return true;
+
 }
 
 /**

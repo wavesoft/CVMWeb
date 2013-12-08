@@ -103,20 +103,83 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
 };
 
 /**
+ * Get last lines from the VirtualBox log and try to locate the string that mentions
+ * state change.
+ */
+int getStateFromFile( std::string logPath ) {
+    std::string state = 0;
+
+    // Locate Logfile
+    string logFile = logPath + "/VBox.log";
+    CVMWA_LOG("Debug", "Looking for state change  in " << logFile );
+    if (!file_exists(logFile)) return 0;
+
+    // Open input stream
+    ifstream fIn(logFile.c_str(), ifstream::in);
+
+    // Read as few bytes as possible
+    string inBufferLine, stateStr;
+    size_t iStart, iEnd, i1, i2, qStart, qEnd;
+    char inBuffer[1024];
+    fIn.seekg( 2048, fIn.end );
+    while (!fIn.eof()) {
+
+        // Read line
+        fIn.getline( inBuffer, 1024 );
+
+        // Handle it via higher-level API
+        inBufferLine.assign( inBuffer );
+        if ((iStart = inBufferLine.find("Changing the VM state from")) != string::npos) {
+
+            // Pick the appropriate ending
+            iEnd = inBufferLine.length();
+            i1 = inBufferLine.find("\r");
+            i2 = inBufferLine.find("\n");
+            if (i1 < iEnd) iEnd=i1;
+            if (i2 < iEnd) iEnd=i2;
+
+            // Find first quotation
+            qStart = inBufferLine.find('\'', iStart);
+            if (qStart == std::endl) continue;
+            qEnd = inBufferLine.find('\'', qStart+1);
+            if (qEnd == std::endl) continue;
+
+            // Find second quotation
+            qStart = inBufferLine.find('\'', qEnd+1);
+            if (qStart == std::endl) continue;
+            qEnd = inBufferLine.find('\'', qStart+1);
+            if (qEnd == std::endl) continue;
+
+            // Extract string
+            stateStr = inBufferLine.substr( qStart+1, qEnd-qStart-2 );
+
+            // Compare to known state names
+            if      (stateStr.compare("RUNNING")) state = SS_RUNNING;
+            else if (stateStr.compare("TERMINATED")) state = SS_RUNNING;
+
+        }
+
+    }
+
+    // Return the found state
+    return state;
+}
+
+/**
  * Parse VirtualBox Log file in order to get the launched process PID
  */
 int getPIDFromFile( std::string logPath ) {
     int pid = 0;
 
-    /* Locate Logfile */
+    // Locate Logfile
     string logFile = logPath + "/VBox.log";
     CVMWA_LOG("Debug", "Looking for PID in " << logFile );
     if (!file_exists(logFile)) return 0;
 
-    /* Open input stream */
+    // Open input stream
     ifstream fIn(logFile.c_str(), ifstream::in);
     
-    /* Read as few bytes as possible */
+    // Read as few bytes as possible
     string inBufferLine;
     size_t iStart, iEnd, i1, i2;
     char inBuffer[1024];
@@ -370,6 +433,9 @@ void VBoxSession::CreateVM() {
         errorOccured("Unable to attach a new SATA controller", HVE_CREATE_ERROR);
         return;
     }
+
+    // The current (known) VM state is 'created'
+    local->set("state", "0");
 
 
     FSMDone("Session initialized");
@@ -1351,6 +1417,30 @@ int VBoxSession::update ( ) {
     // Wait until the FSM is not doing anything
     FSMWaitInactive();
 
+    // Get current state
+    int lastState = local->getNum<int>("state", 0);
+
+    // Re-read the config file from disk
+    parameters->sync();
+
+    // Get the new state
+    int newState = local->getNum<int>("state", 0);
+
+    // Check for some obvious cases, where the PID has gone
+    // away while we expect it to be there - this is much faster
+    // than quering VirtualBox.
+    if ((newState == SS_PAUSED) || (newState == SS_RUNNING)) {
+
+        // In these cases, the VM is supposed to be running
+        if (!isPIDAlive( local->getNum<int>("pid") )) {
+
+        }
+
+    } else {
+
+
+    }
+
     // Goto Update
     FSMGoto( 101 );
 
@@ -1401,6 +1491,38 @@ void VBoxSession::hvStop () {
     FSMThreadStop();
 
 }
+
+/////////////////////////////////////
+/////////////////////////////////////
+////
+//// SimpleFSM Overrides
+////
+/////////////////////////////////////
+/////////////////////////////////////
+
+/**
+ * Notification from the SimpleFSM instance when we enter a state
+ */
+void VBoxSession::FSMEnteringState( const int state ) {
+
+    // On checkpoint states, update the VM state
+    // in the local config file.
+
+    if (state == 3) { // Destroyed
+        local->setNum<int>( "state", SS_MISSING );
+    } else if (state == 8) { // Exists
+        local->setNum<int>( "state", SS_AVAILABLE );
+    } else if (state == 4) { // Power off
+        local->setNum<int>( "state", SS_POWEROFF );
+    } else if (state == 5) { // Saved state
+        local->setNum<int>( "state", SS_SAVED );
+    } else if (state == 6) { // Paused state
+        local->setNum<int>( "state", SS_PAUSED );
+    } else if (state == 7) { // Running state
+        local->setNum<int>( "state", SS_RUNNING );
+    }
+}
+
 
 /////////////////////////////////////
 /////////////////////////////////////

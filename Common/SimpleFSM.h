@@ -163,6 +163,11 @@ protected:
 	void 							FSMFail				( const std::string & message, const int errorCode = -1 );
 
 	/**
+	 * Overridable function to get notified when we are entering a state
+	 */
+	virtual void 					FSMEnteringState	( const int state );
+
+	/**
 	 * Trigger the "begin" action of the SimpleFSM progress feedback.
 	 * This function cannot be used when FSMDoing/FSMDone are used.
 	 */
