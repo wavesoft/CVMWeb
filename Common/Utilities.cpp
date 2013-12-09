@@ -1708,6 +1708,44 @@ bool isPIDAlive( int pid ) {
     CRASH_REPORT_END;
 }
 
+/**
+ * Get file modification time in milliseconds
+ * (Where the system supports it)
+ */
+unsigned long long getFileTimeMs ( const std::string& file ) {
+    #ifdef _WIN32   
+    unsigned long long llWriteTime;
+
+    // Try to open the file
+    HANDLE hFile = CreateFile( file.c_str(),GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL );
+    if(hFile == INVALID_HANDLE_VALUE) {
+        CVMWA_LOG("Error", "Could not open file " << file << " in order to check the modification time!");
+        return 0;
+    }
+
+    // Get file times
+    FILETIME ftCreate, ftAccess, ftWrite;
+    DWORD dwRet;
+    if (!GetFileTime(hFile, &ftCreate, &ftAccess, (FILETIME*)&llWriteTime)) {
+        CVMWA_LOG("Error", "Could not read file times of " << file);
+        return 0;
+    }
+
+    // Return value
+    return llWriteTime;
+
+    #else
+
+    // Stat file
+    struct stat attrib;
+    stat( file.c_str(), &attrib);
+
+    // Calculate and return milliseconds
+    return attrib.st_mtime * 1000 + attrib.st_mtim.tv_nsec / 1000000;
+
+    #endif
+}
+
 /* ======================================================== */
 /*                  PLATFORM-SPECIFIC CODE                  */
 /* ======================================================== */

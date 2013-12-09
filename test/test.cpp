@@ -226,6 +226,9 @@ int main( int argc, char ** argv ) {
             return 1;
         }
 
+        //static_pointer_cast<VBoxSession>(sess)->update();
+        sess->update();
+
         // Goto powered off state
         std::map< std::string, std::string > args;
         pTasks->restart("Starting");

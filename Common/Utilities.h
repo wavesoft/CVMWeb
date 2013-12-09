@@ -366,6 +366,11 @@ void                                                explode         ( std::strin
 char *                                              getTimestamp    ();
 
 /**
+ * Get file modification time in milliseconds
+ */
+unsigned long long                                  getFileTimeMs   ( const std::string& file );
+
+/**
  * Generate Compact ID (30 characters) of the given id
  *
  * This function is used to get the names of the shared mutexes, since
@@ -470,6 +475,23 @@ inline long getMillis() {
     #else
     return GetTickCount();
     #endif
+}
+
+/**
+ * Returns the current time in milliseconds since unix epoch
+ */
+inline unsigned long long getTimeInMs() {
+    unsigned long long ans;
+    #ifndef _WIN32
+    struct timeval  tv;
+    gettimeofday(&tv, NULL);
+    ans = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
+    #else
+    SYSTEMTIME tv;
+    GetSystemTime(&tv);
+    SystemTimeToFileTime(&tv, (FILETIME*)&ans);
+    #endif
+    return ans;
 }
 
 /**

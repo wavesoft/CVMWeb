@@ -87,8 +87,8 @@ LocalConfig::LocalConfig ( std::string path, std::string name ) : ParameterMap()
     this->loadMap( name, parameters.get() );
 
     // Update time it was loaded and modified
-    time(&timeLoaded);
-    time(&timeModified);
+    timeLoaded = getTimeInMs();
+    timeModified = getTimeInMs();
 
     CRASH_REPORT_END;
 }
@@ -401,7 +401,7 @@ void LocalConfig::erase ( const std::string& name ) {
     CRASH_REPORT_BEGIN;
 
     // Update time modified
-    time(&timeModified);
+    timeModified = getTimeInMs();
 
     // Erase key
     ParameterMap::erase(name);
@@ -421,7 +421,7 @@ void LocalConfig::set ( const std::string& name, std::string value ) {
     CRASH_REPORT_BEGIN;
 
     // Update time modified
-    time(&timeModified);
+    timeModified = getTimeInMs();
 
     // Update key value
     ParameterMap::set(name, value);
@@ -458,7 +458,7 @@ bool LocalConfig::save ( ) {
 
     // Update the time it was loaded (since the moment
     // we wrote something we have replaced it's contents)
-    time(&timeLoaded);
+    timeLoaded = getTimeInMs();
 
     // Reset 'keysDeleted'
     keysDeleted.clear();
@@ -476,7 +476,7 @@ bool LocalConfig::load ( ) {
     return this->loadMap( configName, parameters.get() );
 
     // Update the time it was loaded
-    time(&timeLoaded);
+    timeLoaded = getTimeInMs();
 
     // Reset 'keysDeleted'
     keysDeleted.clear();
@@ -491,7 +491,7 @@ bool LocalConfig::load ( ) {
 bool LocalConfig::sync ( ) {
 
     // Load the time the file was modified
-    time_t fileModified = getLastModified( configName + ".conf" );
+    unsigned long long fileModified = getFileTimeMs( configName + ".conf" );
 
     // Check for missing modifications
     if (timeModified <= timeLoaded) {

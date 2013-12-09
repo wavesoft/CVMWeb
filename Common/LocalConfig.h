@@ -174,12 +174,12 @@ private:
     /**
      * The time the parameter map was loaded (for synchronization).
      */
-    time_t                      timeLoaded;
+    unsigned long long          timeLoaded;
 
     /**
      * The time the parameter map was last modified (and not commited).
      */
-    time_t                      timeModified;
+    unsigned long long          timeModified;
 
     /**
      * Parameters erased from file

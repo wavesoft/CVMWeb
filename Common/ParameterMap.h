@@ -110,6 +110,11 @@ public:
      * Delete a parameter
      */
     virtual void				erase  			( const std::string& name );
+    
+    /**
+     * Synchronize the contents with a possibly underlaying system
+     */
+    virtual bool 				sync 			( );
 
 	/** 
 	 * Lock updates
@@ -183,10 +188,6 @@ public:
      */
     void						toMap			( std::map< std::string, std::string> * map, bool clearBefore = false );
 
-    /**
-     * Synchronize the contents with a possibly underlaying system
-     */
-    bool 						sync 			( );
 
    	/**
    	 * Overload bracket operator
