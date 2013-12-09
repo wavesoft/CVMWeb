@@ -140,7 +140,7 @@ int vboxInstall( const DownloadProviderPtr & downloadProvider, const UserInterac
     }
 
     // Initialize sysExec Configuration
-    SysExecConfig sysExecConfig();
+    SysExecConfig sysExecConfig;
 
     ////////////////////////////////////
     // Contact the information point

@@ -107,7 +107,7 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
  * state change.
  */
 int getStateFromFile( std::string logPath ) {
-    std::string state = 0;
+    int state = 0;
 
     // Locate Logfile
     string logFile = logPath + "/VBox.log";
@@ -140,15 +140,15 @@ int getStateFromFile( std::string logPath ) {
 
             // Find first quotation
             qStart = inBufferLine.find('\'', iStart);
-            if (qStart == std::endl) continue;
+            if (qStart == string::npos) continue;
             qEnd = inBufferLine.find('\'', qStart+1);
-            if (qEnd == std::endl) continue;
+            if (qEnd == string::npos) continue;
 
             // Find second quotation
             qStart = inBufferLine.find('\'', qEnd+1);
-            if (qStart == std::endl) continue;
+            if (qStart == string::npos) continue;
             qEnd = inBufferLine.find('\'', qStart+1);
-            if (qEnd == std::endl) continue;
+            if (qEnd == string::npos) continue;
 
             // Extract string
             stateStr = inBufferLine.substr( qStart+1, qEnd-qStart-2 );

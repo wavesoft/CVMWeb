@@ -152,7 +152,7 @@
  * Maximum delay (in milliseconds) between two consecutive errors within
  * which a new error will be counted excess and placed in the error loop
  */
-#define 	SESSION_HEAL_THRESSHOLD			10000
+#define 	SESSION_HEAL_THRESSHOLD			60000
 
 /**
  * Maximum number of retries within thressold after which we will abandon

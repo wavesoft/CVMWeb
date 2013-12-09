@@ -127,8 +127,8 @@ public:
             // 111: PAUSE SEQUENCE
             FSM_HANDLER(111, &VBoxSession::ResumeVM,                7);         // Resume VM
 
-            // 112: FATAL ERROR
-            FSM_HANDLER(112, &VBoxSession::FatalErrorSink);                     // Fatal error sink
+            // 112: FATAL ERROR HANDLING
+            FSM_HANDLER(112, &VBoxSession::FatalErrorSink,          0);         // Fatal Error Sink
 
         });
 

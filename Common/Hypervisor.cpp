@@ -479,7 +479,7 @@ externalContinue:
         if (file_exists(sOutChecksum)) {
 
             // Try to open file
-            std::ifstream ifs( sOutChecksum, std::ifstream::in );
+            std::ifstream ifs( sOutChecksum.c_str(), std::ifstream::in );
             if (!ifs.good()) {
                 // Could not open file. That's a fatal error
                 if (pf) pf->fail("Unable to read local checksum file", HVE_IO_ERROR);

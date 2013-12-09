@@ -25,7 +25,7 @@
  */
 void RollbackTransactionEntry::call() {
 	try {
-		callback(data);
+		callback(arguments);
 	} catch (...) {
 		CVMWA_LOG("Error", "Error handling exception");
 	}
@@ -34,8 +34,9 @@ void RollbackTransactionEntry::call() {
 /**
  * Register a rollback action
  */
-RollbackTransaction::add( const callbackTransaction & callback, ... ) {
+void RollbackTransaction::add( const callbackTransaction & callback, ... ) {
     va_list pl;
+    void * l;
     std::vector<void *> args;
 
     // Store all arguments
