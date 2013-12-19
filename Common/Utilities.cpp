@@ -703,6 +703,20 @@ void abortSysExec() {
 }
 
 /**
+ * Check for buffer
+ */
+int checkMatchingErrorCode( const std::string& buffer, const SysExecConfig& config ) {
+    for (std::map<std::string,int>::const_iterator it = config.errStrings.begin(); it != config.errStrings.end(); ++it) {
+        std::string k = (*it).first;
+        int c = (*it).second;
+        if (buffer.find(k) != string::npos) {
+            return c;
+        }
+    }
+    return 0;
+}
+
+/**
  * Cross-platform exec and return function (called by sysExec())
  */
 int __sysExec( string app, string cmdline, vector<string> * stdoutList, string * rawStderr, const SysExecConfig& config ) {
@@ -1083,7 +1097,7 @@ int sysExecAsync( string app, string cmdline ) {
 int sysExec( const string& app, const string& cmdline, vector<string> * stdoutList, string * rawStderrAns, const SysExecConfig& config ) {
     CRASH_REPORT_BEGIN;
     string stdError;
-    int res = 252;
+    int res = 252, matchedRes = 0;
 
     // If we have already aborted, return
     if (sysExecAborted) {
@@ -1098,6 +1112,10 @@ int sysExec( const string& app, const string& cmdline, vector<string> * stdoutLi
         CVMWA_LOG("Debug", "Executing: " << app << " " << cmdline);
         res = __sysExec( app, cmdline, stdoutList, &stdError, config );
         CVMWA_LOG("Debug", "Exec EXIT_CODE: " << res);
+
+        // Check for known error codes
+        matchedRes = checkMatchingErrorCode( stdError, config );
+        if (matchedRes != 0) return matchedRes;
 
         // Check for "Error" in the stderr
         // (Caused by a weird bug on VirtualBox)
@@ -1119,6 +1137,21 @@ int sysExec( const string& app, const string& cmdline, vector<string> * stdoutLi
 
     return res;
     CRASH_REPORT_END;
+}
+
+/**
+ * Return a path using system's preferred slash type
+ */
+std::string systemPath ( std::string& path ) {
+    for (std::string::iterator it = path.begin(); it != path.end(); ++it) {
+        char c = *it;
+#ifdef _WIN32
+        if (c == '/') *it='\\';
+#else
+        if (c == '\\') *it='/';
+#endif
+    }
+    return path;
 }
 
 /**
@@ -1728,10 +1761,12 @@ unsigned long long getFileTimeMs ( const std::string& file ) {
     DWORD dwRet;
     if (!GetFileTime(hFile, &ftCreate, &ftAccess, (FILETIME*)&llWriteTime)) {
         CVMWA_LOG("Error", "Could not read file times of " << file);
+        CloseHandle( hFile );
         return 0;
     }
 
     // Return value
+    CloseHandle( hFile );
     return llWriteTime;
 
     #else

@@ -136,7 +136,7 @@ bool LocalConfig::saveLines ( std::string name, std::vector<std::string> * lines
     CRASH_REPORT_BEGIN;
     
     // Only a single instance can write at a time
-    std::string file = this->configDir + "/" + name + ".lst";
+    std::string file = systemPath(this->configDir + "/" + name + ".lst");
     NAMED_MUTEX_LOCK(file);
 
     // Truncate file
@@ -166,7 +166,7 @@ bool LocalConfig::saveBuffer ( std::string name, std::string * buffer ) {
     CRASH_REPORT_BEGIN;
     
     // Only a single isntance can access the file
-    std::string file = this->configDir + "/" + name + ".dat";
+    std::string file = systemPath(this->configDir + "/" + name + ".dat");
     NAMED_MUTEX_LOCK(file);
 
     // Truncate file
@@ -190,13 +190,23 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     CRASH_REPORT_BEGIN;
     
     // Only a single isntance can access the file
-    std::string file = this->configDir + "/" + name + ".conf";
+    std::string file = systemPath(this->configDir + "/" + name + ".conf");
     NAMED_MUTEX_LOCK(file);
-    CVMWA_LOG("Config", "Saving" << file );
+    CVMWA_LOG("Config", "OPEN [" << GetCurrentThreadId() << "] Saving " << file );
 
     // Truncate file
     std::ofstream ofs ( file.c_str() , std::ofstream::out | std::ofstream::trunc);
-    if (ofs.fail()) return false;
+    if (ofs.fail()) {
+        CVMWA_LOG("Config", "ERROR [" << GetCurrentThreadId() << "] Code=" << GetLastError() );
+
+        DWORD w = GetLastError();
+        if (w != 0) {
+            CVMWA_LOG("Error", w);
+        }
+
+        ofs.close();
+        return false;
+    }
     
     // Dump the contents
     std::string::size_type pos = 0;
@@ -225,7 +235,11 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     }
     
     // Close
+    ofs.flush();
     ofs.close();
+
+    CVMWA_LOG("Config", "CLOSE [" << GetCurrentThreadId() << "] Closing " << file );
+
     return true;
     
     NAMED_MUTEX_UNLOCK;
@@ -239,7 +253,7 @@ bool LocalConfig::loadLines ( std::string name, std::vector<std::string> * lines
     CRASH_REPORT_BEGIN;
     
     // Only a single isntance can access the file
-    std::string file = this->configDir + "/" + name + ".lst";
+    std::string file = systemPath(this->configDir + "/" + name + ".lst");
     NAMED_MUTEX_LOCK(file);
 
     // Load configuration
@@ -271,7 +285,7 @@ bool LocalConfig::loadBuffer ( std::string name, std::string * buffer ) {
     CRASH_REPORT_BEGIN;
     
     // Only a single isntance can access the file
-    std::string file = this->configDir + "/" + name + ".dat";
+    std::string file = systemPath(this->configDir + "/" + name + ".dat");
     NAMED_MUTEX_LOCK(file);
 
     // Load configuration
@@ -300,13 +314,17 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     CRASH_REPORT_BEGIN;
     
     // Only a single isntance can access the file
-    std::string file = this->configDir + "/" + name + ".conf";
+    std::string file = systemPath(this->configDir + "/" + name + ".conf");
     NAMED_MUTEX_LOCK(file);
+    CVMWA_LOG( "Config", "OPEN [" << GetCurrentThreadId() << "] LoadingMap " << file.c_str()  );
 
     // Load configuration
-    CVMWA_LOG( "Config", "LoadingMap " << file.c_str()  );
     std::ifstream ifs ( file.c_str() , std::ifstream::in);
-    if (ifs.fail()) return false;
+    if (ifs.fail()) {
+        CVMWA_LOG("Config", "ERROR [" << GetCurrentThreadId() << "] Code=" << GetLastError() );
+        ifs.close();
+        return false;
+    }
     
     // Read file
     std::string line;
@@ -345,6 +363,7 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     
     // Close file
     ifs.close();
+    CVMWA_LOG("Config", "CLOSE [" << GetCurrentThreadId() << "] Closing " << file );
     return true;
     
     NAMED_MUTEX_UNLOCK;
@@ -356,7 +375,7 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
  */
 std::string LocalConfig::getPath( std::string configFile ) {
     CRASH_REPORT_BEGIN;
-    std::string file = this->configDir + "/" + configFile;
+    std::string file = systemPath(this->configDir + "/" + configFile);
     return file;
     CRASH_REPORT_END;
 }
@@ -366,7 +385,7 @@ std::string LocalConfig::getPath( std::string configFile ) {
  */
 bool LocalConfig::exists ( std::string configFile ) {
     CRASH_REPORT_BEGIN;
-    std::string file = this->configDir + "/" + configFile;
+    std::string file = systemPath(this->configDir + "/" + configFile);
     return file_exists( file );
     CRASH_REPORT_END;
 }
@@ -376,7 +395,7 @@ bool LocalConfig::exists ( std::string configFile ) {
  */
 time_t LocalConfig::getLastModified ( std::string configFile ) {
     CRASH_REPORT_BEGIN;
-    std::string file = this->configDir + "/" + configFile;
+    std::string file = systemPath(this->configDir + "/" + configFile);
 
     // Get file modification time
     #ifdef _WIN32
@@ -441,8 +460,10 @@ void LocalConfig::set ( const std::string& name, std::string value ) {
 void LocalConfig::commitChanges ( ) {
     CRASH_REPORT_BEGIN;
 
+    CVMWA_LOG("LOG", "commitChanges");
+
     // Synchronize changes with the disk
-    this->sync();
+    this->save();
 
     CRASH_REPORT_END;
 }
@@ -454,14 +475,20 @@ bool LocalConfig::save ( ) {
     CRASH_REPORT_BEGIN;
 
     // Save map to file
-    return this->saveMap( configName, parameters.get() );
+    bool ans = this->saveMap( configName, parameters.get() );
+    if (ans) {
 
-    // Update the time it was loaded (since the moment
-    // we wrote something we have replaced it's contents)
-    timeLoaded = getTimeInMs();
+        // Update the time it was loaded (since the moment
+        // we wrote something we have replaced it's contents)
+        timeLoaded = getTimeInMs();
 
-    // Reset 'keysDeleted'
-    keysDeleted.clear();
+        // Reset 'keysDeleted'
+        keysDeleted.clear();
+
+    }
+
+    // Return staus
+    return ans;
 
     CRASH_REPORT_END;
 }
@@ -473,13 +500,19 @@ bool LocalConfig::load ( ) {
     CRASH_REPORT_BEGIN;
 
     // Load map from file
-    return this->loadMap( configName, parameters.get() );
+    bool ans = this->loadMap( configName, parameters.get() );
+    if (ans) {
 
-    // Update the time it was loaded
-    timeLoaded = getTimeInMs();
+        // Update the time it was loaded
+        timeLoaded = getTimeInMs();
 
-    // Reset 'keysDeleted'
-    keysDeleted.clear();
+        // Reset 'keysDeleted'
+        keysDeleted.clear();
+
+    }
+
+    // Return staus
+    return ans;
 
     CRASH_REPORT_END;
 }
@@ -489,9 +522,14 @@ bool LocalConfig::load ( ) {
  * Conflicts are resolved using 'our' changes as favoured.
  */
 bool LocalConfig::sync ( ) {
+    
+    // If the file is missing, save it 
+    std::string fName = systemPath(this->configDir + "/" + configName + ".conf");
+    if (!file_exists( fName ))
+        return this->save();
 
     // Load the time the file was modified
-    unsigned long long fileModified = getFileTimeMs( configName + ".conf" );
+    unsigned long long fileModified = getFileTimeMs( fName );
 
     // Check for missing modifications
     if (timeModified <= timeLoaded) {

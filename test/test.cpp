@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include <boost/bind.hpp>
+#include <boost/variant.hpp>
 
 #include "Common/Utilities.h"
 #include "Common/Hypervisor.h"

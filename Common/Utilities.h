@@ -168,7 +168,7 @@ public:
     /**
      * Funtion to register an error handler
      *
-     * This function registers
+     * This function registers a string pattern that if matched, will return the given error code
      */
     SysExecConfig&              handleErrString( const std::string& message, int errorCode );
 
@@ -291,6 +291,11 @@ std::string                                         getTmpDir       ( );
  * Return the name of a system-temporary file, appending the given suffix to it.
  */
 std::string                                         getTmpFile      ( std::string suffix, std::string folder = "" );
+
+/**
+ * Return a path using system's preferred slash type
+ */
+std::string                                         systemPath      ( std::string& path );
 
 /**
  * Compare two paths for eqality (ignoring different kinds of slashes)

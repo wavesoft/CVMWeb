@@ -80,6 +80,7 @@
 #define HVF_HEADFUL            16       // Start the VM in headful mode
 #define HVF_GRAPHICAL          32       // Enable graphical extension (like drag-n-drop)
 #define HVF_DUAL_NIC           64       // Use secondary adapter instead of creating a NAT rule on the first one
+#define HVF_SERIAL_LOGFILE    128       // Use ttyS0 as external logfile.
 
 /**
  * Shared Pointer Definition

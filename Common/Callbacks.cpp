@@ -50,6 +50,13 @@ void CallbackHost::onProgress ( const cbProgress & cb ) {
 }
 
 /**
+ * Register a callback that handles arbitrary named events
+ */
+void CallbackHost::onNamedEvent ( const cbNamedEvent & cb ) {
+	namedEventCallbacks.push_back(cb);
+}
+
+/**
  * Fire the 'started' event
  */
 void CallbackHost::fireStarted( const std::string & msg ){
@@ -101,6 +108,20 @@ void CallbackHost::fireProgress( const std::string& msg, const double progress )
 			if (cb) cb( msg, progress );
 		} catch (...) {
 			CVMWA_LOG("Error", "Exception while handling 'progress' event")
+		}
+	}
+}
+
+/**
+ * Fire the a named event
+ */
+void CallbackHost::fireNamedEvent( const std::string& name, variantArgumentList& args ) {
+	for (std::vector< cbNamedEvent >::iterator it = namedEventCallbacks.begin(); it != namedEventCallbacks.end(); ++it) {
+		cbNamedEvent cb = *it;
+		try {
+			if (cb) cb( name, args );
+		} catch (...) {
+			CVMWA_LOG("Error", "Exception while handling named event '" << name << "'")
 		}
 	}
 }
