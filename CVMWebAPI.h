@@ -67,13 +67,12 @@ public:
     {
 
         registerMethod("checkSession",        make_method(this, &CVMWebAPI::checkSession));
-//        registerMethod("requestSession",      make_method(this, &CVMWebAPI::requestSession));
         registerMethod("requestDaemonAccess", make_method(this, &CVMWebAPI::requestDaemonAccess));
         registerMethod("requestControlAccess",make_method(this, &CVMWebAPI::requestControlAccess));
         registerMethod("requestSafeSession",  make_method(this, &CVMWebAPI::requestSafeSession));
         
-//        registerMethod("authenticate",        make_method(this, &CVMWebAPI::authenticate));
-        registerMethod("installHypervisor",   make_method(this, &CVMWebAPI::installHV));
+        registerMethod("installHypervisor",   make_method(this, &CVMWebAPI::installHypervisor));
+        registerMethod("setUserInteraction",  make_method(this, &CVMWebAPI::setUserInteraction));
 
         // Read-only property
         registerProperty("version",           make_property(this, &CVMWebAPI::get_version));
@@ -95,6 +94,9 @@ public:
 
         // Get global config pointer
         config = LocalConfig::global();
+
+        // At construction, use the default user interaction class
+        userInteraction = UserInteraction::Default();
         
     }
 
@@ -145,22 +147,22 @@ public:
 
     // Threads
     void thread_install( );
-    void requestSession_thread( const FB::variant& vm, const FB::variant& code, const FB::variant &successCb, const FB::variant &failureCb );
-    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB );
+
+    // Request safe session
+    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::variant &callbacks );
+    void requestSafeSession_thread( const FB::variant& vmcpURL, const FB::variant &callbacks );
 
     // JS Callbacks
     void confirmCallback( const FB::variant& status );
 
     // Methods
     FB::variant checkSession( const FB::variant& vm, const FB::variant& code );
-    FB::variant requestSession( const FB::variant& vm, const FB::variant& code, const FB::variant &successCb, const FB::variant &failureCb );
-    FB::variant requestSafeSession( const FB::variant& vmcpURL, const FB::variant &successCb, const FB::variant &failureCb, const FB::variant &progressCB );
     FB::variant requestDaemonAccess( const FB::variant &successCb, const FB::variant &failureCb );
     FB::variant requestControlAccess( const FB::variant &successCb, const FB::variant &failureCb );
     std::string getDomainName();
     std::string toString();
-    int         authenticate( const std::string& key );
-    int         installHV();
+    void        setUserInteraction( const FB::variant& v );
+    int         installHypervisor( const FB::variant& callbacks );
     bool        hasHypervisor();
     
     // Events
@@ -177,6 +179,9 @@ public:
     
     // Event delegates
     void                onInstallProgress( const size_t step, const size_t total, const std::string& msg );
+
+    // Local user interaction instance
+    UserInteractionPtr  userInteraction;
 
 private:
     

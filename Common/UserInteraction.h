@@ -139,22 +139,22 @@ private:
 	/**
 	 * Handler for confirm message
 	 */
-	callbackConfirm		cbConfirm;
+	callbackConfirm				cbConfirm;
 
 	/**
 	 * Handler for alert message
 	 */
-	callbackAlert		cbAlert;
+	callbackAlert				cbAlert;
 
 	/**
 	 * Handler for online (URL) license message
 	 */
-	callbackLicense		cbLicenseURL;
+	callbackLicense				cbLicenseURL;
 
 	/**
 	 * Handler for offline license message
 	 */
-	callbackLicense		cbLicense;
+	callbackLicense				cbLicense;
 
 	/**
 	 * Result value

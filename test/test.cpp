@@ -196,10 +196,12 @@ int main( int argc, char ** argv ) {
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
 
     // Setup callbacks
-    pTasks->on( "started", boost::bind(&cb_started, _1) );
+    NamedEventSlotPtr slot = pTasks->on( "started", boost::bind(&cb_started, _1) );
     pTasks->on( "completed", boost::bind(&cb_completed, _1));
     pTasks->on( "failed", boost::bind(&cb_error, _1));
     pTasks->on( "progress", boost::bind(&cb_progress, _1));
+    pTasks->off( "started", slot );
+    pTasks->on( "started", boost::bind(&cb_started, _1) );
 
     // Install Hypervisor
     //installHypervisor( DownloadProvider::Default(), UserInteraction::Default(), pTasks );

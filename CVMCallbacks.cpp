@@ -42,7 +42,7 @@ FB::VariantList ArgVar2FBVar( VariantArgList& argVariants ) {
 /**
  * Prepare the Javascipt Object Callback
  */
-JSObjectCallbacks::JSObjectCallbacks( const Callbacks & ch, const FB::variant &cb ) : parent(ch), isAvailable(false) {
+JSObjectCallbacks::JSObjectCallbacks( const FB::variant &cb ) : delegateSlots(), isAvailable(false) {
 	if (!IS_MISSING(jsobject) && cb.is_of_type<FB::JSObjectPtr>()) {
 
 		// Extract javascript object
@@ -51,28 +51,25 @@ JSObjectCallbacks::JSObjectCallbacks( const Callbacks & ch, const FB::variant &c
 		// Mark as available
 		isAvailable = true;
 
-		// Bind to parent
-		delegateCallback = boost::bind( &JSObjectCallbacks::_delegate_anyEvent, this, _1, _2 );
-		ch.onAnyEvent( delegateCallback );
-
 	}
 }
 
 /**
- * Unregister from the parent callback when destroyed
+ * Listen the events of the specified callback object
  */
-JSObjectCallbacks::~JSObjectCallbacks( ) {
+void JSObjectCallbacks::listen( const Callbacks & ch );
 
-	// Unregister this class from the callbacks
-	if (isAvailable)
-		ch.offAnyEvent( delegateCallback );
-	
+	// Register an anyEvent receiver and keep the slot reference
+	delegateSlots.push_back( 
+			_DelegatedSlot( cb, boost::bind( &JSObjectCallbacks::_delegate_anyEvent, this, _1, _2 ) )
+		);
+		
 }
 
 /**
- * Delegate function to forward any named event to a javascript object
+ * Fire an event to the javascript object
  */
-void JSObjectCallbacks::_delegate_anyEvent( const std::string& name, VariantArgList& args ) {
+void JSObjectCallbacks::fire( const std::string& name, VariantArgList& args ) {
 	if (!isAvailable) return;
 
 	// Convert the event name to onX...

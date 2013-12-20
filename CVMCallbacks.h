@@ -26,6 +26,32 @@
 #include "variant_list.h"
 
 /**
+ * A utility class that keeps track of the delegated Callbacks
+ */
+class _DelegatedSlot {
+public:
+
+	/**
+	 * Connect to the anyEvent slot at constructor
+	 */	
+	_DelegatedSlot( const Callbacks & cb, cbAnyEvent callback ) : cb(cb), slot() {
+		slot = cb.onAnyEvent( callback );
+	}
+
+	/**
+	 * Disconnect from the event slot on destruction
+	 */	
+	~_DelegatedSlot() {
+		cb.offAnyEvent( slot );
+	}
+
+private:
+	const Callbacks & 	cb;
+	AnyEventSlotPtr 	slot;
+
+};
+
+/**
  * Wrapper class that forawrds events to a javascript object callback
  *
  * The javascript object automatically binds to named Callback events, using
@@ -44,20 +70,25 @@
 class JSObjectCallbacks {
 public:
 
-	JSObjectCallbacks 	( const Callbacks & ch, const FB::variant &cb );
-	~JSObjectCallbacks	( );
+	// Create an object that can forward callback events to a given javascript object
+	JSObjectCallbacks 						( const FB::variant &cb );
+
+	// Receive events from the specified callback object
+	void listen								( const Callbacks & ch );
+
+	// Trigger a custom event
+	void fire								( const std::string& name, VariantArgList args );
 
 private:
 
-	const Callbacks 	parent;
-	FB::JSObjectPtr 	jsobject;
-	bool				isAvailable;
-	cbAnyEvent			delegateCallback;
+	// The registry of the objects we are listening events for
+	std::vector< _DelegatedSlot >			delegateSlots;
 
-	/**
-	 * Delegate function that forwards the events to the javascript object
-	 */
-	void 				_delegate_anyEvent( const std::string& msg, VariantArgList& args );
+	// The JSObject pointer for the javascript object we wrap
+	FB::JSObjectPtr 						jsobject;
+
+	// This flag is set to TRUE if the jsobject is valid
+	bool									isAvailable;
 
 };
 

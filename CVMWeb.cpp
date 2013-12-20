@@ -191,6 +191,9 @@ void CVMWeb::shutdown()
     boost::shared_ptr<CVMWebAPI> rAPI = FB::ptr_cast<CVMWebAPI>(getRootJSAPI());
     if (rAPI) rAPI->shutdown();
 
+    // Abort hypervisor with the sessions not already aborted
+    this->hv->abort();
+
     CRASH_REPORT_END;
 }
 

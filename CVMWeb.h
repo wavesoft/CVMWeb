@@ -46,10 +46,12 @@ FB_FORWARD_PTR(CVMWeb)
 class CVMWeb : public FB::PluginCore
 {
 public:
+    
     static void StaticInitialize();
     static void StaticDeinitialize();
     static bool shuttingDown;
-    Hypervisor  * hv;
+
+    HVInstancePtr   hv;
 
 public:
     CVMWeb();

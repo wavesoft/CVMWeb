@@ -203,7 +203,9 @@ public:
      *
      * A required parameter is the parameter map of the session.
      */
-    HVSession( ParameterMapPtr param, HVInstancePtr hv ) : Callbacks(), onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
+    HVSession( ParameterMapPtr param, HVInstancePtr hv ) : 
+        Callbacks(), overridableVars(), parameters(param)
+    {
 
         // Prepare default parameter values
         parameters->setDefault("cpus",                  "1");
@@ -230,6 +232,11 @@ public:
         machine = parameters->subgroup("machine");
         properties = parameters->subgroup("properties");
         
+        // Convert to vector the overridable var names
+        if (parameters->contains("canOverride")) {
+            explode( parameters->get("canOverride"), ',', &overridableVars );
+        }
+
         // Populate local variables
         this->uuid = parameters->get("uuid");
         this->state = parameters->getNum<int>("state", 0);
@@ -380,14 +387,6 @@ public:
      * Abort current task and prepare session for reaping
      */
     virtual void            abort() = 0;
-
-    callbackDebug           onDebug;
-    callbackVoid            onOpen;
-    callbackVoid            onStart;
-    callbackVoid            onStop;
-    callbackVoid            onClose;
-    callbackError           onError;
-    callbackProgress        onProgress;
 
 };
 

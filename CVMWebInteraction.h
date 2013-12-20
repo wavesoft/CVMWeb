@@ -23,17 +23,87 @@
 #define CVMUSERINTERACTION_H
 
 #include "Common/UserInteraction.h"
- 
+
+#include "JSAPIAuto.h"
 #include "JSObject.h"
 #include "variant_list.h"
 
+/**
+ * Forward declerations for CVMWebInteraction
+ */
+class CVMWebInteraction;
+typedef boost::shared_ptr< CVMWebInteraction >	CVMWebInteractionPtr;
+
+/**
+ * A JSAPI object that provides a callback mechanism
+ */
+class CVMWebInteractionMessage : public FB::JSAPIAuto {
+public:
+
+    CVMWebInteractionMessage( const std::string& title, const std::string& content, const callbackResult& cb, const std::string& typeName
+    						  const std::string& nameTitle = "title", const std::string& nameContent = "text" ) :
+        resultCb(resultCb), title(title), content(content), typeName(typeName), JSAPIAuto("CVMWebInteractionMessage")
+    {
+
+    	// Register callback for reply
+        registerMethod("reply",		       		make_method(this, &CVMWebInteractionMessage::send_reply ));
+
+        // Read-only property
+        registerProperty(nameTitle,           	make_property(this, &CVMWebInteractionMessage::get_title ));
+        registerProperty(nameContent,  			make_property(this, &CVMWebInteractionMessage::get_content ));
+        registerProperty("type", 				make_property(this, &CVMWebInteractionMessage::get_type ));
+
+    }
+
+    // Callbacks to return the variable contents
+    std::string get_title() 		{ return title; };
+    std::string get_content() 		{ return content; };
+    std::string get_type() 			{ return typeName; };
+
+    // Callback to call the result callback (wow?!)
+    void send_reply( int result ) 	{ if (cb) cb(result); }
+
+private:
+	callbackResult		resultCb;
+	std::string			title;
+	std::string			content;
+	std::string			typeName;
+
+};
 
 /**
  * User interaction that uses javascript I/O functions
  */
-class CVMWebInteraction {
+class CVMWebInteraction: public UserInteraction {
 public:
 
+	/**
+	 * Initialize a web interaction that forward the events
+	 * to the given javascript object
+	 */
+	static CVMWebInteractionPtr fromJSObject( const FB::variant &cb );
+
+	/**
+	 * Delegate function that forwards the request to the javascript interface
+	 */
+	void __callbackConfim		(const std::string&, const std::string&, const callbackResult& cb);
+	void __callbackAlert		(const std::string&, const std::string&, const callbackResult& cb);
+	void __callbackLicense		(const std::string&, const std::string&, const callbackResult& cb);
+	void __callbackLicenseURL	(const std::string&, const std::string&, const callbackResult& cb);
+
+private:
+
+	/**
+	 * Initialize a web interaction that forward the events
+	 * to the given javascript object
+	 */
+	CVMWebInteraction 			( const FB::variant &cb );
+
+	// The JSObject pointer for the javascript object we wrap
+	FB::JSObjectPtr 			jsobject;
+
+	// This flag is set to TRUE if the jsobject is valid
+	bool						isAvailable;
 
 };
 

@@ -20,27 +20,58 @@
 
 #include "Callbacks.h"
 
-
 /**
  * Register a callback that handles a named event
  */
-void Callbacks::on ( const std::string& name, const cbNamedEvent& cb ) {
-
+NamedEventSlotPtr Callbacks::on ( const std::string& name, cbNamedEvent cb ) {
     // Allocate missing entry
 	if (namedEventCallbacks.find(name) == namedEventCallbacks.end())
-        namedEventCallbacks.insert(std::pair<std::string, std::vector< cbNamedEvent >>( name, std::vector< cbNamedEvent >() ));
-
+        namedEventCallbacks.insert(std::pair<std::string, std::vector< NamedEventSlotPtr >>( name, std::vector< NamedEventSlotPtr >() ));
     // Update map
-    std::vector< cbNamedEvent > * cbs = &namedEventCallbacks[name];
-	cbs->push_back(cb);
+    std::vector< NamedEventSlotPtr > * cbs = &namedEventCallbacks[name];
+    NamedEventSlotPtr ptr = boost::make_shared<NamedEventSlot>( cb );
+	cbs->push_back( ptr );
+	return ptr;
+}
 
+/**
+ * Unegister a callback that handles a named event
+ */
+void Callbacks::off ( const std::string& name, NamedEventSlotPtr cb ) {
+    // Allocate missing entry
+	if (namedEventCallbacks.find(name) == namedEventCallbacks.end()) return;
+    // Lookup and delete entry from map
+    std::vector< NamedEventSlotPtr > * cbs = &namedEventCallbacks[name];
+    for (std::vector< NamedEventSlotPtr >::iterator it = cbs->begin(); it != cbs->end(); ++it) {
+        if (*it == cb) {
+            cbs->erase(it);
+            return;
+        }
+    }
 }
 
 /**
  * Register a callback that handles all the events
  */
-void Callbacks::onAnyEvent ( const cbAnyEvent & cb ) {
-	anyEventCallbacks.push_back(cb);
+AnyEventSlotPtr Callbacks::onAnyEvent ( cbAnyEvent cb ) {
+	AnyEventSlotPtr ptr = boost::make_shared<AnyEventSlot>( cb );
+	anyEventCallbacks.push_back( ptr );
+	return ptr;
+}
+
+/**
+ * Unregister a callback that handles all the events
+ */
+void Callbacks::offAnyEvent ( AnyEventSlotPtr cb ) {
+	
+	// Find and erase the given anyEvent slot
+	for (std::vector< AnyEventSlotPtr >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {
+	    if (*it == cb) {
+		    anyEventCallbacks.erase(it);
+            return;
+	    }
+    }
+
 }
 
 /**
@@ -49,10 +80,10 @@ void Callbacks::onAnyEvent ( const cbAnyEvent & cb ) {
 void Callbacks::fire( const std::string& name, VariantArgList& args ){
 
 	// First, call the anyEvent handlers
-	for (std::vector< cbAnyEvent >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {
-		cbAnyEvent cb = *it;
+	for (std::vector< AnyEventSlotPtr >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {
+		AnyEventSlotPtr cb = *it;
 		try {
-			if (cb) cb( name, args );
+			if (cb) cb->callback( name, args );
 		} catch (...) {
 			CVMWA_LOG("Error", "Exception while forwarding event to cbAnyEvent")
 		}
@@ -60,11 +91,11 @@ void Callbacks::fire( const std::string& name, VariantArgList& args ){
 
 	// Then, call the named event hanlers
 	if (namedEventCallbacks.find(name) != namedEventCallbacks.end()) {
-    	std::vector< cbNamedEvent > * cbs = &namedEventCallbacks[name];
-        for (std::vector< cbNamedEvent >::iterator it = cbs->begin(); it != cbs->end(); ++it) {
-	        cbNamedEvent cb = *it;
+    	std::vector< NamedEventSlotPtr > * cbs = &namedEventCallbacks[name];
+        for (std::vector< NamedEventSlotPtr >::iterator it = cbs->begin(); it != cbs->end(); ++it) {
+	        NamedEventSlotPtr cb = *it;
 	        try {
-		        if (cb) cb( args );
+		        if (cb) cb->callback( args );
 	        } catch (...) {
 		        CVMWA_LOG("Error", "Exception while forwarding event to cbNamedEvent")
 	        }

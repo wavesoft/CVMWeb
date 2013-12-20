@@ -53,7 +53,6 @@ typedef boost::function<void ( VariantArgList& args )>									cbNamedEvent;
  */
 class ArgumentList {
 public:
-
 	ArgumentList( ) : args() { };
 	ArgumentList( VariantArg arg ) : args(1,arg) { };
 	ArgumentList& operator()( VariantArg arg ) {
@@ -63,11 +62,33 @@ public:
 	operator VariantArgList& () {
 		return args;
 	}
-
 private:
 	VariantArgList 		args;
 
 };
+
+/**
+ * Helper class for looking up the appropriate function to
+ * disconnect an anyEvent callback
+ */
+class AnyEventSlot {
+public:
+    AnyEventSlot( cbAnyEvent cb ): callback(cb) { };
+	cbAnyEvent 		callback;
+};
+typedef boost::shared_ptr< AnyEventSlot >	AnyEventSlotPtr;
+
+/**
+ * Helper class for looking up the appropriate function to
+ * disconnect a namedEvent callback
+ */
+class NamedEventSlot {
+public:
+    NamedEventSlot( cbNamedEvent cb ): callback(cb) { };
+	cbNamedEvent 	callback;
+};
+typedef boost::shared_ptr< NamedEventSlot >	NamedEventSlotPtr;
+
 
 /**
  * The Callbacks class provides the interface to register and fire
@@ -81,17 +102,22 @@ public:
 	/**
 	 * Register a callback that will be fired for all events
 	 */
-	void 				onAnyEvent	( const cbAnyEvent & cb );
+	AnyEventSlotPtr		onAnyEvent	( cbAnyEvent cb );
 
 	/**
 	 * Unregister a callback that will be fired for all events
 	 */
-	void 				offAnyEvent	( const cbAnyEvent & cb );
+	void 				offAnyEvent	( AnyEventSlotPtr cb );
 
 	/**
 	 * Register a callback that will be fired when the specific event occurs
 	 */
-	void 				on 			( const std::string& name, const cbNamedEvent& cb );
+	NamedEventSlotPtr	on 			( const std::string& name, cbNamedEvent cb );
+
+	/**
+	 * Unregister a callback that will be fired when the specific event occurs
+	 */
+	void 				off 		( const std::string& name, NamedEventSlotPtr cb );
 
 	 /**
 	  * Fire a named event
@@ -101,8 +127,8 @@ public:
 public:
 
 	// Callback list
-	std::vector< cbAnyEvent >									anyEventCallbacks;
-	std::map< std::string, std::vector< cbNamedEvent > > 	    namedEventCallbacks;
+	std::vector< AnyEventSlotPtr >								anyEventCallbacks;
+	std::map< std::string, std::vector< NamedEventSlotPtr > > 	namedEventCallbacks;
 
 };
 
