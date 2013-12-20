@@ -26,31 +26,44 @@
 #include "variant_list.h"
 
 /**
- * Wrapper class that registers handlers for javascript events
+ * Wrapper class that forawrds events to a javascript object callback
+ *
+ * The javascript object automatically binds to named Callback events, using
+ * the 'on-' callback. For example:
+ *
+ * {
+ *     onBegin: function( msg ) {
+ *			...
+ *     },
+ *     onProgress: function( msg, v ) {
+ *			...
+ *     }
+ * }
+ *
  */
-class FBCallbackHost {
+class JSObjectCallbacks {
 public:
 
-	FBCallbackHost( const CallbackHostPtr & ch ) : parent(ch) 	{ };
-
-	void 				jsStarted( const FB::variant &cb )		{ cbStarted = cb };
-	void				jsCompleted( const FB::variant &cb )	{ cbCompleted = cb };
-	void 				jsFailed( const FB::variant &cb )		{ cbFailed = cb };
-	void 				jsProgress( const FB::variant &cb )		{ cbProgress = cb };
+	JSObjectCallbacks 	( const Callbacks & ch, const FB::variant &cb );
+	~JSObjectCallbacks	( );
 
 private:
 
-	const CallbackHostPtr parent;
-	FB::variant 		jcbStarted;
-	FB::variant 		jcbCompleted;
-	FB::variant 		jcbFailed;
-	FB::variant 		jcbProgress;
+	const Callbacks 	parent;
+	FB::JSObjectPtr 	jsobject;
+	bool				isAvailable;
+	cbAnyEvent			delegateCallback;
 
-	void 				_delegate_jsStarted( const std::string & msg );
-	void 				_delegate_jsCompleted( const std::string & msg );
-	void 				_delegate_jsFailed( const std::string & msg, const int errorCode );
-	void 				_delegate_jsProgress( const std::string& msg, const double progress );
+	/**
+	 * Delegate function that forwards the events to the javascript object
+	 */
+	void 				_delegate_anyEvent( const std::string& msg, VariantArgList& args );
 
 };
+
+/**
+ * Utility function to convert a VariantArgList vector to FB::VariantList vector
+ */
+FB::VariantList 		ArgVar2FBVar ( VariantArgList& argVariants );
 
 #endif /* end of include guard: H_CVMWEBCALLBACKS */

@@ -315,7 +315,7 @@ void SimpleFSM::FSMSkew(int state) {
 	fsmCurrentNode = &((*pt).second);
 
 	// Notify state change
-	FSMEnteringState( state, fsmCurrentNode.empty() );
+	FSMEnteringState( state, fsmCurrentPath.empty() );
 
 	// Continue towards the active target only if the path is not empty. 
 	// Otherwise it's enough just to change the current node

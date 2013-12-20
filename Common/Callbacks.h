@@ -84,9 +84,14 @@ public:
 	void 				onAnyEvent	( const cbAnyEvent & cb );
 
 	/**
+	 * Unregister a callback that will be fired for all events
+	 */
+	void 				offAnyEvent	( const cbAnyEvent & cb );
+
+	/**
 	 * Register a callback that will be fired when the specific event occurs
 	 */
-	 void 				on 			( const std::string& name, const cbNamedEvent& cb );
+	void 				on 			( const std::string& name, const cbNamedEvent& cb );
 
 	 /**
 	  * Fire a named event

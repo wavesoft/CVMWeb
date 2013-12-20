@@ -28,6 +28,11 @@ using namespace std;
 
 #define _wait(x)    boost::this_thread::sleep(boost::posix_time::milliseconds(x));
 
+void cb_state_changed( VariantArgList& args ) {
+    int state = boost::get<int>(args[0]);
+    cout << "[STATE CHANGED] : " << state << endl;
+}
+
 void cb_started( VariantArgList& args ) {
     std::string message = boost::get<std::string>(args[0]);
     cout << "[START] : " << message << endl;
@@ -233,6 +238,7 @@ int main( int argc, char ** argv ) {
         }
 
         //static_pointer_cast<VBoxSession>(sess)->update();
+        sess->on( "stateChanged", boost::bind( &cb_state_changed, _1 ) );
         sess->update();
 
         // Goto powered off state
