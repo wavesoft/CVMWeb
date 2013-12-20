@@ -35,101 +35,69 @@
 #include "Utilities.h"
 
 //////////////////////////////////////
-// Callback function declerations
+// Named callbacks definition
 //////////////////////////////////////
 
-/* Callback functions reference */
-typedef boost::function<void ( const std::string& message )>    						cbStarted;
-typedef boost::function<void ( const std::string& message )>    						cbCompleted;
-typedef boost::function<void ( const std::string& message, const int errorCode )> 		cbFailed;
-typedef boost::function<void ( const std::string& message, const double progress )> 	cbProgress;
-
 /* Typedef for variant callbacks */
-typedef boost::variant< float, int, std::string >										variantArgument;
-typedef std::vector< variantArgument >													variantArgumentList;
-typedef boost::function<void ( const std::string& event, variantArgumentList args )>	cbNamedEvent;
+typedef boost::variant< float, double, int, std::string >								VariantArg;
+typedef std::vector< VariantArg >														VariantArgList;
+typedef boost::function<void ( const std::string& event, VariantArgList& args )>		cbNamedEvent;
+typedef boost::function<void ( VariantArgList& args )>									cbAnyEvent;
 
 //////////////////////////////////////
 // Classes and structures
 //////////////////////////////////////
 
 /**
- * Named argument
+ * Helper class for building callback arguments
  */
-class CallbackArguments {
+class ArgumentList {
 public:
 
-	CallbackArguments( ) : args() { };
-	CallbackArguments( variantArgument arg ) : args(1,arg) { };
-	CallbackArguments& operator()( variantArgument arg ) {
+	ArgumentList( ) : args() { };
+	ArgumentList( variantArgument arg ) : args(1,arg) { };
+	ArgumentList& operator()( variantArgument arg ) {
 		args.push_back(arg);
 		return *this;
 	}
-	operator variantArgumentList& () {
+	operator VariantArgList& () {
 		return args;
 	}
 
 private:
-	variantArgumentList 	args;
+	VariantArgList 		args;
 
 };
 
 /**
- * The CallbackHost class provides the interface to register and fire
+ * The Callbacks class provides the interface to register and fire
  * callbacks by name.
  */
-class CallbackHost {
+class Callbacks {
 public:
 
-	CallbackHost() : startedCallbacks(), completedCallbacks(), failedCallbacks(), progressCallbacks(), namedEventCallbacks() { };
+	Callbacks() : anyEventCallbacks(), namedEventCallbacks() { };
 
 	/**
-	 * Register a callback that will be fired when the very first task has
-	 * started progressing.
+	 * Register a callback that will be fired for all events
 	 */
-	void 				onStarted		( const cbStarted & cb );
+	void 				onAnyEvent	( const cbAnyEvent & cb );
 
 	/**
-	 * Register a callback that will be fired when the last task has completed
-	 * progress.
+	 * Register a callback that will be fired when the specific event occurs
 	 */
-	void 				onCompleted		( const cbCompleted & cb );
+	 void 				on 			( const std::string& name, const cbNamedEvent& cb );
 
-	/**
-	 * Register a callback that will be fired when an error has occured.
-	 */
-	void 				onFailed		( const cbFailed & cb );
-
-	/**
-	 * Register a callback event that will be fired when a progress
-	 * event is updated.
-	 */
-	void 				onProgress		( const cbProgress & cb );
-
-	/**
-	 * Register a named event callback
-	 */
-	void 				onNamedEvent	( const cbNamedEvent & cb );
-
-	/**
-	 * Register a named callback handler
-	 */
-
-	// Register & Call 'started' event
-	void 				fireStarted( const std::string & msg );
-	void 				fireCompleted( const std::string & msg );
-	void 				fireFailed( const std::string & msg, const int errorCode );
-	void 				fireProgress( const std::string& msg, const double progress );
-	void 				fireNamedEvent( const std::string& name, variantArgumentList& args );
+	 /**
+	  * Fire a named event
+	  */
+	 void 				fire 		( const std::string& name, VariantArgList& args );
 
 public:
 
 	// Callback list
-	std::vector< cbStarted >		startedCallbacks;
-	std::vector< cbCompleted >		completedCallbacks;
-	std::vector< cbFailed >			failedCallbacks;
-	std::vector< cbProgress >		progressCallbacks;
-	std::vector< cbNamedEvent >		namedEventCallbacks;
+	std::vector< cbAnyEvent >									anyEventCallbacks;
+	std::map< std::string, std::std::vector< cbNamedEvent > > 	namedEventCallbacks;
 
 };
 

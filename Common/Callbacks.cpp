@@ -22,106 +22,50 @@
 
 
 /**
- * Register a callback that handles the 'started' event
+ * Register a callback that handles a named event
  */
-void CallbackHost::onStarted ( const cbStarted & cb ) {
-	startedCallbacks.push_back(cb);
+void CallbackHost::on ( const std::string& name, const cbNamedEvent& cb ) {
+	std::std::vector< cbNamedEvent > cbs;
+	if (namedEventCallbacks.find(name) != namedEventCallbacks.end())
+		cbs = namedEventCallbacks[name];
+	cbs.push_back(cb);
+	namedEventCallbacks[name] = cbs;
 }
 
 /**
- * Register a callback that handles the 'completed' event
+ * Register a callback that handles all the events
  */
-void CallbackHost::onCompleted ( const cbCompleted & cb ) {
-	completedCallbacks.push_back(cb);
+void CallbackHost::onAnyEvent ( const cbAnyEvent & cb ) {
+	anyEventCallbacks.push_back(cb);
 }
 
 /**
- * Register a callback that handles the 'failed' event
+ * Fire an event by it's name
  */
-void CallbackHost::onFailed ( const cbFailed & cb ) {
-	failedCallbacks.push_back(cb);
-}
+void CallbackHost::fire( const std::string& name, VariantArgList& args ){
 
-/**
- * Register a callback that handles the 'progress' event
- */
-void CallbackHost::onProgress ( const cbProgress & cb ) {
-	progressCallbacks.push_back(cb);
-}
-
-/**
- * Register a callback that handles arbitrary named events
- */
-void CallbackHost::onNamedEvent ( const cbNamedEvent & cb ) {
-	namedEventCallbacks.push_back(cb);
-}
-
-/**
- * Fire the 'started' event
- */
-void CallbackHost::fireStarted( const std::string & msg ){
-	for (std::vector< cbStarted >::iterator it = startedCallbacks.begin(); it != startedCallbacks.end(); ++it) {
-		cbStarted cb = *it;
-		try {
-			if (cb) cb( msg );
-		} catch (...) {
-			CVMWA_LOG("Error", "Exception while handling 'started' event")
-		}
-	}
-}
-
-/**
- * Fire the 'completed' event
- */
-void CallbackHost::fireCompleted( const std::string & msg ){
-	for (std::vector< cbCompleted >::iterator it = completedCallbacks.begin(); it != completedCallbacks.end(); ++it) {
-		cbCompleted cb = *it;
-		try {
-			if (cb) cb( msg );
-		} catch (...) {
-			CVMWA_LOG("Error", "Exception while handling 'completed' event")
-		}
-	}
-}
-
-/**
- * Fire the 'failed' event
- */
-void CallbackHost::fireFailed( const std::string & msg, const int errorCode ){
-	for (std::vector< cbFailed >::iterator it = failedCallbacks.begin(); it != failedCallbacks.end(); ++it) {
-		cbFailed cb = *it;
-		try {
-			if (cb) cb( msg, errorCode );
-		} catch (...) {
-			CVMWA_LOG("Error", "Exception while handling 'failed' event")
-		}
-	}
-}
-
-/**
- * Fire the 'progress' event
- */
-void CallbackHost::fireProgress( const std::string& msg, const double progress ) {
-	for (std::vector< cbProgress >::iterator it = progressCallbacks.begin(); it != progressCallbacks.end(); ++it) {
-		cbProgress cb = *it;
-		try {
-			if (cb) cb( msg, progress );
-		} catch (...) {
-			CVMWA_LOG("Error", "Exception while handling 'progress' event")
-		}
-	}
-}
-
-/**
- * Fire the a named event
- */
-void CallbackHost::fireNamedEvent( const std::string& name, variantArgumentList& args ) {
-	for (std::vector< cbNamedEvent >::iterator it = namedEventCallbacks.begin(); it != namedEventCallbacks.end(); ++it) {
-		cbNamedEvent cb = *it;
+	// First, call the anyEvent handlers
+	for (std::vector< cbAnyEvent >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {
+		cbAnyEvent cb = *it;
 		try {
 			if (cb) cb( name, args );
 		} catch (...) {
-			CVMWA_LOG("Error", "Exception while handling named event '" << name << "'")
+			CVMWA_LOG("Error", "Exception while forwarding event to cbAnyEvent")
 		}
 	}
+
+	// Then, call the named event hanlers
+	std::std::vector< cbNamedEvent > cbs;
+	if (namedEventCallbacks.find(name) != namedEventCallbacks.end())
+		cbs = namedEventCallbacks[name];
+	
+	for (std::vector< cbNamedEvent >::iterator it = cbs.begin(); it != cbs.end(); ++it) {
+		cbNamedEvent cb = *it;
+		try {
+			if (cb) cb( args );
+		} catch (...) {
+			CVMWA_LOG("Error", "Exception while forwarding event to cbNamedEvent")
+		}
+	}
+
 }

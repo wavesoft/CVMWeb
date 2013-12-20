@@ -22,7 +22,7 @@
 #ifndef PROGRESSFEEDBACK_H
 #define PROGRESSFEEDBACK_H
 
-#include "Callbacks.h"
+#include "CallbacksProgress.h"
 
 #include <vector>
 #include <list>
@@ -46,14 +46,14 @@ typedef boost::shared_ptr< BooleanTask >       		BooleanTaskPtr;
 /**
  * Base class to monitor progress events
  */
-class ProgressTask: public boost::enable_shared_from_this<ProgressTask>, public CallbackHost {
+class ProgressTask: public boost::enable_shared_from_this<ProgressTask>, public CallbacksProgress {
 public:
 
 	//////////////////////
 	// Constructor
 	//////////////////////
 	ProgressTask() 
-		: CallbackHost(), started(false), completed(false), parent(), lastMessage(""), __lastEventTime(0) { };
+		: CallbacksProgress(), started(false), completed(false), parent(), lastMessage(""), __lastEventTime(0) { };
 
 
 	//////////////////////
