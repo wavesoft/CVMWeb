@@ -46,7 +46,7 @@ enum VBoxDiskType {
  * VirtualBox Session State
  */
 enum VBoxSessionState {
-    SS_MISSING,
+    SS_MISSING = 0,
     SS_AVAILABLE,
     SS_POWEROFF,
     SS_SAVED,
@@ -216,7 +216,7 @@ public:
     /**
      * Override to get notified when state is changed
      */
-    void                    FSMEnteringState    ( const int state );
+    void                    FSMEnteringState    ( const int state, const bool final );
 
 protected:
 

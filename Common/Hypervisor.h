@@ -193,7 +193,7 @@ private:
  * A hypervisor session is actually a VM instance.
  * This is where the actual I/O happens
  */
-class HVSession : public boost::enable_shared_from_this<HVSession> {
+class HVSession : public boost::enable_shared_from_this<HVSession>, public Callbacks {
 public:
 
 
@@ -203,7 +203,7 @@ public:
      *
      * A required parameter is the parameter map of the session.
      */
-    HVSession( ParameterMapPtr param, HVInstancePtr hv ) : onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
+    HVSession( ParameterMapPtr param, HVInstancePtr hv ) : Callbacks(), onDebug(), onOpen(), onStart(), onStop(), onClose(), onError(), onProgress(), parameters(param) {
 
         // Prepare default parameter values
         parameters->setDefault("cpus",                  "1");

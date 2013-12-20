@@ -24,25 +24,29 @@
 /**
  * Register a callback that handles a named event
  */
-void CallbackHost::on ( const std::string& name, const cbNamedEvent& cb ) {
-	std::std::vector< cbNamedEvent > cbs;
-	if (namedEventCallbacks.find(name) != namedEventCallbacks.end())
-		cbs = namedEventCallbacks[name];
-	cbs.push_back(cb);
-	namedEventCallbacks[name] = cbs;
+void Callbacks::on ( const std::string& name, const cbNamedEvent& cb ) {
+
+    // Allocate missing entry
+	if (namedEventCallbacks.find(name) == namedEventCallbacks.end())
+        namedEventCallbacks.insert(std::pair<std::string, std::vector< cbNamedEvent >>( name, std::vector< cbNamedEvent >() ));
+
+    // Update map
+    std::vector< cbNamedEvent > * cbs = &namedEventCallbacks[name];
+	cbs->push_back(cb);
+
 }
 
 /**
  * Register a callback that handles all the events
  */
-void CallbackHost::onAnyEvent ( const cbAnyEvent & cb ) {
+void Callbacks::onAnyEvent ( const cbAnyEvent & cb ) {
 	anyEventCallbacks.push_back(cb);
 }
 
 /**
  * Fire an event by it's name
  */
-void CallbackHost::fire( const std::string& name, VariantArgList& args ){
+void Callbacks::fire( const std::string& name, VariantArgList& args ){
 
 	// First, call the anyEvent handlers
 	for (std::vector< cbAnyEvent >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {
@@ -55,17 +59,16 @@ void CallbackHost::fire( const std::string& name, VariantArgList& args ){
 	}
 
 	// Then, call the named event hanlers
-	std::std::vector< cbNamedEvent > cbs;
-	if (namedEventCallbacks.find(name) != namedEventCallbacks.end())
-		cbs = namedEventCallbacks[name];
-	
-	for (std::vector< cbNamedEvent >::iterator it = cbs.begin(); it != cbs.end(); ++it) {
-		cbNamedEvent cb = *it;
-		try {
-			if (cb) cb( args );
-		} catch (...) {
-			CVMWA_LOG("Error", "Exception while forwarding event to cbNamedEvent")
-		}
-	}
+	if (namedEventCallbacks.find(name) != namedEventCallbacks.end()) {
+    	std::vector< cbNamedEvent > * cbs = &namedEventCallbacks[name];
+        for (std::vector< cbNamedEvent >::iterator it = cbs->begin(); it != cbs->end(); ++it) {
+	        cbNamedEvent cb = *it;
+	        try {
+		        if (cb) cb( args );
+	        } catch (...) {
+		        CVMWA_LOG("Error", "Exception while forwarding event to cbNamedEvent")
+	        }
+        }
+    }
 
 }

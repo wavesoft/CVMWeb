@@ -107,12 +107,12 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
  * state change.
  */
 int getStateFromFile( std::string logPath ) {
-    int state = 0;
+    int state = SS_AVAILABLE;
 
     // Locate Logfile
     string logFile = logPath + "/VBox.log";
     CVMWA_LOG("Debug", "Looking for state change  in " << logFile );
-    if (!file_exists(logFile)) return 0;
+    if (!file_exists(logFile)) return SS_MISSING;
 
     // Open input stream
     ifstream fIn(logFile.c_str(), ifstream::in);
@@ -154,8 +154,12 @@ int getStateFromFile( std::string logPath ) {
             stateStr = inBufferLine.substr( qStart+1, qEnd-qStart-2 );
 
             // Compare to known state names
-            if      (stateStr.compare("RUNNING")) state = SS_RUNNING;
-            else if (stateStr.compare("TERMINATED")) state = SS_RUNNING;
+            if      (stateStr.compare("RUNNING") == 0) state = SS_RUNNING;
+            else if (stateStr.compare("OFF") == 0) state = SS_POWEROFF;
+            else if (stateStr.compare("SUSPENDED") == 0) state = SS_PAUSED;
+
+            // If we got 'SAVING' it means the VM was saved
+            if      (stateStr.compare("SAVING") == 0) return SS_SAVED;
 
         }
 
@@ -214,6 +218,13 @@ int getPIDFromFile( std::string logPath ) {
     fIn.close();
     return pid;
 
+}
+
+/**
+ * Check if the VM logs exist - This means that the VM is still alive
+ */
+bool vboxLogExists( std::string logPath ) {
+    return file_exists( logPath + "/VBox.log" );
 }
 
 /////////////////////////////////////
@@ -1434,15 +1445,52 @@ int VBoxSession::update ( ) {
         // In these cases, the VM is supposed to be running
         if (!isPIDAlive( local->getNum<int>("pid") )) {
 
+            // If the VBox logs are also missing, it means that
+            // the VM has gone away
+            if (!vboxLogExists( machine->get("Log folder") )) {
+                newState = SS_MISSING;
+
+            } else {
+
+                // Try to read the status from the log folder
+                int logState = getStateFromFile( machine->get("Log folder") );
+
+                // Check for some valid states from the logfile
+                if (logState == SS_POWEROFF) {
+                    newState = SS_POWEROFF;
+                } else if (logState == SS_SAVED) {
+                    newState = SS_SAVED;
+                } else {
+                    CVMWA_LOG("Error", "Mismatching VM state " << logState << " to " << newState );
+                }
+
+            }
         }
-
-    } else {
-
-
     }
 
-    // Goto Update
-    FSMGoto( 101 );
+    // Handle state switches
+    if (newState != lastState) {
+        CVMWA_LOG("Debug", "Update state switch from " << lastState << " to " << newState);
+
+        // Handle state switches
+        if (newState == SS_MISSING) {
+            FSMSkew( 3 ); // Goto 'Destroyed'
+        } else if (newState == SS_AVAILABLE) {
+            FSMSkew( 8 ); // Goto 'Exists'
+        } else if (newState == SS_POWEROFF) {
+            FSMSkew( 4 ); // Goto 'Power Off'
+        } else if (newState == SS_SAVED) {
+            FSMSkew( 5 ); // Goto 'Saved'
+        } else if (newState == SS_PAUSED) {
+            FSMSkew( 6 ); // Goto 'Paused'
+        } else if (newState == SS_RUNNING) {
+            FSMSkew( 7 ); // Goto 'Running'
+        }
+
+        // The FSM will automatically go to HandleError & CureError if something
+        // has gone really wrong.
+
+    }
 
     // It was OK
     return HVE_OK;
@@ -1503,23 +1551,29 @@ void VBoxSession::hvStop () {
 /**
  * Notification from the SimpleFSM instance when we enter a state
  */
-void VBoxSession::FSMEnteringState( const int state ) {
+void VBoxSession::FSMEnteringState( const int state, const bool final ) {
 
     // On checkpoint states, update the VM state
     // in the local config file.
 
     if (state == 3) { // Destroyed
         local->setNum<int>( "state", SS_MISSING );
+        if (final) this->fire( "stateChanged", ArgumentList( SS_MISSING ) );
     } else if (state == 8) { // Exists
         local->setNum<int>( "state", SS_AVAILABLE );
+        if (final) this->fire( "stateChanged", ArgumentList( SS_AVAILABLE ) );
     } else if (state == 4) { // Power off
         local->setNum<int>( "state", SS_POWEROFF );
+        if (final) this->fire( "stateChanged", ArgumentList( SS_POWEROFF ) );
     } else if (state == 5) { // Saved state
         local->setNum<int>( "state", SS_SAVED );
+        if (final) this->fire( "stateChanged", ArgumentList( SS_SAVED ) );
     } else if (state == 6) { // Paused state
         local->setNum<int>( "state", SS_PAUSED );
+        if (final) this->fire( "stateChanged", ArgumentList( SS_PAUSED ) );
     } else if (state == 7) { // Running state
         local->setNum<int>( "state", SS_RUNNING );
+        if (final) this->fire( "stateChanged", ArgumentList( SS_RUNNING ) );
     }
 }
 

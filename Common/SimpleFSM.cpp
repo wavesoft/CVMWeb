@@ -26,8 +26,7 @@
 /**
  * Void function FSMEnteringState
  */
-void SimpleFSM::FSMEnteringState( const int state ) {
-}
+void SimpleFSM::FSMEnteringState( const int state, bool final ) { }
 
 /**
  * Reset FSM registry variables
@@ -164,14 +163,14 @@ bool SimpleFSM::FSMContinue( bool inThread ) {
 
 	// Skip state nodes
 	while ((!next->handler) && !fsmCurrentPath.empty()) {
-		FSMEnteringState( next->id );
+		FSMEnteringState( next->id, false );
 		next = fsmCurrentPath.front();
         fsmCurrentPath.pop_front();
 	}
 
 	// Change current node
 	fsmCurrentNode = next;
-	FSMEnteringState( next->id );
+	FSMEnteringState( next->id, (const bool) fsmCurrentPath.empty() );
 
 	// Call handler
 	if (!_callHandler(next, inThread)) 
@@ -315,8 +314,14 @@ void SimpleFSM::FSMSkew(int state) {
 	// Switch current node to the skewed state
 	fsmCurrentNode = &((*pt).second);
 
-	// Continue towards the active target
-	FSMGoto( fsmTargetState );
+	// Notify state change
+	FSMEnteringState( state, fsmCurrentNode.empty() );
+
+	// Continue towards the active target only if the path is not empty. 
+	// Otherwise it's enough just to change the current node
+	if ( !fsmCurrentPath.empty() ) {
+		FSMGoto( fsmTargetState );
+	}
 
 }
 

@@ -165,7 +165,7 @@ protected:
 	/**
 	 * Overridable function to get notified when we are entering a state
 	 */
-	virtual void 					FSMEnteringState	( const int state );
+	virtual void 					FSMEnteringState	( const int state, const bool final );
 
 	/**
 	 * Trigger the "begin" action of the SimpleFSM progress feedback.

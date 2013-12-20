@@ -28,15 +28,19 @@ using namespace std;
 
 #define _wait(x)    boost::this_thread::sleep(boost::posix_time::milliseconds(x));
 
-void cb_started( const std::string& message ) {
+void cb_started( VariantArgList& args ) {
+    std::string message = boost::get<std::string>(args[0]);
     cout << "[START] : " << message << endl;
 }
 
-void cb_completed( const std::string& message ) {
+void cb_completed(  VariantArgList& args ) {
+    std::string message = boost::get<std::string>(args[0]);
     cout << "[ END ] : " << message << endl;
 }
 
-void cb_error( const std::string& message, const int errorCode ) {
+void cb_error(  VariantArgList& args ) {
+    std::string message = boost::get<std::string>(args[0]);
+    int errorCode = boost::get<int>(args[1]);
     cout << "[ERROR] : " << message << " (#" << errorCode << ")" << endl;
 }
 
@@ -52,11 +56,12 @@ void show_pbar( double progress, int charCount ) {
     cout << setiosflags(ios::fixed) << setprecision(2) << (progress * 100.0) << " %" << std::endl;
 }
 
-void cb_progress( const std::string& message, const double progress ) {
+void cb_progress( VariantArgList& args ) {
+    std::string message = boost::get<std::string>(args[0]);
+    double progress = boost::get<double>(args[1]);
     cout << "[-----] : " << message << " (" << (progress * 100) << " %)" << endl;
     show_pbar(progress, 80);
 }
-
 
 void doProgress( const ProgressTaskPtr & pTaskPtr = ProgressTaskPtr() );
 void doProgress( const ProgressTaskPtr & pTaskPtr) {
@@ -67,10 +72,10 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
     FiniteTaskPtr pTasks = boost::static_pointer_cast<FiniteTask>(pTaskPtr);
 
     // Setup callbacks
-    pTasks->onStarted( boost::bind(&cb_started, _1) );
-    pTasks->onCompleted(boost::bind(&cb_completed, _1));
-    pTasks->onFailed(boost::bind(&cb_error, _1, _2));
-    pTasks->onProgress(boost::bind(&cb_progress, _1, _2));
+    pTasks->on( "sarted", boost::bind(&cb_started, _1) );
+    pTasks->on( "completed", boost::bind(&cb_completed, _1));
+    pTasks->on( "failed", boost::bind(&cb_error, _1));
+    pTasks->on( "progress", boost::bind(&cb_progress, _1));
 
     // Set max
     pTasks->setMax(5);
@@ -186,10 +191,10 @@ int main( int argc, char ** argv ) {
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
 
     // Setup callbacks
-    pTasks->onStarted( boost::bind(&cb_started, _1) );
-    pTasks->onCompleted(boost::bind(&cb_completed, _1));
-    pTasks->onFailed(boost::bind(&cb_error, _1, _2));
-    pTasks->onProgress(boost::bind(&cb_progress, _1, _2));
+    pTasks->on( "started", boost::bind(&cb_started, _1) );
+    pTasks->on( "completed", boost::bind(&cb_completed, _1));
+    pTasks->on( "failed", boost::bind(&cb_error, _1));
+    pTasks->on( "progress", boost::bind(&cb_progress, _1));
 
     // Install Hypervisor
     //installHypervisor( DownloadProvider::Default(), UserInteraction::Default(), pTasks );

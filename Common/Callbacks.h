@@ -41,8 +41,8 @@
 /* Typedef for variant callbacks */
 typedef boost::variant< float, double, int, std::string >								VariantArg;
 typedef std::vector< VariantArg >														VariantArgList;
-typedef boost::function<void ( const std::string& event, VariantArgList& args )>		cbNamedEvent;
-typedef boost::function<void ( VariantArgList& args )>									cbAnyEvent;
+typedef boost::function<void ( const std::string& event, VariantArgList& args )>		cbAnyEvent;
+typedef boost::function<void ( VariantArgList& args )>									cbNamedEvent;
 
 //////////////////////////////////////
 // Classes and structures
@@ -55,8 +55,8 @@ class ArgumentList {
 public:
 
 	ArgumentList( ) : args() { };
-	ArgumentList( variantArgument arg ) : args(1,arg) { };
-	ArgumentList& operator()( variantArgument arg ) {
+	ArgumentList( VariantArg arg ) : args(1,arg) { };
+	ArgumentList& operator()( VariantArg arg ) {
 		args.push_back(arg);
 		return *this;
 	}
@@ -97,7 +97,7 @@ public:
 
 	// Callback list
 	std::vector< cbAnyEvent >									anyEventCallbacks;
-	std::map< std::string, std::std::vector< cbNamedEvent > > 	namedEventCallbacks;
+	std::map< std::string, std::vector< cbNamedEvent > > 	    namedEventCallbacks;
 
 };
 

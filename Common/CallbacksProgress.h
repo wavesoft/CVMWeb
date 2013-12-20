@@ -27,29 +27,34 @@
 class CallbacksProgress: public Callbacks {
 public:
 
+    /**
+     * Initialize parent
+     */
+    CallbacksProgress(): Callbacks() { };
+
 	/**
 	 * Fire 'started' event
 	 */
 	void fireStarted( const std::string & msg )
-		{ fire('started', ArgumentList(msg) ); };
+		{ fire("started", ArgumentList(msg) ); };
 
 	/**
 	 * Fire 'completed' event
 	 */
-	void fireCompleted( const std::string & msg );
-		{ fire('completed', ArgumentList(msg) ); };
+	void fireCompleted( const std::string & msg )
+		{ fire("completed", ArgumentList(msg) ); };
 
 	/**
 	 * Fire 'failed' event
 	 */
-	void fireFailed( const std::string & msg, const int errorCode );
-		{ fire('failed', ArgumentList(msg)(errorCode) ); };
+	void fireFailed( const std::string & msg, const int errorCode )
+		{ fire("failed", ArgumentList(msg)(errorCode) ); };
 
 	/**
 	 * Fire 'progress' event
 	 */
-	void fireProgress( const std::string& msg, const double progress );
-		{ fire('progress', ArgumentList(msg)(progress) ); };
+	void fireProgress( const std::string& msg, const double progress )
+		{ fire("progress", ArgumentList(msg)(progress) ); };
 
 
 };
