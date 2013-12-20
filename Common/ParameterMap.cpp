@@ -18,8 +18,8 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "Common/CrashReport.h"
-#include "Common/Utilities.h"
+#include "CrashReport.h"
+#include "Utilities.h"
 #include "ParameterMap.h"
 
 /**

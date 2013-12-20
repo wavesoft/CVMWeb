@@ -27,13 +27,13 @@
 FB::VariantList ArgVar2FBVar( VariantArgList& argVariants ) {
 	FB::VariantList ans;
 	for (std::vector< VariantArg >::iterator it = argVariants.begin(); it != argVariants.end(); ++it) {
-		if ( int* pi = boost::get<int>( it ) )
+		if ( int* pi = boost::get<int>( &(*it) ) )
 			ans.insert( ans.end(), FB::variant( *pi ) );
-		else if ( double* pi = boost::get<double>( it ) )
+		else if ( double* pi = boost::get<double>( &(*it) ) )
 			ans.insert( ans.end(), FB::variant( *pi ) );
-		else if ( float* pi = boost::get<float>( it ) )
+		else if ( float* pi = boost::get<float>( &(*it) ) )
 			ans.insert( ans.end(), FB::variant( *pi ) );
-		else if ( std::string* pstr = boost::get<std::string>( &operand ) )
+		else if ( std::string* pstr = boost::get<std::string>( &(*it) ) )
 			ans.insert( ans.end(), FB::variant( *pi ) );
 	}
 	return ans;

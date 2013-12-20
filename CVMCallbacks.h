@@ -34,7 +34,7 @@ public:
 	/**
 	 * Connect to the anyEvent slot at constructor
 	 */	
-	_DelegatedSlot( const Callbacks & cb, cbAnyEvent callback ) : cb(cb), slot() {
+	_DelegatedSlot( Callbacks & cb, cbAnyEvent callback ) : cb(cb), slot() {
 		slot = cb.onAnyEvent( callback );
 	}
 
@@ -46,7 +46,7 @@ public:
 	}
 
 private:
-	const Callbacks & 	cb;
+	Callbacks &	        cb;
 	AnyEventSlotPtr 	slot;
 
 };

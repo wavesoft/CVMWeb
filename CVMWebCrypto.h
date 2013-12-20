@@ -31,7 +31,7 @@
 
 #include "Common/DownloadProvider.h"
 #include "Common/Utilities.h"
-#include "Hypervisor.h"
+#include "Common/Hypervisor.h"
 #include "Common/LocalConfig.h"
 #include "Common/CrashReport.h"
 
