@@ -33,7 +33,7 @@ FB::VariantList ArgVar2FBVar( VariantArgList& argVariants ) {
 			ans.insert( ans.end(), FB::variant( *pi ) );
 		else if ( float* pi = boost::get<float>( &(*it) ) )
 			ans.insert( ans.end(), FB::variant( *pi ) );
-		else if ( std::string* pstr = boost::get<std::string>( &(*it) ) )
+		else if ( std::string* pi = boost::get<std::string>( &(*it) ) )
 			ans.insert( ans.end(), FB::variant( *pi ) );
 	}
 	return ans;
@@ -43,7 +43,7 @@ FB::VariantList ArgVar2FBVar( VariantArgList& argVariants ) {
  * Prepare the Javascipt Object Callback
  */
 JSObjectCallbacks::JSObjectCallbacks( const FB::variant &cb ) : delegateSlots(), isAvailable(false) {
-	if (!IS_MISSING(jsobject) && cb.is_of_type<FB::JSObjectPtr>()) {
+	if (!IS_MISSING(cb) && cb.is_of_type<FB::JSObjectPtr>()) {
 
 		// Extract javascript object
 		jsobject = cb.cast<FB::JSObjectPtr>();
@@ -57,11 +57,11 @@ JSObjectCallbacks::JSObjectCallbacks( const FB::variant &cb ) : delegateSlots(),
 /**
  * Listen the events of the specified callback object
  */
-void JSObjectCallbacks::listen( const Callbacks & ch );
+void JSObjectCallbacks::listen( Callbacks & ch ) {
 
 	// Register an anyEvent receiver and keep the slot reference
 	delegateSlots.push_back( 
-			_DelegatedSlot( cb, boost::bind( &JSObjectCallbacks::_delegate_anyEvent, this, _1, _2 ) )
+			_DelegatedSlot( ch, boost::bind( &JSObjectCallbacks::fire, this, _1, _2 ) )
 		);
 		
 }

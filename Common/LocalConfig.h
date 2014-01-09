@@ -144,6 +144,16 @@ public:
     virtual void                erase           ( const std::string& name );
 
     /**
+     * Override the clear function so we can erase the file aswell
+     */
+    virtual void                clear            ( );
+
+    /**
+     * Override the clear function so we can erase the file aswell
+     */
+    virtual void                clearAll         ( );
+
+    /**
      * Override the set function so we can keep track of the changes
      * done in the buffer.
      */

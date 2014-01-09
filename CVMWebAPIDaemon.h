@@ -25,11 +25,9 @@
 #include <string>
 #include <sstream>
 #include <boost/weak_ptr.hpp>
-#
- include "JSAPIAuto.h"
+#include "JSAPIAuto.h"
 #include "BrowserHost.h"
-#
- include "CVMWeb.h"
+#include "CVMWeb.h"
 
 #include "Common/Hypervisor.h"
 #include "Common/CrashReport.h"

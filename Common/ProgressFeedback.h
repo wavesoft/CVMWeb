@@ -53,7 +53,7 @@ public:
 	// Constructor
 	//////////////////////
 	ProgressTask() 
-		: CallbacksProgress(), started(false), completed(false), parent(), lastMessage(""), __lastEventTime(0) { };
+		: CallbacksProgress(), started(false), parent(), completed(false), __lastEventTime(0), lastMessage("") { };
 
 
 	//////////////////////

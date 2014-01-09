@@ -433,6 +433,27 @@ void LocalConfig::erase ( const std::string& name ) {
 }
 
 /**
+ * Override the clear function so we can remove the underlaying file aswell.
+ */
+void LocalConfig::clear ( ) {
+    CRASH_REPORT_BEGIN;
+
+    // Update time modified
+    timeModified = getTimeInMs();
+
+    // Clear all keys
+    ParameterMap::clear();
+
+    // If we don't have a prefix, we just did a 'clearAll'
+    // Remove the file as well.
+    if (prefix.empty()) {
+        
+    }
+
+    CRASH_REPORT_END;
+}
+
+/**
  * Override the set function so we can keep track of the changes
  * done in the buffer.
  */

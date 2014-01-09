@@ -149,7 +149,7 @@ void CVMWeb::onPluginReady()
     }
 
     // Detect browser
-    if (strBrowser.find("MSIE ") != string::npos) {
+    if (strBrowser.find("MSIE ") != std::string::npos) {
         // For Non-IE Browsers, allocate a download provider that uses browser for I/O 
         browserDownloadProvider = boost::make_shared<CVMBrowserProvider>( m_host ); //DownloadProvider::Default();
         CVMWA_LOG("Debug", "Switching to browser download provider");

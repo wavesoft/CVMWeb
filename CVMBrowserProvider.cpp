@@ -25,9 +25,9 @@ void CVMBrowserProvider::httpDataArrived ( const void * ptr, size_t length ) {
     CRASH_REPORT_BEGIN;
     CVMWA_LOG("Info", "Data arrived. Calling handler (len=" << length << ")" );
     if (this->targetStream == 0) {
-        DownloadProvider::writeToStream( &this->fStream, NULL, 0, (const char*) ptr, length );
+        DownloadProvider::writeToStream( &this->fStream, VariableTaskPtr(), 0, (const char*) ptr, length );
     } else {
-        DownloadProvider::writeToStream( &this->sStream, NULL, 0, (const char*) ptr, length );
+        DownloadProvider::writeToStream( &this->sStream, VariableTaskPtr(), 0, (const char*) ptr, length );
     }
     CRASH_REPORT_END;
 }

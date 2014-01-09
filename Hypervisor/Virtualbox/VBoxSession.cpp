@@ -1591,13 +1591,17 @@ void VBoxSession::FSMEnteringState( const int state, const bool final ) {
  * automatically pass the session ID for us.
  */
 int VBoxSession::wrapExec ( std::string cmd, std::vector<std::string> * stdoutList, std::string * stderrMsg, const SysExecConfig& config ) {
+    CRASH_REPORT_BEGIN;
     return this->hypervisor->exec(cmd, stdoutList, stderrMsg, config );
+    CRASH_REPORT_END;
 }
 
 /**
  * Destroy and unregister VM
  */
 int VBoxSession::destroyVM () {
+    CRASH_REPORT_BEGIN;
+
     // Destroy session
     ostringstream args;
     int ans;
@@ -1620,12 +1624,14 @@ int VBoxSession::destroyVM () {
     local->erase("vboxid");
 
     return HVE_OK;
+    CRASH_REPORT_END;
 }
 
 /**
  * Update error info and switch to error state
  */
 void VBoxSession::errorOccured ( const std::string & str, int errNo ) {
+    CRASH_REPORT_BEGIN;
 
     // Update error info
     errorCode = errNo;
@@ -1652,13 +1658,14 @@ void VBoxSession::errorOccured ( const std::string & str, int errNo ) {
 
     // Update last error timestamp
     errorTimestamp = currTime;
-
+    CRASH_REPORT_END;
 }
 
 /**
  *  Compile the user data and return it's string representation
  */
 std::string VBoxSession::getUserData ( ) {
+    CRASH_REPORT_BEGIN;
     std::string patchedUserData = parameters->get("userData", "");
 
     // Update local userData
@@ -1668,7 +1675,7 @@ std::string VBoxSession::getUserData ( ) {
 
     // Return user data
     return patchedUserData;
-
+    CRASH_REPORT_END;
 }
 
 /**
@@ -1738,7 +1745,7 @@ int VBoxSession::unmountDisk ( const std::string & controller,
 
     // Already done
     return HVE_OK;
-
+    CRASH_REPORT_END;
 }
 
 /**
@@ -1752,6 +1759,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
                              const VBoxDiskType & dtype,
                              const std::string & diskFile, 
                              bool multiAttach ) {
+    CRASH_REPORT_BEGIN;
 
     vector<string> lines;
     ostringstream args;
@@ -1876,6 +1884,7 @@ int VBoxSession::mountDisk ( const std::string & controller,
     // Retun last execution result
     return ans;
 
+    CRASH_REPORT_END;
 }
 
 

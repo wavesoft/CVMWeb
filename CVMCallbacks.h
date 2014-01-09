@@ -34,7 +34,7 @@ public:
 	/**
 	 * Connect to the anyEvent slot at constructor
 	 */	
-	_DelegatedSlot( Callbacks & cb, cbAnyEvent callback ) : cb(cb), slot() {
+	_DelegatedSlot( Callbacks& cb, cbAnyEvent callback ) : cb(cb), slot() {
 		slot = cb.onAnyEvent( callback );
 	}
 
@@ -45,8 +45,17 @@ public:
 		cb.offAnyEvent( slot );
 	}
 
+	/**
+	 * Required operator
+	 */
+	_DelegatedSlot& operator=(const _DelegatedSlot& ref) {
+		cb = ref.cb;
+		slot = ref.slot;
+		return *this;
+	};
+
 private:
-	Callbacks &	        cb;
+	Callbacks&	cb;
 	AnyEventSlotPtr 	slot;
 
 };
@@ -74,10 +83,10 @@ public:
 	JSObjectCallbacks 						( const FB::variant &cb );
 
 	// Receive events from the specified callback object
-	void listen								( const Callbacks & ch );
+	void listen								( Callbacks & ch );
 
 	// Trigger a custom event
-	void fire								( const std::string& name, VariantArgList args );
+	void fire								( const std::string& name, VariantArgList& args );
 
 private:
 
