@@ -790,17 +790,12 @@ int VBoxInstance::loadSessions( const FiniteTaskPtr & pf ) {
         // destroyed externally.
         if (vboxVms.find(sess->parameters->get("vboxid")) == vboxVms.end()) {
 
-            // Make sure the session is not aware of that
-            if (sess->state != STATE_CLOSED) {
+            // Remove it from session map and rewind
+            sessions.erase( sess->uuid );
+            it = this->sessions.begin();
 
-                // Remove it from session map and rewind
-                sessions.erase( sess->uuid );
-                it = this->sessions.begin();
-
-                // Quit if we are done
-                if (this->sessions.size() == 0) break;
-
-            }
+            // Quit if we are done
+            if (this->sessions.size() == 0) break;
 
         }
 

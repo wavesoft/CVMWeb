@@ -56,7 +56,7 @@ public:
 	/**
 	 * Create a new blank parameter map
 	 */
-	ParameterMap( ) : parent(), prefix(""), locked(false), changed(false) {
+	ParameterMap( ) : parameters(), prefix(""), parent(), locked(false), changed(false) {
 
 		// Allocate a new shared pointer
 		parameters = boost::make_shared< std::map< std::string, std::string > >( );
@@ -66,14 +66,14 @@ public:
 	/**
 	 * Create a new parameter map with the specified parameters
 	 */
-	ParameterMap( ParameterDataMapPtr parametersptr, std::string pfx ) : parent(), parameters(parametersptr), prefix(pfx), locked(false), changed(false) 
+	ParameterMap( ParameterDataMapPtr parametersptr, std::string pfx ) : parameters(parametersptr), prefix(pfx), parent(), locked(false), changed(false) 
 		{ };
 
 
 	/**
 	 * Create a new parameter map by using the specified as parent
 	 */
-	ParameterMap( ParameterMapPtr parentptr, std::string pfx ) : parent(parentptr), prefix(pfx), locked(false), changed(false) {
+	ParameterMap( ParameterMapPtr parentptr, std::string pfx ) : parameters(), prefix(pfx), parent(parentptr), locked(false), changed(false) {
 
 		// Use the pointer from the parent class
 		parameters = parentptr->parameters;
@@ -208,11 +208,6 @@ public:
 private:
 
 	/**
-	 * Optional parent class
-	 */
-	ParameterMapPtr				parent;
-
-	/**
 	 * Flags if we are locked
 	 */
 	bool						locked;
@@ -224,6 +219,11 @@ private:
 
 protected:
 	
+	/**
+	 * Optional parent class
+	 */
+	ParameterMapPtr				parent;
+
 	/**
 	 * Locally overridable function to commit changes to the dictionary
 	 */

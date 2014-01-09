@@ -40,6 +40,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 // Constants for boost interprocess
 #ifdef _WIN32
@@ -74,7 +75,6 @@
 #ifndef _WIN32
 #define SOCKET          int
 #include <fcntl.h>
-#include <sys/time.h>
 #include <sys/wait.h>
 
 #include <sys/socket.h>
@@ -295,7 +295,7 @@ std::string                                         getTmpFile      ( std::strin
 /**
  * Return a path using system's preferred slash type
  */
-std::string                                         systemPath      ( std::string& path );
+std::string                                         systemPath      ( const std::string& path );
 
 /**
  * Compare two paths for eqality (ignoring different kinds of slashes)

@@ -40,47 +40,91 @@ FB::VariantList ArgVar2FBVar( VariantArgList& argVariants ) {
 }
 
 /**
- * Prepare the Javascipt Object Callback
+ * Unregister everything upon destruction
  */
-JSObjectCallbacks::JSObjectCallbacks( const FB::variant &cb ) : delegateSlots(), isAvailable(false) {
-	if (!IS_MISSING(cb) && cb.is_of_type<FB::JSObjectPtr>()) {
+JSObjectCallbacks::~JSObjectCallbacks() {
 
-		// Extract javascript object
-		jsobject = cb.cast<FB::JSObjectPtr>();
-
-		// Mark as available
-		isAvailable = true;
-
+	// Unregister from all the objects that we are monitoring
+	for (std::vector< DisposableDelegate* >::iterator it = listening.begin(); it != listening.end(); ++it ) {
+		DisposableDelegate * dd = *it;
+		// Free memory and unregister
+		delete dd;
 	}
+
 }
 
 /**
  * Listen the events of the specified callback object
  */
-void JSObjectCallbacks::listen( Callbacks & ch ) {
+void JSObjectCallbacks::listen( Callbacks & cb ) {
 
 	// Register an anyEvent receiver and keep the slot reference
-	delegateSlots.push_back( 
-			_DelegatedSlot( ch, boost::bind( &JSObjectCallbacks::fire, this, _1, _2 ) )
-		);
+	listening.push_back(
+		new DisposableDelegate( &cb, boost::bind( &JSObjectCallbacks::fire, this, _1, _2 ) )
+	);
 		
 }
 
 /**
+ * Stop listening for events of the specified callback object
+ */
+void JSObjectCallbacks::stopListening( Callbacks & cb ) {
+
+	// Register an anyEvent receiver and keep the slot reference
+	for (std::vector< DisposableDelegate* >::iterator it = listening.begin(); it != listening.end(); ++it ) {
+		DisposableDelegate * dd = *it;
+
+		// Erase the callback item
+		if (dd->cb == &cb) {
+
+			// Erase item from vector
+			listening.erase( it );
+
+			// Delete and unregister
+			delete dd;
+
+			// Break from loop
+			break;
+
+		}
+
+	}
+		
+}
+/**
  * Fire an event to the javascript object
  */
 void JSObjectCallbacks::fire( const std::string& name, VariantArgList& args ) {
-	if (!isAvailable) return;
 
-	// Convert the event name to onX...
-	std::string cbName = "on" + toupper(name[0]) + name.substr(1);
+	// First fire the anyEvent listeners
+	for (std::vector< FB::JSObjectPtr >::iterator it = jsAny.begin(); it != jsAny.end(); ++it) {
+		FB::JSObjectPtr jsobject = *it;
 
-	// Check if we have such callback
-    if (jsobject->HasProperty( cbName )) {
+		// Convert the event name to onX...
+		std::string cbName = "on" + toupper(name[0]) + name.substr(1);
 
-    	// Fire callback
-		jsobject->InvokeAsync( cbName, ArgVar2FBVar( args ) );
+		// Check if we have such callback
+	    if (jsobject->HasProperty( cbName )) {
 
-    }
+	    	// Fire callback
+			jsobject->InvokeAsync( cbName, ArgVar2FBVar( args ) );
+
+	    }
+
+	}
+
+	// Fetch named callbacks
+	std::map< std::string, std::vector< FB::JSObjectPtr > >::iterator pos = jsNamed.find( name );
+	if (pos == jsNamed.end()) return;
+
+	// Fire callbacks
+	std::vector< FB::JSObjectPtr > callbacks = (*pos).second;
+	for (std::vector< FB::JSObjectPtr >::iterator it = callbacks.begin(); it != callbacks.end(); ++it) {
+		FB::JSObjectPtr jsobject = *it;
+
+    	// Fire anonymous callback
+		jsobject->InvokeAsync( "", ArgVar2FBVar( args ) );
+
+	}
 
 }

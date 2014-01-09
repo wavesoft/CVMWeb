@@ -30,7 +30,6 @@
 #include "BrowserHost.h"
 
 #include "CVMWeb.h"
-#include "CVMCallbacks.h"
 
 #include "Common/Hypervisor.h"
 #include "Common/Utilities.h"

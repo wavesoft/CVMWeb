@@ -26,7 +26,7 @@
 NamedEventSlotPtr Callbacks::on ( const std::string& name, cbNamedEvent cb ) {
     // Allocate missing entry
 	if (namedEventCallbacks.find(name) == namedEventCallbacks.end())
-        namedEventCallbacks.insert(std::pair<std::string, std::vector< NamedEventSlotPtr >>( name, std::vector< NamedEventSlotPtr >() ));
+        namedEventCallbacks[name] = std::vector< NamedEventSlotPtr >();
     // Update map
     std::vector< NamedEventSlotPtr > * cbs = &namedEventCallbacks[name];
     NamedEventSlotPtr ptr = boost::make_shared<NamedEventSlot>( cb );

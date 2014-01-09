@@ -1142,8 +1142,9 @@ int sysExec( const string& app, const string& cmdline, vector<string> * stdoutLi
 /**
  * Return a path using system's preferred slash type
  */
-std::string systemPath ( std::string& path ) {
-    for (std::string::iterator it = path.begin(); it != path.end(); ++it) {
+std::string systemPath ( const std::string& path ) {
+    std::string ans = path;
+    for (std::string::iterator it = ans.begin(); it != ans.end(); ++it) {
         char c = *it;
 #ifdef _WIN32
         if (c == '/') *it='\\';
@@ -1151,7 +1152,7 @@ std::string systemPath ( std::string& path ) {
         if (c == '\\') *it='/';
 #endif
     }
-    return path;
+    return ans;
 }
 
 /**
@@ -1746,7 +1747,7 @@ bool isPIDAlive( int pid ) {
  * (Where the system supports it)
  */
 unsigned long long getFileTimeMs ( const std::string& file ) {
-    #ifdef _WIN32   
+#ifdef _WIN32   
     unsigned long long llWriteTime;
 
     // Try to open the file
@@ -1769,16 +1770,29 @@ unsigned long long getFileTimeMs ( const std::string& file ) {
     CloseHandle( hFile );
     return llWriteTime;
 
-    #else
+#elif defined(__APPLE__) && defined(__MACH__)
 
     // Stat file
     struct stat attrib;
     stat( file.c_str(), &attrib);
 
     // Calculate and return milliseconds
-    return attrib.st_mtime * 1000 + attrib.st_mtim.tv_nsec / 1000000;
+    return attrib.st_mtimespec.tv_sec * 1000 + attrib.st_mtimespec.tv_nsec / 1000000;
 
+#else
+
+    // Stat file
+    struct stat attrib;
+    stat( file.c_str(), &attrib);
+
+    // Calculate and return milliseconds
+    #if STAT_HAVE_NSEC
+        return attrib.st_mtime.tv_sec * 1000 + attrib.st_mtime.tv_nsec / 1000000;
+    #else
+        return attrib.st_mtime.tv_sec * 1000;
     #endif
+
+#endif
 }
 
 /* ======================================================== */

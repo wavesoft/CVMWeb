@@ -192,18 +192,12 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     // Only a single isntance can access the file
     std::string file = systemPath(this->configDir + "/" + name + ".conf");
     NAMED_MUTEX_LOCK(file);
-    CVMWA_LOG("Config", "OPEN [" << GetCurrentThreadId() << "] Saving " << file );
+    CVMWA_LOG("Config", "OPEN Saving " << file );
 
     // Truncate file
     std::ofstream ofs ( file.c_str() , std::ofstream::out | std::ofstream::trunc);
     if (ofs.fail()) {
-        CVMWA_LOG("Config", "ERROR [" << GetCurrentThreadId() << "] Code=" << GetLastError() );
-
-        DWORD w = GetLastError();
-        if (w != 0) {
-            CVMWA_LOG("Error", w);
-        }
-
+        CVMWA_LOG("Error", "SaveMap failed while oppening " << file );
         ofs.close();
         return false;
     }
@@ -238,7 +232,7 @@ bool LocalConfig::saveMap ( std::string name, std::map<std::string, std::string>
     ofs.flush();
     ofs.close();
 
-    CVMWA_LOG("Config", "CLOSE [" << GetCurrentThreadId() << "] Closing " << file );
+    CVMWA_LOG("Config", "CLOSE Closing " << file );
 
     return true;
     
@@ -316,12 +310,12 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     // Only a single isntance can access the file
     std::string file = systemPath(this->configDir + "/" + name + ".conf");
     NAMED_MUTEX_LOCK(file);
-    CVMWA_LOG( "Config", "OPEN [" << GetCurrentThreadId() << "] LoadingMap " << file.c_str()  );
+    CVMWA_LOG( "Config", "OPEN LoadingMap " << file.c_str()  );
 
     // Load configuration
     std::ifstream ifs ( file.c_str() , std::ifstream::in);
     if (ifs.fail()) {
-        CVMWA_LOG("Config", "ERROR [" << GetCurrentThreadId() << "] Code=" << GetLastError() );
+        CVMWA_LOG("Error", "Error loading map from " << file );
         ifs.close();
         return false;
     }
@@ -363,7 +357,7 @@ bool LocalConfig::loadMap ( std::string name, std::map<std::string, std::string>
     
     // Close file
     ifs.close();
-    CVMWA_LOG("Config", "CLOSE [" << GetCurrentThreadId() << "] Closing " << file );
+    CVMWA_LOG("Config", "CLOSE Closing " << file );
     return true;
     
     NAMED_MUTEX_UNLOCK;
@@ -447,8 +441,36 @@ void LocalConfig::clear ( ) {
     // If we don't have a prefix, we just did a 'clearAll'
     // Remove the file as well.
     if (prefix.empty()) {
-        
+        if (!parent) {
+            std::string fName = systemPath(this->configDir + "/" + configName + ".conf");
+            if (file_exists(fName))
+                remove( fName.c_str() );
+        }
     }
+
+    CRASH_REPORT_END;
+}
+
+/**
+ * Override the clearAll function so we can remove the underlaying file aswell.
+ */
+void LocalConfig::clearAll ( ) {
+    CRASH_REPORT_BEGIN;
+
+    // Update time modified
+    timeModified = getTimeInMs();
+
+    // Clear all keys
+    ParameterMap::clearAll();
+
+    // If we don't have a prefix, we just did a 'clearAll'
+    // Remove the file as well.
+    if (!parent) {
+        std::string fName = systemPath(this->configDir + "/" + configName + ".conf");
+        if (file_exists(fName))
+            remove( fName.c_str() );
+    }
+
 
     CRASH_REPORT_END;
 }

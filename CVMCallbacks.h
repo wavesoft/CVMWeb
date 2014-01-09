@@ -25,37 +25,38 @@
 #include "JSObject.h"
 #include "variant_list.h"
 
+#include <vector>
+#include <map>
+
 /**
  * A utility class that keeps track of the delegated Callbacks
+ * and helps deregistering the listeners after destruction.
  */
-class _DelegatedSlot {
+class DisposableDelegate {
 public:
 
 	/**
 	 * Connect to the anyEvent slot at constructor
 	 */	
-	_DelegatedSlot( Callbacks& cb, cbAnyEvent callback ) : cb(cb), slot() {
-		slot = cb.onAnyEvent( callback );
+	DisposableDelegate( Callbacks* cb, cbAnyEvent callback ) : cb(cb), slot() {
+		slot = cb->onAnyEvent( callback );
 	}
 
 	/**
 	 * Disconnect from the event slot on destruction
 	 */	
-	~_DelegatedSlot() {
-		cb.offAnyEvent( slot );
+	~DisposableDelegate() {
+		cb->offAnyEvent( slot );
 	}
 
 	/**
-	 * Required operator
+	 * The callback object used for unregister
 	 */
-	_DelegatedSlot& operator=(const _DelegatedSlot& ref) {
-		cb = ref.cb;
-		slot = ref.slot;
-		return *this;
-	};
+	Callbacks*			cb;
 
-private:
-	Callbacks&	cb;
+	/**
+	 * The allocated slot used for unregister
+	 */
 	AnyEventSlotPtr 	slot;
 
 };
@@ -80,10 +81,28 @@ class JSObjectCallbacks {
 public:
 
 	// Create an object that can forward callback events to a given javascript object
-	JSObjectCallbacks 						( const FB::variant &cb );
+	JSObjectCallbacks 						( ) : listening(), jsAny(), jsNamed() { };
+
+	// Unregister everything upon destruction
+	~JSObjectCallbacks						( );
 
 	// Receive events from the specified callback object
 	void listen								( Callbacks & ch );
+
+	// Remove listener object
+	void stopListening						( Callbacks & ch );
+
+	// Register a named event listener
+	void on 								( const std::string& name, const FB::variant &cb );
+
+	// Unregister a named event listener
+	void off 								( const FB::variant &cb );
+
+	// Register an anyEvent listener
+	void onAnyEvent							( const FB::variant &cb );
+
+	// Remove an anyEvent listener
+	void offAnyEvent						( const FB::variant &cb );
 
 	// Trigger a custom event
 	void fire								( const std::string& name, VariantArgList& args );
@@ -91,13 +110,34 @@ public:
 private:
 
 	// The registry of the objects we are listening events for
-	std::vector< _DelegatedSlot >			delegateSlots;
+	std::vector< DisposableDelegate* >							listening;
 
-	// The JSObject pointer for the javascript object we wrap
-	FB::JSObjectPtr 						jsobject;
+	// The JSObject pointer for anyEvent listeners
+	std::vector< FB::JSObjectPtr >								jsAny;
 
-	// This flag is set to TRUE if the jsobject is valid
-	bool									isAvailable;
+	// The JSObject pointer for named event listeners
+	std::map< std::string, std::vector< FB::JSObjectPtr > >		jsNamed;
+
+};
+
+/**
+ * A helper class that binds the listener to the JSO
+ */
+class JSContextCallbackListener {
+public:
+
+	JSContextCallbackListener( JSObjectCallbacks& host, Callbacks & ch ): host(host), ch(ch) {
+		host.listen( ch );
+	};
+
+	~JSContextCallbackListener( ) {
+		host.stopListening( ch );
+	};
+
+private:
+
+	JSObjectCallbacks& 			host;
+	Callbacks& 					ch;
 
 };
 
