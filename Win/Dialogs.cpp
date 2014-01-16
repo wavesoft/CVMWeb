@@ -18,7 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "../Dialogs.h"
+#include "../CVMDialogs.h"
 #include <Windows.h>
 #include <Winuser.h>
 
