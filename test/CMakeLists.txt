@@ -13,7 +13,9 @@ set( HV_NAMES Virtualbox )
 
 # External libraries
 set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
+set( EXTERN_MONGOOSE "../extern/mongoose" )
 include_directories( ${EXTERN_ZLIB} )
+include_directories( ${EXTERN_MONGOOSE} )
 
 # Static build
 SET(BUILD_SHARED_LIBS OFF)
@@ -129,6 +131,10 @@ add_subdirectory( ${EXTERN_ZLIB} ${CMAKE_BINARY_DIR}/extern/zlib )
 include_directories( ${CMAKE_BINARY_DIR}/extern/zlib )
 set( LIBZ_LIBRARIES zlibstatic )
 
+# Build libmicrohttpd statically from the resources
+add_subdirectory( ${EXTERN_MONGOOSE} ${CMAKE_BINARY_DIR}/extern/mongoose )
+set( MONGOOSE_LIBRARIES mongoose )
+
 # Sources
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/test.cpp 
@@ -142,6 +148,7 @@ target_link_libraries ( ${PROJECT_NAME} ${CURL_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${OPENSSL_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${BOOST_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${LIBZ_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${MONGOOSE_LIBRARIES} )
 
 # Windows additional libraries
 if (WIN32)
