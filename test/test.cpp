@@ -7,7 +7,8 @@
 #include <string>
 #include <math.h>
 
-#include <mongoose.h>
+#include <MicroDaemon/webserver.h>
+#include <MicroDaemon/websocket_handler.h>
 
 #include <boost/bind.hpp>
 #include <boost/variant.hpp>
@@ -141,28 +142,6 @@ void doProgress( const ProgressTaskPtr & pTaskPtr) {
 
 }
 
-static int index_html(struct mg_connection *conn) {
-  mg_printf_data(conn, "Hello! Requested URI is [%s]", conn->uri);
-  return 1;
-}
-
-void server() {
-    
-    mg_server* server = mg_create_server( NULL );
-
-    mg_set_option(server, "listening_port", "8080");
-    mg_add_uri_handler(server, "/", index_html);
-
-    // Serve request. Hit Ctrl-C to terminate the program
-    printf("Starting on port %s\n", mg_get_option(server, "listening_port"));
-    for (;;) {
-    mg_poll_server(server, 1000);
-    }
-
-    mg_destroy_server( &server );
-    
-}
-
 int main( int argc, char ** argv ) {
 
     /*
@@ -217,7 +196,9 @@ int main( int argc, char ** argv ) {
     fsm.FSMThreadStop();
     */
 
-    server();
+    // Debug server
+    CVMWebserver<CVMWebsocketHandler> server;
+    server.start();
 
     FiniteTaskPtr pTasks = boost::make_shared<FiniteTask>();
 

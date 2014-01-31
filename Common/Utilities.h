@@ -40,7 +40,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 
 // Constants for boost interprocess
 #ifdef _WIN32
@@ -76,6 +75,7 @@
 #define SOCKET          int
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>

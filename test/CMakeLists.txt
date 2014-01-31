@@ -14,8 +14,10 @@ set( HV_NAMES Virtualbox )
 # External libraries
 set( EXTERN_ZLIB "../extern/zlib-1.2.8" )
 set( EXTERN_MONGOOSE "../extern/mongoose" )
+set( EXTERN_JSONCPP "../extern/jsoncpp" )
 include_directories( ${EXTERN_ZLIB} )
 include_directories( ${EXTERN_MONGOOSE} )
+include_directories( ${EXTERN_JSONCPP}/include )
 
 # Static build
 SET(BUILD_SHARED_LIBS OFF)
@@ -135,12 +137,20 @@ set( LIBZ_LIBRARIES zlibstatic )
 add_subdirectory( ${EXTERN_MONGOOSE} ${CMAKE_BINARY_DIR}/extern/mongoose )
 set( MONGOOSE_LIBRARIES mongoose )
 
+# Build jsoncpp statically from the resources
+add_subdirectory( ${EXTERN_JSONCPP} ${CMAKE_BINARY_DIR}/extern/jsoncpp )
+set( JSONCPP_LIBRARIES jsoncpp )
+
+# Include mongoose
+include_directories( ${PROJECT_SOURCE_DIR}/../MicroDaemon )
+
 # Sources
 add_executable( ${PROJECT_NAME} 
 	${PROJECT_SOURCE_DIR}/test.cpp 
 	${PLATFORM_SOURCES}
 	${COMMON_SOURCES}
 	${HYPERVISOR_SOURCES}
+	${PROJECT_SOURCE_DIR}/../MicroDaemon/webserver.cpp
 	)
 
 # Libraries
@@ -149,6 +159,7 @@ target_link_libraries ( ${PROJECT_NAME} ${OPENSSL_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${BOOST_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${LIBZ_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${MONGOOSE_LIBRARIES} )
+target_link_libraries ( ${PROJECT_NAME} ${JSONCPP_LIBRARIES} )
 
 # Windows additional libraries
 if (WIN32)
