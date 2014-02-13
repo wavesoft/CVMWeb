@@ -34,6 +34,11 @@ class CVMWebserverConnectionHandler {
 public:
 
 	/**
+	 * Abstract destructor
+	 */
+	virtual ~CVMWebserverConnectionHandler() { };
+
+	/**
 	 * This function is called when there is an incoming data frame 
 	 * from the browser.
 	 */
@@ -108,7 +113,7 @@ public:
 	/**
 	 * Create a webserver and setup listening port
 	 */
-	CVMWebserver( const CVMWebserverConnectionFactory& factory, const int port = 1793 );
+	CVMWebserver( CVMWebserverConnectionFactory& factory, const int port = 1793 );
 
 	/**
 	 * Cleanup and destroy server
@@ -143,7 +148,7 @@ private:
 	/**
 	 * The factory used for connection handler creation
 	 */
-	const CVMWebserverConnectionFactory&	factory;
+	CVMWebserverConnectionFactory&	factory;
 
 	/**
 	 * Iterator over the websocket connections

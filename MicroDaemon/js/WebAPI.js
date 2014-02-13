@@ -1,0 +1,4 @@
+
+var WebAPI = {
+	'debugLogging': true
+};

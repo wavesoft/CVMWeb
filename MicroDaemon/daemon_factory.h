@@ -27,9 +27,9 @@
 #include "daemon_session.h"
 #include "daemon_core.h"
 
-class DaemonFactory : public CVMWebserverConnectionFactory 
-{
-
+class DaemonFactory : public CVMWebserverConnectionFactory {
+public:
+	
 	/**
 	 * Keep a reference of the daemon core
 	 */

@@ -642,5 +642,5 @@ bool LocalConfig::sync ( ) {
     // Save file contents
     this->saveMap( configName, &map );
 
-
+    return true;
 }

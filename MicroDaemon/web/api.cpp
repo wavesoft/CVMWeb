@@ -18,14 +18,15 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include <Common/ParameterMap.h>
+#include "api.h"
+#include <sstream>
 
 /**
  * Translate json value to parameter map
  */
 void parseJSONtoParameters( const Json::Value& json, ParameterMapPtr map ) {
 	const Json::Value::Members membNames = json.getMemberNames();
-	for (std::vector<std::string>::begin it = membNames.begin(); it != membNames.end(); ++it) {
+	for (std::vector<std::string>::const_iterator it = membNames.begin(); it != membNames.end(); ++it) {
 		std::string k = *it;
 		Json::Value v = json[k];
 
@@ -64,10 +65,12 @@ void WebsocketAPI::handleRawData( const char * buf, const size_t len ) {
 
 	// Translate json value to ParameterMapPtr
 	ParameterMapPtr map = ParameterMap::instance();
-	parseJSONtoParameters( root, map );
+	if (root.isMember("data")) {
+		parseJSONtoParameters( root["data"], map );
+	}
 
 	// Handle action
-	handleAction(a, map );
+	handleAction( a, map );
 
 }
 
@@ -110,7 +113,7 @@ void WebsocketAPI::sendError( const std::string& error ) {
 /**
  * Send a json-formatted action response
  */
-void WebsocketAPI::sendAction( const std::string& action, const std::map< std::string, std::string >& data ) {
+void WebsocketAPI::sendAction( const std::string& action, const std::map< std::string, std::string >& params ) {
 	// Build and send an action response
 	Json::FastWriter writer;
 	Json::Value root, data;
@@ -120,8 +123,8 @@ void WebsocketAPI::sendAction( const std::string& action, const std::map< std::s
 	root["action"] = action;
 
 	// Populate data
-	for (std::map< std::string, std::string >::const_iterator it = data.begin(); it != data.end(); ++it) {
-		data[(*it).first] = (*it).second();
+	for (std::map< std::string, std::string >::const_iterator it = params.begin(); it != params.end(); ++it) {
+		data[(*it).first] = (*it).second;
 	}
 	root["data"] = data;
 

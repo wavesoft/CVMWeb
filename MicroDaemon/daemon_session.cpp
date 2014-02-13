@@ -23,6 +23,6 @@
 /**
  * Handle incoming websocket action
  */
-void DaemonSession:handleAction( const std::string& action, ParameterMapPtr parameters ) {
-
+void DaemonSession::handleAction( const std::string& action, ParameterMapPtr parameters ) {
+	
 }

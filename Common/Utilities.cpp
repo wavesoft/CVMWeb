@@ -32,8 +32,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <openssl/sha.h>
-#include <openssl/md5.h>
+#include <openssl/evp.h>
 #include "zlib.h"
 
 #include "Utilities.h"
@@ -164,7 +163,8 @@ void flushNamedMutexes() {
  */
 std::string newGUID( ) {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
-    return boost::lexical_cast<std::string>(uuid);    
+    std::stringstream out; out << uuid;
+    return out.str();
 }
 
 /**
@@ -1172,15 +1172,94 @@ bool samePath( std::string pathA, std::string pathB ) {
 }
 
 /**
- * Sha256 from binary to hex
+ * Calculate the digest of a given string buffer
  */
-void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {
+int digest_buffer( const std::string& buffer, const EVP_MD * md, string * dst, bool hex ) {
     CRASH_REPORT_BEGIN;
-    int i = 0;
-    for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
+    unsigned int md_len;
+    unsigned char md_value[EVP_MAX_MD_SIZE];
+
+    // Initialize EVP subsystem
+    EVP_MD_CTX *mdctx;
+    mdctx = EVP_MD_CTX_create();
+    EVP_DigestInit_ex(mdctx, md, NULL);
+
+    // Checksum
+    EVP_DigestUpdate(mdctx, buffer.c_str(), buffer.length());
+    EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+
+    // Convert to hex & upload to dst
+    if (hex) {
+        std::ostringstream oss; oss << std::setfill ('0') << std::setw(2) << std::hex;
+        for(int i = 0; i < md_len; i++) {
+            oss << md_value[i];
+        }
+        *dst = oss.str();
+    } else {
+        dst->assign( (char*) md_value, md_len );
     }
-    outputBuffer[64] = 0;
+
+    // Cleanup
+    EVP_MD_CTX_destroy(mdctx);
+    return 0;
+    CRASH_REPORT_END;
+}
+
+/**
+ * Calculate the digest of the given filename
+ */
+int digest_file( const std::string& path, const EVP_MD * md, string * dst, bool hex ) {
+    CRASH_REPORT_BEGIN;
+    const int FREAD_CHUNK = 4096; // Filesystems have 4k or 8k chunks
+    unsigned int md_len;
+    unsigned char md_value[EVP_MAX_MD_SIZE];
+
+    // Open file
+    std::ifstream file( path.c_str() );
+    if(!file.good()) return -534;
+
+    // Initialize EVP subsystem
+    EVP_MD_CTX *mdctx;
+    mdctx = EVP_MD_CTX_create();
+    EVP_DigestInit_ex(mdctx, md, NULL);
+
+    // Prepare file scanning buffers
+    char read_buffer[FREAD_CHUNK];
+    while(!file.eof()) {
+
+        // Read file chunk
+        file.read( read_buffer, FREAD_CHUNK );
+
+        // Check for errors while reading
+        if (file.bad()) {    
+            EVP_MD_CTX_destroy(mdctx);
+            return -534;
+        }
+
+        // Update digest
+        EVP_DigestUpdate(mdctx, read_buffer, file.gcount());
+    }
+
+    // Close file
+    file.close();
+
+    // Checksum
+    EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+
+    // Convert to hex & upload to dst
+    if (hex) {
+        std::ostringstream oss; oss << std::setfill ('0') << std::setw(2) << std::hex;
+        for(int i = 0; i < md_len; i++) {
+            oss << md_value[i];
+        }
+        *dst = oss.str();
+    } else {
+        dst->assign( (char*)md_value, md_len );
+    }
+
+    // Cleanup
+    EVP_MD_CTX_destroy(mdctx);
+    return 0;
     CRASH_REPORT_END;
 }
 
@@ -1189,32 +1268,7 @@ void __sha256_hash_string( unsigned char * hash, char * outputBuffer) {
  */
 int sha256_file( string path, string * checksum ) {
     CRASH_REPORT_BEGIN;
-    
-    FILE *file = fopen(path.c_str(), "rb");
-    if(!file) return -534;
-
-    char outputBuffer[65];
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    const int bufSize = 32768;
-    unsigned char *buffer = (unsigned char *) malloc(bufSize);
-    int bytesRead = 0;
-    if(!buffer) {
-        fclose(file);
-        return -1;
-    }
-    while((bytesRead = fread(buffer, 1, bufSize, file))) {
-        SHA256_Update(&sha256, buffer, bytesRead);
-    }
-    SHA256_Final(hash, &sha256);
-
-    __sha256_hash_string( hash, outputBuffer);
-    fclose(file);
-    free(buffer);
-    *checksum = outputBuffer;
-    
-    return 0;
+    return digest_file( path, EVP_sha256(), checksum, true );
     CRASH_REPORT_END;
 }
 
@@ -1223,42 +1277,7 @@ int sha256_file( string path, string * checksum ) {
  */
 int sha256_buffer( string buffer, string * checksum ) {
     CRASH_REPORT_BEGIN;
-    char outputBuffer[65];
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, buffer.c_str(), buffer.length());
-    SHA256_Final(hash, &sha256);
-    __sha256_hash_string( hash, outputBuffer);
-    *checksum = outputBuffer;
-    
-    return 0;
-    CRASH_REPORT_END;
-}
-
-/**
- * OpenSSL SHA256 on string buffer
- */
-int sha256_bin( string buffer, unsigned char * hash ) {
-    CRASH_REPORT_BEGIN;
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, buffer.c_str(), buffer.length());
-    SHA256_Final(hash, &sha256);
-    return 0;
-    CRASH_REPORT_END;
-}
-
-/**
- * OpenSSL MD5 on a string buffer
- */
-int md5_bin( string buffer, unsigned char * hash ) {
-    CRASH_REPORT_BEGIN;
-    MD5_CTX md5;
-    MD5_Init(&md5);
-    MD5_Update(&md5, buffer.c_str(), buffer.length());
-    MD5_Final(hash, &md5);
-    return 0;
+    return digest_buffer( buffer, EVP_sha256(), checksum, true );
     CRASH_REPORT_END;
 }
 
@@ -1364,11 +1383,11 @@ string base64_decode(const ::std::string &ascdata) {
 string compactID( string id ) {
 
     // Calculate the MD5 digest of the ID
-    unsigned char md5_digest[16];
-    md5_bin( id, md5_digest );
+    std::string md5_digest;
+    digest_buffer( id, EVP_md5(), &md5_digest, false);
 
     // Convert it to base64
-    string b64_digest = base64_encode_ptr( md5_digest, 16 );
+    string b64_digest = base64_encode( md5_digest );
 
     // Prefix with "cvmw"
     b64_digest = "cvm" + b64_digest.substr(0, 5);

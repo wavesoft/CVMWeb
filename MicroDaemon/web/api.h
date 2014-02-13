@@ -28,9 +28,9 @@
 #include "api.h"
 
 #include <json/json.h>
-#include <queue>
 
 #include <map>
+#include <queue>
 #include <string>
 
 class WebsocketAPI : public CVMWebserverConnectionHandler  {
@@ -39,7 +39,7 @@ public:
 	/**
 	 * Constructor for WebsocketAPI
 	 */
-	WebsocketAPI( const std::string& domain, const std::string& uri ) : domain(domain), url(uri), egress(), connected(true), CVMWebserverConnectionHandler() { };
+	WebsocketAPI( const std::string& domain, const std::string& uri ) : domain(domain), uri(uri), egress(), connected(true), CVMWebserverConnectionHandler() { };
 
 	/**
 	 * Virtual destructor
@@ -79,7 +79,7 @@ protected:
 	/**
 	 * The egress queue
 	 */
-	queue::< std::string >	egress;
+	std::queue< std::string >	egress;
 
 	/**
 	 * A status flag to let the server know when to drop the connection

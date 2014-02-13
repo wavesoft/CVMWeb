@@ -57,7 +57,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include "CrashReport.h"
 
@@ -240,16 +239,6 @@ int                                                 sha256_file     ( std::strin
  * string in the checksum pointer
  */
 int                                                 sha256_buffer   ( std::string path, std::string * checksum );
-
-/**
- * Get the sha256 signature of the given buffer and store it on the checksum char pointer
- */
-int                                                 sha256_bin      ( std::string path, unsigned char * checksum );
-
-/**
- * Get the md5 signature of the given buffer and store it on the checksum char pointer
- */
-int                                                 md5_bin         ( std::string path, unsigned char * checksum );
 
 /**
  * Platform-independant function to execute the given command-line and return the

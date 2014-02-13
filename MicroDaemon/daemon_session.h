@@ -27,12 +27,26 @@
 
 #include "daemon_core.h"
 
-class DaemonSession : public WebsocketAPI
-{
+class DaemonSession : public WebsocketAPI {
+public:
 
-	DaemonSession( const std::string& domain, const std::string uri, const DaemonCore& core );
+	/**
+	 * Constructor
+	 */
+	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
+		: WebsocketAPI(domain, uri), core(core) { };
 
+protected:
+
+	/**
+	 * API actino handler
+	 */
 	virtual void handleAction( const std::string& action, ParameterMapPtr parameters );
+
+	/**
+	 * The daemon core instance
+	 */
+	DaemonCore&	core;
 
 };
 

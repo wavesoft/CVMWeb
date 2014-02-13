@@ -19,6 +19,9 @@
  */
 
 #include "webserver.h"
+#include <sstream>
+
+using namespace std;
 
 /**
  * This is the entry point for the CernVM Web API I/O
@@ -52,7 +55,7 @@ int CVMWebserver::api_handler(struct mg_connection *conn) {
         // Check if a connection is active
         CVMWebserverConnection * c;
         if (self->connections.find(conn) == self->connections.end()) {
-            c = new CVMWebserverConnection( factory.createHandler(domain, url) );
+            c = new CVMWebserverConnection( self->factory.createHandler(domain, url) );
             c->isIterated = true;
             self->connections[conn] = c;
         } else {
@@ -90,8 +93,8 @@ int CVMWebserver::iterate_callback(struct mg_connection *conn) {
     // Handle websockets
     if (conn->is_websocket) {
 
-        // Check if a TConnectionHandler is active
-        TConnectionHandler * c;
+        // Check if a CVMWebserverConnection is active
+        CVMWebserverConnection * c;
         if (self->connections.find(conn) == self->connections.end()) {
             // This connection is not handled by us!
             return MG_REQUEST_PROCESSED;
@@ -129,7 +132,7 @@ int CVMWebserver::iterate_callback(struct mg_connection *conn) {
 /**
  * Create a webserver and setup listening port
  */
-CVMWebserver::CVMWebserver( const CVMWebserverConnectionFactory& factory, const int port = 1793 ) : factory(factory) {
+CVMWebserver::CVMWebserver( CVMWebserverConnectionFactory& factory, const int port ) : factory(factory) {
 
 	// Create a mongoose server, passing the pointer
 	// of this class, in order for the C callbacks
@@ -151,9 +154,9 @@ CVMWebserver::CVMWebserver( const CVMWebserverConnectionFactory& factory, const 
 CVMWebserver::~CVMWebserver() {
 
 	// Destroy connections
-    std::map<mg_connection*, TConnectionHandler*>::iterator it;
+    std::map<mg_connection*, CVMWebserverConnection*>::iterator it;
     for (it=connections.begin(); it!=connections.end(); ++it) {
-        TConnectionHandler * c = it->second;
+        CVMWebserverConnection * c = it->second;
         delete c;
     }
 
@@ -169,9 +172,9 @@ CVMWebserver::~CVMWebserver() {
 void CVMWebserver::poll( const int timeout) {
 
     // Mark all the connections as 'not iterated'
-    std::map<mg_connection*, TConnectionHandler*>::iterator it;
+    std::map<mg_connection*, CVMWebserverConnection*>::iterator it;
     for (it=connections.begin(); it!=connections.end(); ++it) {
-        TConnectionHandler * c = it->second;
+        CVMWebserverConnection * c = it->second;
         c->isIterated = false;
     }
 
@@ -183,7 +186,7 @@ void CVMWebserver::poll( const int timeout) {
 
     // Find dead connections
     for (it=connections.begin(); it!=connections.end(); ++it) {
-        TConnectionHandler * c = it->second;
+        CVMWebserverConnection * c = it->second;
 
         // Delete non-iterated over actions
         if (!c->isIterated) {
