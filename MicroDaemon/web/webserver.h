@@ -19,8 +19,8 @@
  */
 
 #pragma once
-#ifndef SERVERAPI_H
-#define SERVERAPI_H
+#ifndef WEBSERVER_H
+#define WEBSERVER_H
 
 #include <mongoose.h>
 
@@ -157,4 +157,4 @@ private:
 
 };
 
-#endif /* end of include guard: SERVERAPI_H */
+#endif /* end of include guard: WEBSERVER_H */

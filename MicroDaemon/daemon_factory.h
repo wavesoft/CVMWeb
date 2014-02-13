@@ -18,47 +18,35 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-/**
- *
- */
-void WebsocketAPI::handleRawData( const char * buf, const size_t len ) {
+#pragma once
+#ifndef DAEMON_FACTORY_H
+#define DAEMON_FACTORY_H
 
-	// Parse the incoming buffer as JSON
-	Json::Value root;
-	Json::Reader reader;
-	bool parsingSuccessful = reader.parse( buf, buf+len, root );
-	if ( !parsingSuccessful ) {
-	    // report to the user the failure and their locations in the document.
-		sendRawData( "{\"result\":\"error\",\"error\":\"\"}" );
-	    return;
+#include "web/webserver.h"
+
+#include "daemon_session.h"
+#include "daemon_core.h"
+
+class DaemonFactory : public CVMWebserverConnectionFactory 
+{
+
+	/**
+	 * Keep a reference of the daemon core
+	 */
+	DaemonFactory( DaemonCore& core ) : core(core), CVMWebserverConnectionFactory() { };
+
+	/**
+	 * This factory just creates WebsocketAPI handlers
+	 */
+	virtual CVMWebserverConnectionHandler *	createHandler( const std::string& domain, const std::string uri ) {
+		return new DaemonSession( domain, uri, core );
 	}
 
-	// Handle data
-	this->handleMessage( root );
+	/**
+	 * Daemon core
+	 */
+	DaemonCore& 	core;
 
-}
+};
 
-/**
- *
- */
-std::string WebsocketAPI::getEgressRawData() {
-
-	// Return empty string if the queue is empty
-	if (egress.empty())
-		return "";
-
-	// Pop first element
-	return egress.front();
-	egress.pop();
-
-}
-
-/**
- *
- */
-void WebsocketAPI::sendRawData( const std::string& data ) {
-
-	// Add data to the egress queue
-	egress.push(data);
-
-}
+#endif /* end of include guard: DAEMON_FACTORY_H */

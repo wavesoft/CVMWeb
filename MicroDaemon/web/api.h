@@ -22,11 +22,16 @@
 #ifndef SERVERAPI_H
 #define SERVERAPI_H
 
+#include <Common/ParameterMap.h>
+
 #include "webserver.h"
 #include "api.h"
 
 #include <json/json.h>
 #include <queue>
+
+#include <map>
+#include <string>
 
 class WebsocketAPI : public CVMWebserverConnectionHandler  {
 public:
@@ -34,7 +39,12 @@ public:
 	/**
 	 * Constructor for WebsocketAPI
 	 */
-	WebsocketAPI( const std::string& domain ) : domain(domain), egress(), connected(true) { };
+	WebsocketAPI( const std::string& domain, const std::string& uri ) : domain(domain), url(uri), egress(), connected(true), CVMWebserverConnectionHandler() { };
+
+	/**
+	 * Virtual destructor
+	 */
+	virtual ~WebsocketAPI() { };
 
 	/**
 	 * This function is called when there is an incoming data frame 
@@ -54,12 +64,17 @@ public:
 	 */
 	virtual std::string 	getEgressRawData();
 
-private:
+protected:
 
 	/**
 	 * The domain where the plugin resides
 	 */
 	std::string 			domain;
+
+	/**
+	 * The request URI
+	 */
+	std::string 			uri;
 
 	/**
 	 * The egress queue
@@ -71,16 +86,28 @@ private:
 	 */
 	bool 					connected;
 
+protected:
+
+	/**
+	 * Handle incoming actions
+	 */
+	virtual void			handleAction( const std::string& action, ParameterMapPtr parameters ) = 0;
+
 	/**
 	 * Send a RAW message
 	 */
 	void 					sendRawData( const std::string& data );
 
-private:
+	/**
+	 * Send error response
+	 */
+	void 					sendError( const std::string& message );
 
 	/**
-	 * Handle incoming actions
+	 * Send a named action
 	 */
+	void 					sendAction( const std::string& name, const std::map< std::string, std::string >& data );
+
 
 };
 

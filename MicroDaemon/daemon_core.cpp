@@ -18,24 +18,14 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#pragma once
-#ifndef SERVERAPI_H
-#define SERVERAPI_H
+#include "daemon_core.h"
 
-#include "webserver.h"
-#include "api.h"
+/**
+ * Initialize daemon code
+ */
+DaemonCore::DaemonCore() {
 
-class WebsocketAPIFactory : public CVMWebserverConnectionFactory 
-{
+	// Detect and instantiate hypervisor
+	hypervisor = detectHypervisor();
 
-	/**
-	 * This factory just creates WebsocketAPI handlers
-	 */
-	virtual CVMWebserverConnectionHandler *	createHandler( const std::string& domain, const std::string uri )
-	{
-		return new WebsocketAPI( domain, uri );
-	}
-
-};
-
-#endif /* end of include guard: SERVERAPI_H */
+}
