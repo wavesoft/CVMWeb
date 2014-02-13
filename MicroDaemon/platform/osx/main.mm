@@ -7,8 +7,11 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "URLDaemonDelegate.h"
 
 int main(int argc, const char * argv[])
 {
-    return NSApplicationMain(argc, argv);
+	URLDaemonDelegate * delegate = [[URLDaemonDelegate alloc] init];
+	[[NSApplication sharedApplication] setDelegate:delegate];
+	[NSApp run];
 }

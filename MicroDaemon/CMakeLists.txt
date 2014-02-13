@@ -127,7 +127,8 @@ file ( GLOB DAEMON_SOURCES
 	)
 
 # Platform-dependant sources
-set ( PLATFORM_SOURCES "platform/osx.mm" )
+set ( PLATFORM_DIR ${PROJECT_SOURCE_DIR}/platform/osx )
+file ( GLOB PLATFORM_SOURCES ${PLATFORM_DIR}/*.mm  )
 
 # Locate the common sources
 file ( GLOB COMMON_SOURCES ${PROJECT_SOURCE_DIR}/../Common/*.cpp  )
@@ -164,13 +165,10 @@ set( JSONCPP_LIBRARIES jsoncpp )
 include_directories( ${PROJECT_SOURCE_DIR}/../MicroDaemon )
 
 # OSX Frameworks
-find_library(FOUNDATION NAMES Foundation)
+find_library(FRAMEWORK_FOUNDATION NAMES Foundation)
+find_library(FRAMEWORK_COCOA NAMES Cocoa)
 
 # Sources
-set(MACOSX_BUNDLE_BUNDLE_NAME "CVMWebAPI Daemon")
-set(MACOSX_BUNDLE_LONG_VERSION_STRING "2.0 Beta")
-set(MACOSX_BUNDLE_SHORT_VERSION_STRING "2.0b")
-set(MACOSX_BUNDLE_INFO_STRING "CernVM WebAPI Daemon")
 add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
 	${PLATFORM_SOURCES}
 	${DAEMON_SOURCES}
@@ -187,7 +185,11 @@ target_link_libraries ( ${PROJECT_NAME} ${MONGOOSE_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${JSONCPP_LIBRARIES} )
 
 # Link OSX Frameworks
-target_link_libraries ( ${PROJECT_NAME} ${FOUNDATION} )
+target_link_libraries ( ${PROJECT_NAME} ${FRAMEWORK_FOUNDATION} )
+target_link_libraries ( ${PROJECT_NAME} ${FRAMEWORK_COCOA} )
+set_target_properties( ${PROJECT_NAME} PROPERTIES 
+	MACOSX_BUNDLE_INFO_PLIST ${PLATFORM_DIR}/Info.plist
+)
 
 # Windows additional libraries
 if (WIN32)
