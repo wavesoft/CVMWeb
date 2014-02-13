@@ -75,40 +75,50 @@ else()
 ENDIF(OPENSSL_FOUND)
 
 # Use FireBreath (already built) boost libraries
-ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
-INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
-if (WIN32)
-	file ( GLOB BOOST_LIBRARIES 
-		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*.lib
-		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*.lib
-		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*.lib
-		${FB_BOOST_LIB_DIR}/regex/${CMAKE_BUILD_TYPE}/*.lib )
-elseif(APPLE)
-	file ( GLOB BOOST_LIBRARIES 
-		${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*
-		${FB_BOOST_LIB_DIR}/regex/${CMAKE_BUILD_TYPE}/* )
+set(Boost_USE_STATIC_LIBS ON) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME ON) 
+find_package(Boost COMPONENTS thread system filesystem regex) 
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS}) 
+    set( BOOST_LIBRARIES "${Boost_LIBRARIES}" )
+else()
+	ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
+	INCLUDE_DIRECTORIES( ${FB_BOOST_INCLUDE_DIR} )
+	if (WIN32)
+		file ( GLOB BOOST_LIBRARIES 
+			${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*.lib
+			${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*.lib
+			${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*.lib
+			${FB_BOOST_LIB_DIR}/regex/${CMAKE_BUILD_TYPE}/*.lib )
+	elseif(APPLE)
+		file ( GLOB BOOST_LIBRARIES 
+			${FB_BOOST_LIB_DIR}/thread/${CMAKE_BUILD_TYPE}/*
+			${FB_BOOST_LIB_DIR}/system/${CMAKE_BUILD_TYPE}/*
+			${FB_BOOST_LIB_DIR}/filesystem/${CMAKE_BUILD_TYPE}/*
+			${FB_BOOST_LIB_DIR}/regex/${CMAKE_BUILD_TYPE}/* )
 
-	# Check if the user is using Make instead of XCodeBuild
-	IF("${BOOST_LIBRARIES}" STREQUAL "")
+		# Check if the user is using Make instead of XCodeBuild
+		IF("${BOOST_LIBRARIES}" STREQUAL "")
+			file ( GLOB BOOST_LIBRARIES 
+				${FB_BOOST_LIB_DIR}/thread/*.a
+				${FB_BOOST_LIB_DIR}/system/*.a
+				${FB_BOOST_LIB_DIR}/filesystem/*.a
+				${FB_BOOST_LIB_DIR}/regex/*.a )
+		ENDIF()
+
+	elseif(UNIX)
 		file ( GLOB BOOST_LIBRARIES 
 			${FB_BOOST_LIB_DIR}/thread/*.a
 			${FB_BOOST_LIB_DIR}/system/*.a
 			${FB_BOOST_LIB_DIR}/filesystem/*.a
 			${FB_BOOST_LIB_DIR}/regex/*.a )
+	ENDIF(WIN32)
+	IF("${BOOST_LIBRARIES}" STREQUAL "")
+		MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
 	ENDIF()
 
-elseif(UNIX)
-	file ( GLOB BOOST_LIBRARIES 
-		${FB_BOOST_LIB_DIR}/thread/*.a
-		${FB_BOOST_LIB_DIR}/system/*.a
-		${FB_BOOST_LIB_DIR}/filesystem/*.a
-		${FB_BOOST_LIB_DIR}/regex/*.a )
-ENDIF(WIN32)
-IF("${BOOST_LIBRARIES}" STREQUAL "")
-	MESSAGE( FATAL_ERROR "No BOOST libraries were found for ${CMAKE_BUILD_TYPE} configuration! Please build the plugin first..." )
-ENDIF()
+endif()
 
 # Locate the common sources
 file ( GLOB COMMON_SOURCES ${PROJECT_SOURCE_DIR}/../Common/*.cpp  )
