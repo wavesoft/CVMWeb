@@ -25,4 +25,10 @@
  */
 void DaemonSession::handleAction( const std::string& action, ParameterMapPtr parameters ) {
 	
+	if (action == "handshake") {
+
+		
+
+	}
+
 }

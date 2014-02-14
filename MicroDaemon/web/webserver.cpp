@@ -221,3 +221,10 @@ void CVMWebserver::start() {
 	}
 
 }
+
+/**
+ * Check if there are live registered connections
+ */
+bool CVMWebserver::hasLiveConnections() {
+    return !connections.empty();
+}

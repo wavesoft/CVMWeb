@@ -32,6 +32,19 @@ WebAPI.Socket.prototype.__handleData = function(data) {
 }
 
 /**
+ * Send a JSON frame
+ */
+WebAPI.Socket.prototype.send = function(action, data) {
+	var frame = {
+		'action': action,
+		'data': data || {}
+	};
+
+	// Send JSON Frame
+	this.socket.send(JSON.stringify(frame));
+}
+
+/**
  * Close connection
  */
 WebAPI.Socket.prototype.close = function() {
@@ -70,11 +83,13 @@ WebAPI.Socket.prototype.connect = function() {
 		try {
 			var socket = new WebSocket(WS_ENDPOINT);
 			socket.onerror = function(e) {
+				console.log("Error:",e);
 				cb(false);
-			}
+			};
 			socket.onopen = function(e) {
+				console.log("Open:",e);
 				cb(true, socket);
-			}
+			};
 		} catch(e) {
 			console.warn("[socket] Error setting up socket! ",e);
 			cb(false);
@@ -135,13 +150,17 @@ WebAPI.Socket.prototype.connect = function() {
 
 		// Bind extra handlers
 		self.socket = socket;
-		self.socket.onclosee = function() {
+		self.socket.onclose = function() {
 			console.warn("Remotely disconnected from CernVM WebAPI");
 			self.__handleClose();
-		}
+		};
 		self.socket.onmessage = function(e) {
+			console.log("Message:",e.data);
 			self.__handleData(e.data);
-		}
+		};
+
+		// Send handshake
+		self.send("handshake", {"version": WebAPI.version});
 
 	};
 
@@ -152,7 +171,6 @@ WebAPI.Socket.prototype.connect = function() {
 		console.error("Unable to contact CernVM WebAPI");
 		self.connecting = false;
 		self.connected = false;
-
 	};
 
 	/**

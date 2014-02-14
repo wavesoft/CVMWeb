@@ -1,4 +1,5 @@
 
 var WebAPI = {
-	'debugLogging': true
+	'debugLogging': true,
+	'version': '1.0'
 };

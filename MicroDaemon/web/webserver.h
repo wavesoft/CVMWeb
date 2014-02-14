@@ -133,6 +133,11 @@ public:
 	 */
 	void start();
 
+	/**
+	 * Check if there are live registered connections
+	 */
+	bool hasLiveConnections();
+
 private:
 
 	/**

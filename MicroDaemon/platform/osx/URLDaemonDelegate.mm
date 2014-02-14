@@ -10,6 +10,9 @@
 
 @implementation URLDaemonDelegate
 
+/**
+ * State to register event manager
+ */
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
 {
 	// Create the C++ daemon core
@@ -18,9 +21,6 @@
 	factory = new DaemonFactory(*core);
 	// Create the webserver instance
 	webserver = new CVMWebserver(*factory);
-
-	// Daemon components are ready
-	NSLog(@"Daemon initialized");
 
 	// Handle URL
 	NSAppleEventManager *em = [NSAppleEventManager sharedAppleEventManager];
@@ -35,10 +35,14 @@
 		forEventClass:'WWW!' 
 		andEventID:'OURL'];
 
-	NSLog(@"Events registered");
+	// Daemon components are ready
+	NSLog(@"Daemon initialized");
 
 }
 
+/**
+ * Application launch phase completed
+ */
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
 
@@ -47,6 +51,14 @@
 		scheduledTimerWithTimeInterval:.01 
 		target:self
 		selector:@selector(serverStep)
+		userInfo:nil
+		repeats:YES];
+
+	// Reap timer
+	reapTimer = [NSTimer 
+		scheduledTimerWithTimeInterval:1
+		target:self
+		selector:@selector(serverReap)
 		userInfo:nil
 		repeats:YES];
 
@@ -61,6 +73,17 @@
 {
 	// Poll for 100ms
 	webserver->poll(100);
+}
+
+/**
+ * Reap server if there are no active connections
+ */
+- (void)serverReap
+{
+	if (!webserver->hasLiveConnections()) {
+		NSLog(@"Reaping server");
+		[NSApp terminate: nil];
+	}
 }
 
 /**
@@ -86,6 +109,7 @@
 
 	// Stop timer
 	[timer invalidate];
+	[reapTimer invalidate];
 
 	// Destruct webserver components
 	delete webserver;

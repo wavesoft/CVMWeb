@@ -26,12 +26,19 @@
   	@private CVMWebserver *		webserver;
   	// The webserver polling timer
   	@private NSTimer *			timer;
+  	// The reaping probe timer
+  	@private NSTimer *			reapTimer;
 }
 
 /**
  * Run one step on server events
  */
 - (void)serverStep;
+
+/**
+ * Check server for reaping dead connections
+ */
+- (void)serverReap;
 
 /**
  * Callback when a URL is requested

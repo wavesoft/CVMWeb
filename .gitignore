@@ -4,6 +4,7 @@
 *.un~
 test/test
 test/build
+MicroDaemon/build*
 daemon/daemon
 daemon/build
 test/code.txt
