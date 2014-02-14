@@ -102,7 +102,6 @@ public:
 
 };
 
-
 /**
  * This class encapsulates the Mongoose (webserver) instance and provides
  * the core functionality for interfacing with javascript via JSON RPC.
@@ -138,6 +137,14 @@ public:
 	 */
 	bool hasLiveConnections();
 
+public:
+
+	/**
+	 * Serve a static resource under the given URL
+	 */
+	void serve_static( const std::string& url, const std::string& file );
+
+
 private:
 
 	/**
@@ -154,6 +161,11 @@ private:
 	 * The factory used for connection handler creation
 	 */
 	CVMWebserverConnectionFactory&	factory;
+
+	/**
+	 * Map of static resources
+	 */
+	std::map< std::string, std::string > staticResources;
 
 	/**
 	 * Iterator over the websocket connections

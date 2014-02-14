@@ -81,15 +81,23 @@ WebAPI.Socket.prototype.connect = function() {
 	 */
 	var probe_socket = function(cb) {
 		try {
+
+			// Safari bugfix: When everything else fails
+			var timeoutCb = setTimeout(function() {
+				cb(false);
+			}, 100);
+
+			// Setup websocket & callbacks
 			var socket = new WebSocket(WS_ENDPOINT);
 			socket.onerror = function(e) {
-				console.log("Error:",e);
+				clearTimeout(timeoutCb);
 				cb(false);
 			};
 			socket.onopen = function(e) {
-				console.log("Open:",e);
+				clearTimeout(timeoutCb);
 				cb(true, socket);
 			};
+
 		} catch(e) {
 			console.warn("[socket] Error setting up socket! ",e);
 			cb(false);
@@ -155,7 +163,6 @@ WebAPI.Socket.prototype.connect = function() {
 			self.__handleClose();
 		};
 		self.socket.onmessage = function(e) {
-			console.log("Message:",e.data);
 			self.__handleData(e.data);
 		};
 

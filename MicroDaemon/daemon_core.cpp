@@ -28,4 +28,14 @@ DaemonCore::DaemonCore() {
 	// Detect and instantiate hypervisor
 	hypervisor = detectHypervisor();
 
+	// The daemon is running
+	running = true;
+
+}
+
+/**
+ * Check if daemon has exited
+ */
+bool DaemonCore::hasExited() {
+	return !running;
 }

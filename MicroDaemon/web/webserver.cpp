@@ -19,9 +19,30 @@
  */
 
 #include "webserver.h"
+#include <iostream>
 #include <sstream>
+#include <fstream>
 
 using namespace std;
+
+/**
+ * Send an error message
+ */
+int send_error( struct mg_connection *conn, const char* message, const int code = 500 ) {
+
+    // Send error code
+    mg_send_status(conn, code);
+
+    // Send payload
+    mg_printf_data( conn, 
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<title>CernVM WebAPI :: Error</title>\n</head>\n"
+        "<body><h1>CernVM WebAPI Error %i</h1><p>%s</p></body>"
+        "</html>", code, message );
+
+    // Request processed
+    return MG_REQUEST_PROCESSED;
+
+}
 
 /**
  * This is the entry point for the CernVM Web API I/O
@@ -72,10 +93,55 @@ int CVMWebserver::api_handler(struct mg_connection *conn) {
 
     } else {
 
-		// Enable CORS (important for allowing every website to contact us)
-	    mg_send_header(conn, "Access-Control-Allow-Origin", "*" );
-	    mg_printf_data(conn, "{\"status\":\"ok\",\"request\":\"%s\",\"domain\":\"%s\"}", conn->uri, domain.c_str());
-        return MG_REQUEST_PROCESSED;
+        // Trim trailing slash from URL
+        if (url[url.length()-1] == '/')
+            url = url.substr(0, url.length()-1);
+
+        cout << "Handing URL: " << url << endl;
+
+        // Check for static URLs
+        if (self->staticResources.find(url) != self->staticResources.end()) {
+
+            // Get the name of the file to serve
+            string file = self->staticResources[url];
+
+            // Start reading file
+            ifstream ifs( file.c_str() );
+            if (!ifs.good()) {
+                return send_error( conn, "Unable to open the requested resource!" );
+            }
+
+            // Get MIME type of the file to send and send header
+            const char * mimeType = mg_get_mime_type( file.c_str(), "text/plain" );
+            mg_send_header(conn, "Content-Type", mimeType );
+
+            // Start reading and sending
+            char inBuffer[4096];
+            while (!ifs.eof()) {
+                ifs.read( inBuffer, 4096 );
+                if (ifs.bad()) {
+                    return send_error( conn, "Error while reading resource!" );
+                }
+                mg_send_data( conn, inBuffer, ifs.gcount() );
+            }
+
+            // Close file
+            ifs.close();
+
+        } else if ( url == "info" ) {
+
+            // Enable CORS (important for allowing every website to contact us)
+            mg_send_header(conn, "Access-Control-Allow-Origin", "*" );
+            mg_printf_data(conn, "{\"status\":\"ok\",\"request\":\"%s\",\"domain\":\"%s\"}", conn->uri, domain.c_str());
+            return MG_REQUEST_PROCESSED;
+
+        } else {
+
+            // File not found
+            return send_error( conn, "File not found", 404);
+
+        }
+
 	    
     }
     return 1;
@@ -132,7 +198,7 @@ int CVMWebserver::iterate_callback(struct mg_connection *conn) {
 /**
  * Create a webserver and setup listening port
  */
-CVMWebserver::CVMWebserver( CVMWebserverConnectionFactory& factory, const int port ) : factory(factory) {
+CVMWebserver::CVMWebserver( CVMWebserverConnectionFactory& factory, const int port ) : factory(factory), staticResources() {
 
 	// Create a mongoose server, passing the pointer
 	// of this class, in order for the C callbacks
@@ -153,6 +219,9 @@ CVMWebserver::CVMWebserver( CVMWebserverConnectionFactory& factory, const int po
  */
 CVMWebserver::~CVMWebserver() {
 
+    // Destroy mongoose server
+    mg_destroy_server( &server );
+
 	// Destroy connections
     std::map<mg_connection*, CVMWebserverConnection*>::iterator it;
     for (it=connections.begin(); it!=connections.end(); ++it) {
@@ -160,8 +229,18 @@ CVMWebserver::~CVMWebserver() {
         delete c;
     }
 
-	// Destroy mongoose server
-    mg_destroy_server( &server );
+    // Clear map
+    connections.clear();
+
+}
+
+/**
+ * Serve a static resource under the given URL
+ */
+void CVMWebserver::serve_static( const std::string& url, const std::string& file ) {
+
+    // Store on staticResources
+    staticResources[url] = file;
 
 }
 

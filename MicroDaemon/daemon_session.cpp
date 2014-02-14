@@ -27,7 +27,10 @@ void DaemonSession::handleAction( const std::string& action, ParameterMapPtr par
 	
 	if (action == "handshake") {
 
-		
+	} else if ( action == "exit" ) {
+
+		// Shut down core
+		core.running = false;
 
 	}
 

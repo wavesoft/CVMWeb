@@ -11,6 +11,16 @@
 @implementation URLDaemonDelegate
 
 /**
+ * Open browser when focued
+ */
+- (void)applicationDidBecomeActive:(NSNotification *)aNotification
+{
+	NSLog(@"Focusing!");
+	[self launchURL];
+
+}
+
+/**
  * State to register event manager
  */
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
@@ -21,6 +31,16 @@
 	factory = new DaemonFactory(*core);
 	// Create the webserver instance
 	webserver = new CVMWebserver(*factory);
+
+	// Serve some static resources
+	NSBundle* bundle = [NSBundle mainBundle];
+	webserver->serve_static( "/control.html", 			[[bundle pathForResource:@"control" ofType:@"html"] cStringUsingEncoding:NSASCIIStringEncoding] );
+	webserver->serve_static( "/js/EventDispatcher.js", 	[[bundle pathForResource:@"EventDispatcher" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
+	webserver->serve_static( "/js/Socket.js", 			[[bundle pathForResource:@"Socket" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
+	webserver->serve_static( "/js/WebAPI.js", 			[[bundle pathForResource:@"WebAPI" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
+
+	// Reset variables
+	launchedByURL = false;
 
 	// Handle URL
 	NSAppleEventManager *em = [NSAppleEventManager sharedAppleEventManager];
@@ -50,17 +70,37 @@
 	timer = [NSTimer 
 		scheduledTimerWithTimeInterval:.01 
 		target:self
-		selector:@selector(serverStep)
+		selector:@selector(serverLoop)
 		userInfo:nil
 		repeats:YES];
 
-	// Reap timer
-	reapTimer = [NSTimer 
-		scheduledTimerWithTimeInterval:1
-		target:self
-		selector:@selector(serverReap)
-		userInfo:nil
-		repeats:YES];
+	// If we were not launched by URL, open the management interface
+	// in the browser.
+	if (!launchedByURL) {
+
+		// Launch URL right after the server started polling
+		delayLaunch = [NSTimer 
+			scheduledTimerWithTimeInterval:0.05
+			target:self
+			selector:@selector(launchURL)
+			userInfo:nil
+			repeats:NO];
+
+		// Delay a bit the Reap loop, since
+		// it takes some time for the browser to open
+		delayStartTimer = [NSTimer 
+			scheduledTimerWithTimeInterval:5
+			target:self
+			selector:@selector(startReap)
+			userInfo:nil
+			repeats:NO];
+
+	} else {
+
+		// Otherwise, immediately tart the reap timer
+		[self startReap];
+
+	}
 
 	NSLog(@"Timer started");
 
@@ -69,10 +109,24 @@
 /**
  * Polling timer
  */
-- (void)serverStep
+- (void)serverLoop
 {
 	// Poll for 100ms
 	webserver->poll(100);
+}
+
+/**
+ * Start the reaping timer for probing server status
+ */
+- (void)startReap
+{
+	// Reap timer that cleans-up plugin instances
+	reapTimer = [NSTimer 
+		scheduledTimerWithTimeInterval:1
+		target:self
+		selector:@selector(serverReap)
+		userInfo:nil
+		repeats:YES];
 }
 
 /**
@@ -80,10 +134,21 @@
  */
 - (void)serverReap
 {
-	if (!webserver->hasLiveConnections()) {
+	if (!webserver->hasLiveConnections() || core->hasExited()) {
 		NSLog(@"Reaping server");
 		[NSApp terminate: nil];
 	}
+}
+
+/**
+ * Launch URL
+ */
+- (void)launchURL
+{
+
+	// Open again the management interface
+	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"http://localhost:1793/control.html"]]; 
+
 }
 
 /**
@@ -97,6 +162,7 @@
 		stringValue];
 
 	NSLog(@"URL Handled: %s", [urlStr UTF8String]);
+	launchedByURL = true;
 }
 
 /**
@@ -107,7 +173,7 @@
 
 	NSLog(@"Cleaning-up daemon");
 
-	// Stop timer
+	// Stop timers
 	[timer invalidate];
 	[reapTimer invalidate];
 

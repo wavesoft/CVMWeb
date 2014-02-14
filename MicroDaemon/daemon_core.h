@@ -32,12 +32,22 @@ public:
 	 */
 	DaemonCore();
 
+	/**
+	 * Check if the daemon has exited
+	 */
+	bool hasExited();
+
 public:
 
 	/**
 	 * The identified hypervisor
 	 */
 	HVInstancePtr		hypervisor;
+
+	/**
+	 * Connection status
+	 */
+	bool 				running;
 
 };
 

@@ -120,15 +120,29 @@ else()
 
 endif()
 
+# Locate platform-dependant sources
+if (WIN32)
+	set ( PLATFORM_DIR ${PROJECT_SOURCE_DIR}/platform/win )
+	file ( GLOB PLATFORM_SOURCES ${PLATFORM_DIR}/*.cpp  )
+elseif (APPLE)
+	set ( PLATFORM_DIR ${PROJECT_SOURCE_DIR}/platform/osx )
+	file ( GLOB PLATFORM_SOURCES ${PLATFORM_DIR}/*.mm  )
+elseif(UNIX)
+	set ( PLATFORM_DIR ${PROJECT_SOURCE_DIR}/platform/unix )
+	file ( GLOB PLATFORM_SOURCES ${PLATFORM_DIR}/*.cpp  )
+endif()
+
 # Locate the daemon sources
 file ( GLOB DAEMON_SOURCES 
 		${PROJECT_SOURCE_DIR}/*.cpp
 		${PROJECT_SOURCE_DIR}/web/*.cpp  
 	)
 
-# Platform-dependant sources
-set ( PLATFORM_DIR ${PROJECT_SOURCE_DIR}/platform/osx )
-file ( GLOB PLATFORM_SOURCES ${PLATFORM_DIR}/*.mm  )
+# Collect resources
+file ( GLOB DAEMON_RESOURCES 
+		${PROJECT_SOURCE_DIR}/html/*.html
+		${PROJECT_SOURCE_DIR}/html/js/*.js
+	)
 
 # Locate the common sources
 file ( GLOB COMMON_SOURCES ${PROJECT_SOURCE_DIR}/../Common/*.cpp  )
@@ -165,16 +179,31 @@ set( JSONCPP_LIBRARIES jsoncpp )
 include_directories( ${PROJECT_SOURCE_DIR}/../MicroDaemon )
 
 # OSX Frameworks
-find_library(FRAMEWORK_FOUNDATION NAMES Foundation)
-find_library(FRAMEWORK_COCOA NAMES Cocoa)
+if (APPLE)
 
-# Sources
-add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
-	${PLATFORM_SOURCES}
-	${DAEMON_SOURCES}
-	${COMMON_SOURCES}
-	${HYPERVISOR_SOURCES}
-	)
+	# Mac OSX Foundations
+	find_library(FRAMEWORK_FOUNDATION NAMES Foundation)
+	find_library(FRAMEWORK_COCOA NAMES Cocoa)
+
+	# Sources
+	add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
+		${PLATFORM_SOURCES}
+		${DAEMON_SOURCES}
+		${COMMON_SOURCES}
+		${HYPERVISOR_SOURCES}
+		${DAEMON_RESOURCES}
+		)
+else()
+
+	# Sources
+	add_executable( ${PROJECT_NAME}
+		${PLATFORM_SOURCES}
+		${DAEMON_SOURCES}
+		${COMMON_SOURCES}
+		${HYPERVISOR_SOURCES}
+		)
+
+endif()
 
 # Libraries
 target_link_libraries ( ${PROJECT_NAME} ${CURL_LIBRARIES} )
@@ -185,11 +214,18 @@ target_link_libraries ( ${PROJECT_NAME} ${MONGOOSE_LIBRARIES} )
 target_link_libraries ( ${PROJECT_NAME} ${JSONCPP_LIBRARIES} )
 
 # Link OSX Frameworks
-target_link_libraries ( ${PROJECT_NAME} ${FRAMEWORK_FOUNDATION} )
-target_link_libraries ( ${PROJECT_NAME} ${FRAMEWORK_COCOA} )
-set_target_properties( ${PROJECT_NAME} PROPERTIES 
-	MACOSX_BUNDLE_INFO_PLIST ${PLATFORM_DIR}/Info.plist
-)
+if (APPLE)
+	target_link_libraries ( ${PROJECT_NAME} ${FRAMEWORK_FOUNDATION} )
+	target_link_libraries ( ${PROJECT_NAME} ${FRAMEWORK_COCOA} )
+	set_target_properties( ${PROJECT_NAME} PROPERTIES 
+		MACOSX_BUNDLE_INFO_PLIST ${PLATFORM_DIR}/Info.plist
+	)
+	set_source_files_properties(
+	  ${DAEMON_RESOURCES}
+	  PROPERTIES
+	  MACOSX_PACKAGE_LOCATION Resources
+	)
+endif()
 
 # Windows additional libraries
 if (WIN32)
