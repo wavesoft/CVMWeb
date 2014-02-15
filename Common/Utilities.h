@@ -104,6 +104,7 @@
 #define _EOL "\n"
 #endif
 
+
 // How much time (in ms) to wait for a command to return from sysExec( )
 #define SYSEXEC_TIMEOUT     30000
 #define SYSEXEC_SLEEP_DELAY 100
@@ -428,12 +429,12 @@ void                                                getLinuxInfo    ( LINUX_INFO
 /**
  * Utility function to check if the file is oppened by another process
  */
-bool isFileOpen( string fileName );
+bool isFileOpen( std::string fileName );
 
 /**
  * Wait for a file to be oppened within a specific time range
  */
-bool waitFileOpen( string filename, bool forOpen, int waitMillis );
+bool waitFileOpen( std::string filename, bool forOpen, int waitMillis );
 
 #endif
 
