@@ -410,33 +410,34 @@ time_t LocalConfig::getLastModified ( std::string configFile ) {
  * Override the erase function so we can keep track of the 
  * changes done in the buffer.
  */
-void LocalConfig::erase ( const std::string& name ) {
+ParameterMap& LocalConfig::erase ( const std::string& name ) {
     CRASH_REPORT_BEGIN;
 
     // Update time modified
     timeModified = getTimeInMs();
 
     // Erase key
-    ParameterMap::erase(name);
+    ParameterMap& ans = ParameterMap::erase(name);
 
     // Store it on 'deleted keys'
     if (std::find(keysDeleted.begin(), keysDeleted.end(), prefix+name) == keysDeleted.end())
         keysDeleted.push_back(prefix + name);
 
+    return ans;
     CRASH_REPORT_END;
 }
 
 /**
  * Override the clear function so we can remove the underlaying file aswell.
  */
-void LocalConfig::clear ( ) {
+ParameterMap& LocalConfig::clear ( ) {
     CRASH_REPORT_BEGIN;
 
     // Update time modified
     timeModified = getTimeInMs();
 
     // Clear all keys
-    ParameterMap::clear();
+    ParameterMap& ans = ParameterMap::clear();
 
     // If we don't have a prefix, we just did a 'clearAll'
     // Remove the file as well.
@@ -448,20 +449,21 @@ void LocalConfig::clear ( ) {
         }
     }
 
+    return ans;
     CRASH_REPORT_END;
 }
 
 /**
  * Override the clearAll function so we can remove the underlaying file aswell.
  */
-void LocalConfig::clearAll ( ) {
+ParameterMap& LocalConfig::clearAll ( ) {
     CRASH_REPORT_BEGIN;
 
     // Update time modified
     timeModified = getTimeInMs();
 
     // Clear all keys
-    ParameterMap::clearAll();
+    ParameterMap& ans = ParameterMap::clearAll();
 
     // If we don't have a prefix, we just did a 'clearAll'
     // Remove the file as well.
@@ -471,7 +473,7 @@ void LocalConfig::clearAll ( ) {
             remove( fName.c_str() );
     }
 
-
+    return ans;
     CRASH_REPORT_END;
 }
 
@@ -479,20 +481,21 @@ void LocalConfig::clearAll ( ) {
  * Override the set function so we can keep track of the changes
  * done in the buffer.
  */
-void LocalConfig::set ( const std::string& name, std::string value ) {
+ParameterMap& LocalConfig::set ( const std::string& name, std::string value ) {
     CRASH_REPORT_BEGIN;
 
     // Update time modified
     timeModified = getTimeInMs();
 
     // Update key value
-    ParameterMap::set(name, value);
+    ParameterMap& ans = ParameterMap::set(name, value);
 
     // Find and erase key from 'deleted'
     std::list<std::string>::iterator iItem = std::find(keysDeleted.begin(), keysDeleted.end(), prefix+name);
     if (iItem != keysDeleted.end())
         keysDeleted.erase(iItem);
 
+    return ans;
     CRASH_REPORT_END;
 }
 

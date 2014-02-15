@@ -141,23 +141,23 @@ public:
      * Override the erase function so we can keep track of the 
      * changes done in the buffer.
      */
-    virtual void                erase           ( const std::string& name );
+    virtual ParameterMap&       erase           ( const std::string& name );
 
     /**
      * Override the clear function so we can erase the file aswell
      */
-    virtual void                clear            ( );
+    virtual ParameterMap&       clear            ( );
 
     /**
      * Override the clear function so we can erase the file aswell
      */
-    virtual void                clearAll         ( );
+    virtual ParameterMap&       clearAll         ( );
 
     /**
      * Override the set function so we can keep track of the changes
      * done in the buffer.
      */
-    virtual void                set             ( const std::string& name, std::string value );
+    virtual ParameterMap&       set             ( const std::string& name, std::string value );
 
 private:
 

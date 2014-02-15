@@ -14,47 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with CVMWebAPI. If not, see <http://www.gnu.org/licenses/>.
  *
- * Developed by Ioannis Charalampidis 2013
+ * Developed by Ioannis Charalampidis 2013 
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
 #pragma once
-#ifndef DAEMON_SESSION_H
-#define DAEMON_SESSION_H
+#ifndef DAEMON_FEEDBACK_H
+#define DAEMON_FEEDBACK_H
 
-#include "web/webserver.h"
-#include "web/api.h"
-
-#include "daemon_core.h"
-
-/**
- * Websocket Session
- */
-class DaemonSession : public WebsocketAPI {
+class ActionFeedback {
 public:
-
-	/**
-	 * Constructor
-	 */
-	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
-		: WebsocketAPI(domain, uri), core(core) { };
-
-protected:
-
-	/**
-	 * API actino handler
-	 */
-	virtual void handleAction( const std::string& action, ParameterMapPtr parameters );
-
-	/**
-	 * The daemon core instance
-	 */
-	DaemonCore&	core;
-
-private:
 
 
 
 };
 
-#endif /* end of include guard: DAEMON_SESSION_H */
+#endif /* end of include guard: DAEMON_FEEDBACK_H */

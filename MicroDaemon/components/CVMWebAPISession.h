@@ -19,42 +19,12 @@
  */
 
 #pragma once
-#ifndef DAEMON_SESSION_H
-#define DAEMON_SESSION_H
+#ifndef DAEMON_COMPONENT_WEBAPISESSION_H
+#define DAEMON_COMPONENT_WEBAPISESSION_H
 
-#include "web/webserver.h"
-#include "web/api.h"
-
-#include "daemon_core.h"
-
-/**
- * Websocket Session
- */
-class DaemonSession : public WebsocketAPI {
+class CVMWebAPISession {
 public:
-
-	/**
-	 * Constructor
-	 */
-	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
-		: WebsocketAPI(domain, uri), core(core) { };
-
-protected:
-
-	/**
-	 * API actino handler
-	 */
-	virtual void handleAction( const std::string& action, ParameterMapPtr parameters );
-
-	/**
-	 * The daemon core instance
-	 */
-	DaemonCore&	core;
-
-private:
-
-
 
 };
 
-#endif /* end of include guard: DAEMON_SESSION_H */
+#endif /* end of include guard: DAEMON_COMPONENT_WEBAPISESSION_H */

@@ -46,7 +46,7 @@ std::string ParameterMap::get( const std::string& kname, std::string defaultValu
 /**
  * Set a string parameter
  */
-void ParameterMap::set ( const std::string& kname, std::string value ) {
+ParameterMap& ParameterMap::set ( const std::string& kname, std::string value ) {
     CRASH_REPORT_BEGIN;
     std::string name = prefix + kname;
     (*parameters)[name] = value;
@@ -55,17 +55,19 @@ void ParameterMap::set ( const std::string& kname, std::string value ) {
     } else {
         changed = true;
     }
+    return *this;
     CRASH_REPORT_END;
 }
 
 /**
  * Delete a parameter
  */
-void ParameterMap::erase ( const std::string& name ) {
+ParameterMap& ParameterMap::erase ( const std::string& name ) {
     CRASH_REPORT_BEGIN;
     std::map<std::string, std::string>::iterator e = parameters->find(prefix+name);
     if (e != parameters->end())
         parameters->erase(e);
+    return *this;
     CRASH_REPORT_END;
 }
 
@@ -108,7 +110,7 @@ template<typename T> void ParameterMap::setNum ( const std::string& kname, T val
 /**
  * Empty the parameter set
  */
-void  ParameterMap::clear( ) {
+ParameterMap& ParameterMap::clear( ) {
     CRASH_REPORT_BEGIN;
 
     // Get the keys for this group
@@ -119,35 +121,39 @@ void  ParameterMap::clear( ) {
         parameters->erase( prefix + *it );
     }
 
+    return *this;
     CRASH_REPORT_END;
 }
 
 /**
  * Empty all the parameter set
  */
-void  ParameterMap::clearAll( ) {
+ParameterMap& ParameterMap::clearAll( ) {
     CRASH_REPORT_BEGIN;
     parameters->clear();
+    return *this;
     CRASH_REPORT_END;
 }
 
 /**
  * Lock the parameter map disable updates
  */
-void ParameterMap::lock ( ) {
+ParameterMap& ParameterMap::lock ( ) {
     CRASH_REPORT_BEGIN;
     locked = true;
     changed = false;
+    return *this;
     CRASH_REPORT_END;
 }
 
 /**
  * Unlock the parameter map and enable updates
  */
-void ParameterMap::unlock ( ) {
+ParameterMap& ParameterMap::unlock ( ) {
     CRASH_REPORT_BEGIN;
     locked = false;
     if (changed) commitChanges();
+    return *this;
     CRASH_REPORT_END;
 }
 

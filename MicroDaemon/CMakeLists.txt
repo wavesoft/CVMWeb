@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 2.6)
 project ( daemon )
 include_directories( .. )
 
+# Project's long name
+set( PROJECT_LONG_NAME "CernVM WebAPI Launcher" )
+
 # Find FireBreath libs dir
 set( FB_LIB_DIR "${PROJECT_SOURCE_DIR}/../../../src/libs" )
 set( FB_BOOST_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../../src/3rdParty/boost" )
@@ -140,8 +143,11 @@ file ( GLOB DAEMON_SOURCES
 
 # Collect resources
 file ( GLOB DAEMON_RESOURCES 
+		# Get HTML Websites
 		${PROJECT_SOURCE_DIR}/html/*.html
 		${PROJECT_SOURCE_DIR}/html/js/*.js
+		# Get Icon
+		${PLATFORM_DIR}/icon.*
 	)
 
 # Locate the common sources
@@ -221,9 +227,8 @@ if (APPLE)
 		MACOSX_BUNDLE_INFO_PLIST ${PLATFORM_DIR}/Info.plist
 	)
 	set_source_files_properties(
-	  ${DAEMON_RESOURCES}
-	  PROPERTIES
-	  MACOSX_PACKAGE_LOCATION Resources
+		${DAEMON_RESOURCES} PROPERTIES
+		MACOSX_PACKAGE_LOCATION Resources
 	)
 endif()
 

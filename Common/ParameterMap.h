@@ -86,7 +86,7 @@ public:
 	 * This function will remove only the parameters under the
 	 * current prefix.
 	 */
-	virtual void 				clear			( );
+	virtual ParameterMap&		clear			( );
 
 	/**
 	 * Clean the entire parameter set
@@ -94,7 +94,7 @@ public:
 	 * This function will remove all the parameters in the dictionary
 	 * that will also affect subgroup children.
 	 */
-	virtual void 				clearAll		( );
+	virtual ParameterMap&		clearAll		( );
 
 	/**
 	 * Return a string parameter value
@@ -104,12 +104,12 @@ public:
     /**
      * Set a string parameter
      */
-    virtual void                set             ( const std::string& name, std::string value );
+    virtual ParameterMap&		set             ( const std::string& name, std::string value );
 
     /**
      * Delete a parameter
      */
-    virtual void				erase  			( const std::string& name );
+    virtual ParameterMap&		erase  			( const std::string& name );
     
     /**
      * Synchronize the contents with a possibly underlaying system
@@ -123,7 +123,7 @@ public:
 	 * to optimize the write performance. lock() the parameter map before
 	 * you set the parameter values and unlock() it when you are done.
 	 */
-	void 						lock 			( );
+	ParameterMap&				lock 			( );
 
 	/** 
 	 * Unlock updates and commit
@@ -131,7 +131,7 @@ public:
 	 * This function will synchronize the changes only if something has 
 	 * changed since the time the lock() function was called.
 	 */
-	void 						unlock 			( );
+	ParameterMap&				unlock 			( );
 
     /**
      * Set a string parameter only if there is no value already

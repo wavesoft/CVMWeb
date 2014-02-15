@@ -18,43 +18,5 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#pragma once
-#ifndef DAEMON_SESSION_H
-#define DAEMON_SESSION_H
+#include "CVMWebAPISession.h"
 
-#include "web/webserver.h"
-#include "web/api.h"
-
-#include "daemon_core.h"
-
-/**
- * Websocket Session
- */
-class DaemonSession : public WebsocketAPI {
-public:
-
-	/**
-	 * Constructor
-	 */
-	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
-		: WebsocketAPI(domain, uri), core(core) { };
-
-protected:
-
-	/**
-	 * API actino handler
-	 */
-	virtual void handleAction( const std::string& action, ParameterMapPtr parameters );
-
-	/**
-	 * The daemon core instance
-	 */
-	DaemonCore&	core;
-
-private:
-
-
-
-};
-
-#endif /* end of include guard: DAEMON_SESSION_H */
