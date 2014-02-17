@@ -22,7 +22,14 @@
 			ws.connect();
 		}
 		function stop() {
-			ws.send("exit");
+			ws.send("stop");
+		}
+		function start() {
+			ws.send("requestSession", {
+				"vmcp": "http://localhost/sign.php"
+			}, function(ans) {
+				console.log(ans);
+			});
 		}
 
 		</script>
@@ -33,6 +40,7 @@
 		</pre>
 		<input type="button" value="Start" />
 		<input type="button" value="Stop" onclick="stop()" />
+		<input type="button" value="Open session" onclick="start()" />
 		<script type="text/javascript">initialize();</script>
 	</body>
 </html>

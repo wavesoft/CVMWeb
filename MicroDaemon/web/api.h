@@ -23,6 +23,7 @@
 #define SERVERAPI_H
 
 #include <Common/ParameterMap.h>
+#include <Common/ArgumentList.h>
 
 #include "webserver.h"
 #include "api.h"
@@ -72,7 +73,7 @@ public:
 	/**
 	 * Send a named event with array data
 	 */
-	void 					sendEvent( const std::string& event, const std::string&id, const std::vector< std::string>& params );
+	void 					sendEvent( const std::string& event, const std::string&id, const VariantArgList& params );
 
 	/**
 	 * Send error response

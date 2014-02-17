@@ -135,7 +135,7 @@ void WebsocketAPI::reply( const std::string& id, const std::map< std::string, st
 /**
  * Send a json-formatted action response
  */
-void WebsocketAPI::sendEvent( const std::string& event, const std::string&id, const std::vector<std::string>& params ) {
+void WebsocketAPI::sendEvent( const std::string& event, const std::string&id, const VariantArgList& argVariants ) {
 	// Build and send an action response
 	Json::FastWriter writer;
 	Json::Value root, data;
@@ -145,9 +145,16 @@ void WebsocketAPI::sendEvent( const std::string& event, const std::string&id, co
 	root["name"] = event;
 	root["id"] = id;
 
-	// Populate data
-	for (std::vector<std::string >::const_iterator it = params.begin(); it != params.end(); ++it) {
-		data.append(*it);
+	// Populate json fields
+	for (std::vector< VariantArg >::const_iterator it = argVariants.begin(); it != argVariants.end(); ++it) {
+		if ( const int* pi = boost::get<int>( &(*it) ) )
+			data.append( *pi );
+		else if ( const double* pi = boost::get<double>( &(*it) ) )
+			data.append( *pi );
+		else if ( const float* pi = boost::get<float>( &(*it) ) )
+			data.append( *pi );
+		else if ( const std::string* pi = boost::get<std::string>( &(*it) ) )
+			data.append( *pi );
 	}
 	root["data"] = data;
 

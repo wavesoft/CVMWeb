@@ -26,14 +26,14 @@
  */
 DaemonCore::DaemonCore(): authKeys(), sessions(), keystore(), config() {
 
-	// Initialize download provider
-	downloadProvider = DownloadProvider::Default();
-
 	// Initialize local config
     config = LocalConfig::global();
 
 	// Detect and instantiate hypervisor
 	hypervisor = detectHypervisor();
+
+    // Initialize download provider
+    downloadProvider = DownloadProvider::Default();
 
 	// The daemon is running
 	running = true;

@@ -22,6 +22,9 @@
 #ifndef DAEMON_SESSION_H
 #define DAEMON_SESSION_H
 
+#include <Common/Config.h>
+#include <Common/UserInteraction.h>
+
 #include "web/webserver.h"
 #include "web/api.h"
 
@@ -31,17 +34,15 @@
 /**
  * Websocket Session
  */
-class DaemonSession : public WebsocketAPI {
+class DaemonSession : public WebsocketAPI, public UserInteraction {
 public:
 
 	/**
 	 * Constructor
 	 */
 	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
-		: WebsocketAPI(domain, uri), core(core), privileged(false), userInteraction() 
+		: WebsocketAPI(domain, uri), UserInteraction(), core(core), privileged(false)
 	{
-		// Initialize user interaction
-		userInteraction = UserInteraction::Default(); 
 
 		// Reset throttling parameters
 	    throttleTimestamp = 0;
@@ -62,11 +63,6 @@ protected:
 	DaemonCore&	core;
 
 	/**
-	 * User interaction
-	 */
-	UserInteractionPtr userInteraction;
-
-	/**
 	 * A flag that defines if this session is authenticated
 	 * for privileged operations
 	 */
@@ -80,9 +76,17 @@ protected:
 private:
 
 	/**
-	 * 
+	 * Delegate function that forwards the request to the javascript interface
 	 */
-	void requestSession_thread( const std::string& id, const std::string& vmcpURL, ParameterMapPtr parameters );
+	void __callbackConfim		(const std::string&, const std::string&, const callbackResult& cb);
+	void __callbackAlert		(const std::string&, const std::string&, const callbackResult& cb);
+	void __callbackLicense		(const std::string&, const std::string&, const callbackResult& cb);
+	void __callbackLicenseURL	(const std::string&, const std::string&, const callbackResult& cb);
+
+	/**
+	 * RequestSession Thread
+	 */
+	HVSessionPtr requestSession( const std::string& id, const std::string& vmcpURL );
 
 };
 

@@ -21,24 +21,6 @@
 #include "CVMCallbacks.h"
 
 /**
- * Utility function to convert a VariantArgList vector to Json::Value array
- */
-Json::Value ArgVal2Json( VariantArgList& argVariants ) {
-	Json::Value val;
-	for (std::vector< VariantArg >::iterator it = argVariants.begin(); it != argVariants.end(); ++it) {
-		if ( int* pi = boost::get<int>( &(*it) ) )
-			val.append( *pi );
-		else if ( double* pi = boost::get<double>( &(*it) ) )
-			val.append( *pi );
-		else if ( float* pi = boost::get<float>( &(*it) ) )
-			val.append( *pi );
-		else if ( std::string* pi = boost::get<std::string>( &(*it) ) )
-			val.append( *pi );
-	}
-	return val;
-}
-
-/**
  * Unregister everything upon destruction
  */
 CVMCallbacks::~CVMCallbacks() {
@@ -94,21 +76,7 @@ void CVMCallbacks::stopListening( Callbacks & cb ) {
  * Fire an event to the javascript object
  */
 void CVMCallbacks::fire( const std::string& name, VariantArgList& args ) {
-	Json::Value value = ArgVal2Json( args );
-	std::vector< std::string > ans;
-
-	for (std::vector< VariantArg >::iterator it = args.begin(); it != args.end(); ++it) {
-		if ( int* pi = boost::get<int>( &(*it) ) )
-			ans.push_back( ntos<int>(*pi) );
-		else if ( double* pi = boost::get<double>( &(*it) ) )
-			ans.push_back( ntos<double>(*pi) );
-		else if ( float* pi = boost::get<float>( &(*it) ) )
-			ans.push_back( ntos<float>(*pi) );
-		else if ( std::string* pi = boost::get<std::string>( &(*it) ) )
-			ans.push_back( *pi );
-	}
-
 	// Forward the event to the interface
-	api.sendEvent( name, eventID, ans );
+	api.sendEvent( name, eventID, args );
 
 }

@@ -30,42 +30,21 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/variant.hpp>
 
 #include "Utilities.h"
+#include "ArgumentList.h"
 
 //////////////////////////////////////
 // Named callbacks definition
 //////////////////////////////////////
 
 /* Typedef for variant callbacks */
-typedef boost::variant< float, double, int, std::string >								VariantArg;
-typedef std::vector< VariantArg >														VariantArgList;
 typedef boost::function<void ( const std::string& event, VariantArgList& args )>		cbAnyEvent;
 typedef boost::function<void ( VariantArgList& args )>									cbNamedEvent;
 
 //////////////////////////////////////
 // Classes and structures
 //////////////////////////////////////
-
-/**
- * Helper class for building callback arguments
- */
-class ArgumentList {
-public:
-	ArgumentList( ) : args() { };
-	ArgumentList( VariantArg arg ) : args(1,arg) { };
-	ArgumentList& operator()( VariantArg arg ) {
-		args.push_back(arg);
-		return *this;
-	}
-	operator VariantArgList& () {
-		return args;
-	}
-private:
-	VariantArgList 		args;
-
-};
 
 /**
  * Helper class for looking up the appropriate function to

@@ -1196,9 +1196,9 @@ int digest_buffer( const std::string& buffer, const EVP_MD * md, string * dst, b
 
     // Convert to hex & upload to dst
     if (hex) {
-        std::ostringstream oss; oss << std::setfill ('0') << std::setw(2) << std::hex;
+        std::ostringstream oss; oss << std::hex;
         for(int i = 0; i < md_len; i++) {
-            oss << md_value[i];
+            oss << std::setfill('0') << std::setw(2) << (int)md_value[i];
         }
         *dst = oss.str();
     } else {
@@ -1254,9 +1254,9 @@ int digest_file( const std::string& path, const EVP_MD * md, string * dst, bool 
 
     // Convert to hex & upload to dst
     if (hex) {
-        std::ostringstream oss; oss << std::setfill ('0') << std::setw(2) << std::hex;
+        std::ostringstream oss; oss << std::hex;
         for(int i = 0; i < md_len; i++) {
-            oss << md_value[i];
+            oss << std::setfill('0') << std::setw(2) << (int)md_value[i];
         }
         *dst = oss.str();
     } else {

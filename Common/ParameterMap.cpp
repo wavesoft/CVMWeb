@@ -299,8 +299,11 @@ void ParameterMap::fromJSON( const Json::Value& json, bool clearBefore ){
         if (v.isObject()) {
             ParameterMapPtr sg = subgroup(k);
             sg->fromJSON(v);
-        } else {
+        } else if (v.isString()) {
             (*parameters)[k] = v.asString();
+        } else if (v.isInt()) {
+            int vv = v.asInt();
+            (*parameters)[k] = ntos<int>( vv );
         }
     }
 

@@ -57,7 +57,7 @@ WebAPI.Socket.prototype.__handleData = function(data) {
 	} 
 
 	// Fire event if we got an event response
-	else if (o['type'] == "event") {
+	if (o['type'] == "event") {
 		this.__fire(o['name'], o['data']);
 	}
 
