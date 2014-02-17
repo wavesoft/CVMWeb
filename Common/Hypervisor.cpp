@@ -31,7 +31,7 @@
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 
-#include "CVMGlobals.h"
+#include "Config.h"
 #include "Utilities.h"
 #include "Hypervisor.h"
 #include "DaemonCtl.h"

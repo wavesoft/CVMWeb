@@ -27,6 +27,7 @@
 
 #include "daemon_core.h"
 
+
 /**
  * Websocket Session
  */
@@ -37,23 +38,51 @@ public:
 	 * Constructor
 	 */
 	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
-		: WebsocketAPI(domain, uri), core(core) { };
+		: WebsocketAPI(domain, uri), core(core), privileged(false), userInteraction() 
+	{
+		// Initialize user interaction
+		userInteraction = UserInteraction::Default(); 
+
+		// Reset throttling parameters
+	    throttleTimestamp = 0;
+	    throttleDenies = 0;
+	    throttleBlock = false;
+	};
 
 protected:
 
 	/**
 	 * API actino handler
 	 */
-	virtual void handleAction( const std::string& action, ParameterMapPtr parameters );
+	virtual void handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters );
 
 	/**
 	 * The daemon core instance
 	 */
 	DaemonCore&	core;
 
+	/**
+	 * User interaction
+	 */
+	UserInteractionPtr userInteraction;
+
+	/**
+	 * A flag that defines if this session is authenticated
+	 * for privileged operations
+	 */
+	bool 	privileged;
+
+    // Throttling protection
+    long	throttleTimestamp;
+    int 	throttleDenies;
+    bool 	throttleBlock;
+
 private:
 
-
+	/**
+	 * 
+	 */
+	void requestSession_thread( const std::string& id, const std::string& vmcpURL, ParameterMapPtr parameters );
 
 };
 

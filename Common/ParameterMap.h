@@ -22,10 +22,11 @@
 #ifndef PARAMETERMAP_H
 #define PARAMETERMAP_H
 
-#include "CVMGlobals.h"
+#include "Config.h"
 
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/make_shared.hpp>
+#include <json/json.h>
 
 #include <string>
 #include <map>
@@ -182,6 +183,11 @@ public:
      * Update all the parameters from the specified parameter map
      */
     void						fromParameters	( const ParameterMapPtr& ptr, bool clearBefore = false );
+
+    /**
+     * Update all the parameters from a JSON map
+     */
+    void						fromJSON		( const Json::Value& json, bool clearBefore = false );
 
     /**
      * Store all the parameters to the specified map

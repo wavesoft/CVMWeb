@@ -5,10 +5,24 @@ var WS_ENDPOINT = "ws://127.0.0.1:1793",
  * WebAPI Socket handler
  */
 WebAPI.Socket = function() {
-	WebAPI.EventDispatcher.call(this); // Superclass constructor
+
+	// Superclass constructor
+	WebAPI.EventDispatcher.call(this);
+
+	// Status flags
 	this.connecting = false;
 	this.connected = false;
 	this.socket = null;
+
+	// Event ID and callback tracking
+	this.lastID = 0;
+	this.responseCallbacks = {};
+
+	// Parse authentication token from URL hash
+	this.authToken = "";
+	if (window.location.hash)
+		this.authToken = window.location.hash.substr(1);
+
 }
 
 /**
@@ -20,7 +34,14 @@ WebAPI.Socket.prototype = Object.create( WebAPI.EventDispatcher.prototype );
  * Cleanup after shutdown/close
  */
 WebAPI.Socket.prototype.__handleClose = function() {
+	this.__fire("disconnected");
+}
 
+/**
+ * Handle connection acknowlegement
+ */
+WebAPI.Socket.prototype.__handleOpen = function(data) {
+	this.__fire("connected", data['version']);
 }
 
 /**
@@ -29,16 +50,59 @@ WebAPI.Socket.prototype.__handleClose = function() {
 WebAPI.Socket.prototype.__handleData = function(data) {
 	var o = JSON.parse(data);
 
+	// Fire callbacks if there is an ID
+	if (o['id'] != undefined) {
+		var cb = this.responseCallbacks[o['id']];
+		if (cb != undefined) cb(o);
+	} 
+
+	// Fire event if we got an event response
+	else if (o['type'] == "event") {
+		this.__fire(o['name'], o['data']);
+	}
+
 }
 
 /**
  * Send a JSON frame
  */
-WebAPI.Socket.prototype.send = function(action, data) {
+WebAPI.Socket.prototype.send = function(action, data, responseCallback, responseTimeout) {
+	var self = this;
+
+	// Calculate next frame's ID
+	var frameID = "a-" + (++this.lastID);
 	var frame = {
-		'action': action,
-		'data': data || {}
+		'type': 'action',
+		'name': action,
+		'id': frameID,
+		'data': data || { }
 	};
+
+	// Register response callback
+	if (responseCallback) {
+		var timeoutTimer = null;
+
+		// Register a timeout timer
+		// unless the responseTimeout is set to 0
+		if (responseTimeout !== 0) {
+			timeoutTimer = setTimeout(function() {
+
+				// Remove slot
+				delete self.responseCallbacks[frameID];
+
+				// Respond error
+				responseCallback(null, "error", {"error": "Response timeout"});
+
+			}, responseTimeout || 10000);
+		}
+
+		// Register a callback for the frame of the given type
+		this.responseCallbacks[frameID] = function(data) {
+			if (timeoutTimer!=null) clearTimeout(timeoutTimer);
+			delete self.responseCallbacks[frameID];
+			responseCallback(data['data'] || { }, data['type'], data);
+		};
+	}
 
 	// Send JSON Frame
 	this.socket.send(JSON.stringify(frame));
@@ -152,7 +216,6 @@ WebAPI.Socket.prototype.connect = function() {
 	 * Callback to handle a successful pick of socket
 	 */
 	var socket_success = function( socket ) {
-		console.info("Successfuly contacted CernVM WebAPI");
 		self.connecting = false;
 		self.connected = true;
 
@@ -166,8 +229,15 @@ WebAPI.Socket.prototype.connect = function() {
 			self.__handleData(e.data);
 		};
 
-		// Send handshake
-		self.send("handshake", {"version": WebAPI.version});
+		// Send handshake and wait for response
+		// to finalize the connection
+		self.send("handshake", {
+			"version": WebAPI.version,
+			"auth": self.authToken
+		}, function(data, type, raw) {
+			console.info("Successfuly contacted with CernVM WebAPI v" + data['version']);
+			self.__handleOpen(data);
+		});
 
 	};
 

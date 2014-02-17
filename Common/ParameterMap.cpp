@@ -283,6 +283,39 @@ void ParameterMap::fromMap ( std::map< std::string, std::string> * map, bool cle
 }
 
 /**
+ * Update all the parameters from the specified JSON Value
+ */
+void ParameterMap::fromJSON( const Json::Value& json, bool clearBefore ){
+    CRASH_REPORT_BEGIN;
+
+    // Check if we have to clean the keys first
+    if (clearBefore) clear();
+
+    // Store values
+    const Json::Value::Members membNames = json.getMemberNames();
+    for (std::vector<std::string>::const_iterator it = membNames.begin(); it != membNames.end(); ++it) {
+        std::string k = *it;
+        Json::Value v = json[k];
+        if (v.isObject()) {
+            ParameterMapPtr sg = subgroup(k);
+            sg->fromJSON(v);
+        } else {
+            (*parameters)[k] = v.asString();
+        }
+    }
+
+    // If we are not locked, sync changes.
+    // Oherwise mark us as dirty
+    if (!locked) {
+        commitChanges();
+    } else {
+        changed = true;
+    }
+
+    CRASH_REPORT_END;
+}
+
+/**
  * Store all the parameters to the specified map
  */
 void ParameterMap::toMap ( std::map< std::string, std::string> * map, bool clearBefore ) {

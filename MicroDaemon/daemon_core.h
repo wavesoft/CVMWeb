@@ -23,6 +23,23 @@
 #define DAEMON_CORE_H
 
 #include <Common/Hypervisor.h>
+#include <Common/DomainKeystore.h>
+#include <Common/DownloadProvider.h>
+
+class AuthKey {
+public:
+
+	/**
+	 * The key string
+	 */
+	std::string			key;
+
+	/**
+	 * The time after the key is considered invalid
+	 */
+	unsigned long 		expireTime;
+
+};
 
 class DaemonCore {
 public:
@@ -37,17 +54,72 @@ public:
 	 */
 	bool hasExited();
 
+	/**
+	 * Allocate new authenticatino key
+	 */
+	std::string 				newAuthKey();
+
+	/**
+	 * Validate authentication key
+	 */
+	bool 						authKeyValid( const std::string& key );
+
+	/**
+	 * Calculate the host ID for the given domain
+	 */
+	std::string 				calculateHostID( std::string& domain );
+
+	/**
+	 * Check if a hypervisor was detected
+	 */
+	bool 						hasHypervisor();
+
+	/**
+	 * Return the hypervisor name
+	 */
+	std::string 				get_hv_name();
+
+	/**
+	 * Return hypervisor version
+	 */
+	std::string 				get_hv_version();
+
 public:
 
 	/**
 	 * The identified hypervisor
 	 */
-	HVInstancePtr		hypervisor;
+	HVInstancePtr				hypervisor;
 
 	/**
 	 * Connection status
 	 */
-	bool 				running;
+	bool 						running;
+
+	/**
+	 * The domain keystore
+	 */
+	DomainKeystore				keystore;
+
+	/**
+	 * Local config
+	 */
+	LocalConfigPtr				config;
+
+	/**
+	 * The download provider
+	 */
+	DownloadProviderPtr			downloadProvider;
+
+	/**
+	 * Authenticated keys
+	 */
+	std::list< AuthKey >		authKeys;
+
+	/**
+	 * Sessions
+	 */
+	std::map<unsigned int, HVSessionPtr >	sessions;
 
 };
 

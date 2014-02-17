@@ -146,8 +146,15 @@
 - (void)launchURL
 {
 
+	// Generate an authentication token
+	std::string authToken = core->newAuthKey();
+
+	// Concat url + auth token
+	NSMutableString* url = [[NSMutableString alloc] initWithString:@"http://localhost:1793/control.html#"];
+	[url appendString:[NSString stringWithCString:authToken.c_str() encoding:[NSString defaultCStringEncoding]]];
+
 	// Open again the management interface
-	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"http://localhost:1793/control.html"]]; 
+	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]]; 
 
 }
 

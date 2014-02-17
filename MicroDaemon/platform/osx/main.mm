@@ -7,11 +7,21 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import <Common/DomainKeystore.h>
 #import "URLDaemonDelegate.h"
 
 int main(int argc, const char * argv[])
 {
+
+	// Initialize subsystems
+	DomainKeystore::Initialize();
+
+	// Start app
 	URLDaemonDelegate * delegate = [[URLDaemonDelegate alloc] init];
 	[[NSApplication sharedApplication] setDelegate:delegate];
 	[NSApp run];
+
+	// Cleanup subsystems
+	DomainKeystore::Cleanup();
+	
 }

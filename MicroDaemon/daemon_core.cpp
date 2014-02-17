@@ -19,11 +19,18 @@
  */
 
 #include "daemon_core.h"
+#include <Common/Utilities.h>
 
 /**
  * Initialize daemon code
  */
-DaemonCore::DaemonCore() {
+DaemonCore::DaemonCore(): authKeys(), sessions(), keystore(), config() {
+
+	// Initialize download provider
+	downloadProvider = DownloadProvider::Default();
+
+	// Initialize local config
+    config = LocalConfig::global();
 
 	// Detect and instantiate hypervisor
 	hypervisor = detectHypervisor();
@@ -38,4 +45,111 @@ DaemonCore::DaemonCore() {
  */
 bool DaemonCore::hasExited() {
 	return !running;
+}
+
+
+/**
+ * Check if a hypervisor was detected
+ */
+bool DaemonCore::hasHypervisor() {
+    CRASH_REPORT_BEGIN;
+    return (hypervisor->getType() != HV_NONE);
+    CRASH_REPORT_END;
+};
+
+/**
+ * Return the hypervisor name
+ */
+std::string DaemonCore::get_hv_name() {
+    CRASH_REPORT_BEGIN;
+    if (!hypervisor) {
+        return "";
+    } else {
+        if (hypervisor->getType() == HV_VIRTUALBOX) {
+            return "virtualbox";
+        } else {
+            return "unknown";
+        }
+    }
+    CRASH_REPORT_END;
+}
+
+/**
+ * Return hypervisor version
+ */
+std::string DaemonCore::get_hv_version() {
+    CRASH_REPORT_BEGIN;
+    if (!hypervisor) {
+        return "";
+    } else {
+        return hypervisor->version.verString;
+    }
+    CRASH_REPORT_END;
+}
+
+/**
+ * Allocate new authenticatino key
+ */
+std::string DaemonCore::newAuthKey() {
+	AuthKey key;
+
+	// The key lasts 5 minutes
+	key.expireTime = getTimeInMs() + 300000;
+	// Allocate new UUID
+	key.key = newGUID();
+	// Store on list
+	authKeys.push_back( key );
+
+	// Return the key
+	return key.key;
+
+}
+
+/**
+ * Validate authentication key
+ */
+bool DaemonCore::authKeyValid( const std::string& key ) {
+
+	// Expire past keys
+	bool found = false;
+	unsigned long ts = getTimeInMs();
+	for (std::list< AuthKey >::iterator it = authKeys.begin(); it != authKeys.end(); ++it) {
+		AuthKey k = *it;
+		if (ts >= k.expireTime) {
+			authKeys.erase(it);
+			if (it != authKeys.end())
+				++it;
+		} else if (k.key == key) {
+			found = true;
+		}
+	}
+
+	// Check if we found it
+	return found;
+
+}
+
+/**
+ * Calculate the domain ID using user's unique ID plus the domain name
+ * specified.
+ */
+std::string DaemonCore::calculateHostID( std::string& domain ) {
+    CRASH_REPORT_BEGIN;
+    
+    /* Fetch/Generate user UUID */
+    std::string machineID = config->get("local-id");
+    if (machineID.empty()) {
+        machineID = keystore.generateSalt();
+        config->set("local-id", machineID);
+    }
+
+    /* When we use the local-id, update the crash-reporting utility config */
+    crashReportAddInfo("Machine UUID", machineID);
+    
+    /* Create a checksum of the user ID + domain and use this as HostID */
+    std::string checksum = "";
+    sha256_buffer( machineID + "|" + domain, &checksum );
+    return checksum;
+
+    CRASH_REPORT_END;
 }

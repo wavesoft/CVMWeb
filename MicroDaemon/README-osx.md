@@ -2,10 +2,13 @@
 Extras for Info.plist
 =====================
 
-You should add the extra parameters:
+For hiding the UI of the application, add in Info.plist the:
 
     <key>LSUIElement</key>
     <string>1</string>
+
+For handling the `cernvm-webapi` URL scheme, add in Info.plist the:
+
 	<key>CFBundleURLTypes</key>
 	<array>
 	        <dict>

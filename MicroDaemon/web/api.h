@@ -64,6 +64,26 @@ public:
 	 */
 	virtual std::string 	getEgressRawData();
 
+	/**
+	 * Reply to an action
+	 */
+	void 					reply( const std::string& id, const std::map< std::string, std::string>& params );
+
+	/**
+	 * Send a named event with array data
+	 */
+	void 					sendEvent( const std::string& event, const std::string&id, const std::vector< std::string>& params );
+
+	/**
+	 * Send error response
+	 */
+	void 					sendError( const std::string& message, const std::string& id = "" );
+
+	/**
+	 * Send a RAW message
+	 */
+	void 					sendRawData( const std::string& data );
+
 protected:
 
 	/**
@@ -91,23 +111,7 @@ protected:
 	/**
 	 * Handle incoming actions
 	 */
-	virtual void			handleAction( const std::string& action, ParameterMapPtr parameters ) = 0;
-
-	/**
-	 * Send a RAW message
-	 */
-	void 					sendRawData( const std::string& data );
-
-	/**
-	 * Send error response
-	 */
-	void 					sendError( const std::string& message );
-
-	/**
-	 * Send a named action
-	 */
-	void 					sendAction( const std::string& name, const std::map< std::string, std::string >& data );
-
+	virtual void			handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters ) = 0;
 
 };
 

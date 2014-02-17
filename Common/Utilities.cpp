@@ -82,12 +82,18 @@ template <typename T> std::string ntos( T &value ) {
  */
 template int hex_ston<int>( const std::string &Text );
 template long hex_ston<long>( const std::string &Text );
+
 template int ston<int>( const std::string &Text );
 template long ston<long>( const std::string &Text );
 template size_t ston<size_t>( const std::string &Text );
+template double ston<double>( const std::string &Text );
+template float ston<float>( const std::string &Text );
+
 template std::string ntos<int>( int &value );
 template std::string ntos<long>( long &value );
 template std::string ntos<size_t>( size_t &value );
+template std::string ntos<double>( double &value );
+template std::string ntos<float>( float &value );
 
 
 /**

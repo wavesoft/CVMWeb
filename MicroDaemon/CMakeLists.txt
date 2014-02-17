@@ -139,6 +139,7 @@ endif()
 file ( GLOB DAEMON_SOURCES 
 		${PROJECT_SOURCE_DIR}/*.cpp
 		${PROJECT_SOURCE_DIR}/web/*.cpp  
+		${PROJECT_SOURCE_DIR}/components/*.cpp  
 	)
 
 # Collect resources

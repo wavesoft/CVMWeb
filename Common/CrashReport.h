@@ -22,6 +22,9 @@
 #ifndef CRASH_REPORT_H
 #define CRASH_REPORT_H
 
+#include <iostream>
+#include <sstream>
+
 // If we don't have crash report enabled, register some dummy definitions
 #ifndef CRASH_REPORTING
 	#define CRASH_REPORT_BEGIN 	;
@@ -30,10 +33,8 @@
 
 #else
 
- 	#include "CVMGlobals.h"
+ 	#include "Config.h"
 
-    #include <iostream>
- 	#include <sstream>
 	#include <string.h>
 	#include <curl/curl.h>
 	#include "Utilities.h"

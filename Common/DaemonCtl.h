@@ -21,7 +21,7 @@
 #ifndef DAEMONCTL_H_4LFX6MZT
 #define DAEMONCTL_H_4LFX6MZT
 
-#include "CVMGlobals.h"
+#include "Config.h"
 #include "ThinIPC.h"
 #include "CrashReport.h"
 #include <string>

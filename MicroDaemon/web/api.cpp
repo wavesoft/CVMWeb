@@ -22,24 +22,6 @@
 #include <sstream>
 
 /**
- * Translate json value to parameter map
- */
-void parseJSONtoParameters( const Json::Value& json, ParameterMapPtr map ) {
-	const Json::Value::Members membNames = json.getMemberNames();
-	for (std::vector<std::string>::const_iterator it = membNames.begin(); it != membNames.end(); ++it) {
-		std::string k = *it;
-		Json::Value v = json[k];
-
-		if (v.isObject()) {
-			parseJSONtoParameters(v, map->subgroup(k));
-		} else {
-			map->set(k, v.asString());
-		}
-
-	}
-}
-
-/**
  * Handle incoming raw request from the browser
  */
 void WebsocketAPI::handleRawData( const char * buf, const size_t len ) {
@@ -55,22 +37,37 @@ void WebsocketAPI::handleRawData( const char * buf, const size_t len ) {
 	}
 
 	// Ensure we have an action defined
-	if (!root.isMember("action")) {
-		sendError("Missing action parameter in the incoming request.");
+	if (!root.isMember("type")) {
+		sendError("Missing 'type' parameter in the incoming request.");
+		return;
+	}
+	if (!root.isMember("name")) {
+		sendError("Missing 'name' parameter in the incoming request.");
+		return;
+	}
+	if (!root.isMember("id")) {
+		sendError("Missing 'id' parameter in the incoming request.");
 		return;
 	}
 
-	// Fetch action
-	std::string a = root["action"].asString();
+	// Fetch type, action and ID
+	std::string type = root["type"].asString();
+	std::string a = root["name"].asString();
+	std::string id = root["id"].asString();
+
+	// Ensure type = action
+	if (type != "action") {
+		sendError("Unknown request type.");
+		return;
+	}
 
 	// Translate json value to ParameterMapPtr
 	ParameterMapPtr map = ParameterMap::instance();
-	if (root.isMember("data")) {
-		parseJSONtoParameters( root["data"], map );
-	}
+	if (root.isMember("data"))
+		map->fromJSON(root["data"]);
 
 	// Handle action
-	handleAction( a, map );
+	handleAction( id, a, map );
 
 }
 
@@ -103,28 +100,54 @@ void WebsocketAPI::sendRawData( const std::string& data ) {
 /**
  * Send error response
  */
-void WebsocketAPI::sendError( const std::string& error ) {
+void WebsocketAPI::sendError( const std::string& error, const std::string& id ) {
 	// Build and send an error response
 	std::ostringstream oss;
-	oss << "{\"result\":\"error\",\"error\":\"" << error << "\"}";
+	oss << "{\"type\":\"error\",";
+	if (!id.empty())
+		oss << "\"id\":\"" << id << "\",";
+	oss << "\"error\":\"" << error << "\"}";
 	sendRawData( oss.str() );
 }
 
 /**
  * Send a json-formatted action response
  */
-void WebsocketAPI::sendAction( const std::string& action, const std::map< std::string, std::string >& params ) {
+void WebsocketAPI::reply( const std::string& id, const std::map< std::string, std::string>& params ) {
 	// Build and send an action response
 	Json::FastWriter writer;
 	Json::Value root, data;
 
 	// Populate core fields
-	root["result"] = "ok";
-	root["action"] = action;
+	root["type"] = "result";
+	root["id"] = id;
 
 	// Populate data
 	for (std::map< std::string, std::string >::const_iterator it = params.begin(); it != params.end(); ++it) {
 		data[(*it).first] = (*it).second;
+	}
+	root["data"] = data;
+
+	// Compile JSON response
+	sendRawData( writer.write(root) );
+}
+
+/**
+ * Send a json-formatted action response
+ */
+void WebsocketAPI::sendEvent( const std::string& event, const std::string&id, const std::vector<std::string>& params ) {
+	// Build and send an action response
+	Json::FastWriter writer;
+	Json::Value root, data;
+
+	// Populate core fields
+	root["type"] = "event";
+	root["name"] = event;
+	root["id"] = id;
+
+	// Populate data
+	for (std::vector<std::string >::const_iterator it = params.begin(); it != params.end(); ++it) {
+		data.append(*it);
 	}
 	root["data"] = data;
 

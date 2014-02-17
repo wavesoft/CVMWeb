@@ -25,7 +25,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/regex.hpp> 
 
-#include "CVMGlobals.h"
+#include "Config.h"
 
 #include "ProgressFeedback.h"
 #include "DownloadProvider.h"
@@ -56,8 +56,15 @@
 #define HVE_NOT_VALIDATED       -12
 #define HVE_NOT_TRUSTED         -13
 #define HVE_STILL_WORKING       -14
+#define HVE_PASSWORD_DENIED     -20
 #define HVE_USAGE_ERROR         -99
 #define HVE_NOT_IMPLEMENTED     -100
+
+#define HVE_ACCESS_DENIED       -10 /* Same to HVE_NOT_ALLOWED */
+#define HVE_UNSUPPORTED         -11 /* Same to HVE_NOT_SUPPORTED */
+#define HVE_NOT_VALIDATED       -12 /* Same to HVE_NOT_VALIDATED */
+#define HVE_NOT_TRUSTED         -13 /* Same to HVE_NOT_TRUSTED */
+#define CVME_PASSWORD_DENIED    -20
 
 /* Session states */
 #define STATE_CLOSED            0
