@@ -58,7 +58,23 @@ WebAPI.Socket.prototype.__handleData = function(data) {
 
 	// Fire event if we got an event response
 	if (o['type'] == "event") {
-		this.__fire(o['name'], o['data']);
+		var data = o['data'];
+
+		// Handle core events
+		if (o['name'] == "interact") {
+			if (data[0] == "confirm") {
+				if (window.confirm(data[2], data[1])) {
+					this.send("interactionCallback", {"result": 1});
+				} else {
+					this.send("interactionCallback", {"result": 0});
+				}
+			}
+
+		} else {
+			this.__fire(o['name'], o['data']);
+
+		}
+
 	}
 
 }

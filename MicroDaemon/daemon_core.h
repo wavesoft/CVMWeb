@@ -26,6 +26,10 @@
 #include <Common/DomainKeystore.h>
 #include <Common/DownloadProvider.h>
 
+class CVMWebAPISession;
+
+#include "components/CVMWebAPISession.h"
+
 class AuthKey {
 public:
 
@@ -70,6 +74,11 @@ public:
 	std::string 				calculateHostID( std::string& domain );
 
 	/**
+	 * Create new random session ID and store the given session
+	 */
+	int 						storeSession( CVMWebAPISession* session );
+
+	/**
 	 * Check if a hypervisor was detected
 	 */
 	bool 						hasHypervisor();
@@ -89,37 +98,37 @@ public:
 	/**
 	 * The identified hypervisor
 	 */
-	HVInstancePtr				hypervisor;
+	HVInstancePtr								hypervisor;
 
 	/**
 	 * Connection status
 	 */
-	bool 						running;
+	bool 										running;
 
 	/**
 	 * The domain keystore
 	 */
-	DomainKeystore				keystore;
+	DomainKeystore								keystore;
 
 	/**
 	 * Local config
 	 */
-	LocalConfigPtr				config;
+	LocalConfigPtr								config;
 
 	/**
 	 * The download provider
 	 */
-	DownloadProviderPtr			downloadProvider;
+	DownloadProviderPtr							downloadProvider;
 
 	/**
 	 * Authenticated keys
 	 */
-	std::list< AuthKey >		authKeys;
+	std::list< AuthKey >						authKeys;
 
 	/**
 	 * Sessions
 	 */
-	std::map<unsigned int, HVSessionPtr >	sessions;
+	std::map<unsigned int, CVMWebAPISession* >	sessions;
 
 };
 

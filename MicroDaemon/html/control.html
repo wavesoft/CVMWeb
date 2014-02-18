@@ -18,6 +18,7 @@
 		<script type="text/javascript">
 
 		var ws = new WebAPI.Socket();
+		var session_id = 0;
 		function initialize() {
 			ws.connect();
 		}
@@ -28,7 +29,14 @@
 			ws.send("requestSession", {
 				"vmcp": "http://localhost/sign.php"
 			}, function(ans) {
+				session_id = ans["session_id"];
+				document.getElementById('session_controls').style['display'] = 'block';
 				console.log(ans);
+			});
+		}
+		function sendSession(what) {
+			ws.send(what, {
+				"session_id": session_id
 			});
 		}
 
@@ -41,6 +49,13 @@
 		<input type="button" value="Start" />
 		<input type="button" value="Stop" onclick="stop()" />
 		<input type="button" value="Open session" onclick="start()" />
+		<div class="display:none" id="session_controls">
+			<input type="button" value="Start" onclick="sendSession('start')" />
+			<input type="button" value="Stop" onclick="sendSession('stop')" />
+			<input type="button" value="Pause" onclick="sendSession('pause')" />
+			<input type="button" value="Resume" onclick="sendSession('resume')" />
+			<input type="button" value="Hibernate" onclick="sendSession('hibernate')" />
+		</div>
 		<script type="text/javascript">initialize();</script>
 	</body>
 </html>

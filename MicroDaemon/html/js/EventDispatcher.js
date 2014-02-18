@@ -6,9 +6,7 @@ WebAPI.EventDispatcher = function(e) {
 /**
  * Fire an event to the registered handlers
  */
-WebAPI.EventDispatcher.prototype.__fire = function( name ) {
-    var args = Array.prototype.slice.call(arguments),
-        name = args.shift();
+WebAPI.EventDispatcher.prototype.__fire = function( name, args ) {
     if (WebAPI.debugLogging) console.log("Firing",name,"(", args, ")");
     if (this.events[name] == undefined) return;
     var callbacks = this.events[name];

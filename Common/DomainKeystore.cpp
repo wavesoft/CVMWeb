@@ -378,7 +378,7 @@ int DomainKeystore::signatureValidate( std::string& domain, std::string& salt, P
         string value = (*it).second;
         toLowerCase( key );
         if (key.compare("signature") != 0) {
-        	checksumBuf << key << "=" << value << "\n";
+        	checksumBuf << key << "=" << urlEncode(value) << "\n";
         } else {
             // Store signature and skip it from the checksum
             dataSignature = value;

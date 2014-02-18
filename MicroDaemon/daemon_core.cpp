@@ -18,7 +18,11 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+#include <cstdlib>
+#include <openssl/rand.h>
+
 #include "daemon_core.h"
+
 #include <Common/Utilities.h>
 
 /**
@@ -152,4 +156,31 @@ std::string DaemonCore::calculateHostID( std::string& domain ) {
     return checksum;
 
     CRASH_REPORT_END;
+}
+
+/**
+ * Store the given session and return it's unique ID
+ */
+int DaemonCore::storeSession( CVMWebAPISession* session ) {
+
+    // Create a random int that does not exist in the sessions
+    int uuid;
+    while (true) {
+        
+        // Create a positive random number
+        RAND_bytes( (unsigned char*)&uuid, 4 );
+        uuid = abs(uuid);
+
+        // Make sure we have no collisions
+        if (sessions.find(uuid) == sessions.end());
+            break;
+            
+    }
+
+    // Store session
+    sessions[uuid] = session;
+
+    // Return session
+    return uuid;
+
 }

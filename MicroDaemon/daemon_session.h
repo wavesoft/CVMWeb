@@ -25,6 +25,9 @@
 #include <Common/Config.h>
 #include <Common/UserInteraction.h>
 
+#include <boost/make_shared.hpp>
+#include <boost/bind.hpp>
+
 #include "web/webserver.h"
 #include "web/api.h"
 
@@ -34,15 +37,22 @@
 /**
  * Websocket Session
  */
-class DaemonSession : public WebsocketAPI, public UserInteraction {
+class DaemonSession : public WebsocketAPI {
 public:
 
 	/**
 	 * Constructor
 	 */
 	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
-		: WebsocketAPI(domain, uri), UserInteraction(), core(core), privileged(false)
+		: WebsocketAPI(domain, uri), core(core), privileged(false), userInteraction(), interactionCallback()
 	{
+
+		// Prepare user interaction
+		userInteraction = boost::make_shared<UserInteraction>();
+		userInteraction->setConfirmHandler( boost::bind( &DaemonSession::__callbackConfim, this, _1, _2, _3 ) );
+		userInteraction->setAlertHandler( boost::bind( &DaemonSession::__callbackAlert, this, _1, _2, _3 ) );
+		userInteraction->setLicenseHandler( boost::bind( &DaemonSession::__callbackLicense, this, _1, _2, _3 ) );
+		userInteraction->setLicenseURLHandler( boost::bind( &DaemonSession::__callbackLicenseURL, this, _1, _2, _3 ) );
 
 		// Reset throttling parameters
 	    throttleTimestamp = 0;
@@ -61,6 +71,11 @@ protected:
 	 * The daemon core instance
 	 */
 	DaemonCore&	core;
+
+	/**
+	 * The User interaction class
+	 */
+	UserInteractionPtr	userInteraction;
 
 	/**
 	 * A flag that defines if this session is authenticated
@@ -84,9 +99,14 @@ private:
 	void __callbackLicenseURL	(const std::string&, const std::string&, const callbackResult& cb);
 
 	/**
+	 * The user interaction callback where we should forward the responses
+	 */
+	callbackResult interactionCallback;
+
+	/**
 	 * RequestSession Thread
 	 */
-	HVSessionPtr requestSession( const std::string& id, const std::string& vmcpURL );
+	void requestSession_thread( const std::string& eventID, const std::string& vmcpURL );
 
 };
 

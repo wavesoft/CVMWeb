@@ -20,3 +20,28 @@
 
 #include "CVMWebAPISession.h"
 
+/**
+ * Handle session commands
+ */
+void CVMWebAPISession::handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters ) {
+	if (action == "start") {
+		hvSession->start(NULL);
+	} else if (action == "stop") {
+		hvSession->stop();
+	} else if (action == "pause") {
+		hvSession->pause();
+	} else if (action == "resume") {
+		hvSession->resume();
+	} else if (action == "hibernate") {
+		hvSession->hibernate();
+	} else if (action == "reset") {
+		hvSession->reset();
+	}
+}
+
+/**
+ * Forward state changed events to the UI
+ */
+void CVMWebAPISession::__cbStateChanged( VariantArgList& args ) {
+	session.sendEvent("stateChanged", "", args);
+}

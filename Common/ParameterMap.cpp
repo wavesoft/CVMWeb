@@ -267,6 +267,7 @@ void ParameterMap::fromMap ( std::map< std::string, std::string> * map, bool cle
     if (clearBefore) clear();
 
     // Store values
+    if (map == NULL) return;
     for (std::map< std::string, std::string>::iterator it = map->begin(); it != map->end(); ++it) {
         (*parameters)[prefix + (*it).first] = (*it).second;
     }

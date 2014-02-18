@@ -22,8 +22,55 @@
 #ifndef DAEMON_COMPONENT_WEBAPISESSION_H
 #define DAEMON_COMPONENT_WEBAPISESSION_H
 
+#include <Common/Hypervisor.h>
+
+class DaemonCore;
+class DaemonSession;
+
+#include "../daemon_core.h"
+#include "../daemon_session.h"
+
 class CVMWebAPISession {
 public:
+
+	/**
+	 * Constructor for the CernVM WebAPI Session 
+	 */
+	CVMWebAPISession( DaemonCore& core, DaemonSession& session, HVSessionPtr hvSession  )
+		: core(core), session(session), hvSession(hvSession)
+	{ 
+
+		// Handle state changes
+        hvSession->on( "stateChanged", boost::bind( &CVMWebAPISession::__cbStateChanged, this, _1 ) );
+
+	};
+
+	/**
+	 * Handling of commands directed for this session
+	 */
+	void handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters );
+
+private:
+
+	/**
+	 * Event callbacks from the hypervisor session
+	 */
+	void __cbStateChanged( VariantArgList& args );
+
+	/**
+	 * The daemon's core state manager
+	 */
+	DaemonCore&			core;
+
+	/**
+	 * The websocket session used for I/O
+	 */
+	DaemonSession& 		session;
+
+	/**
+	 * The encapsulated hypervisor session pointer
+	 */
+	HVSessionPtr		hvSession;
 
 };
 

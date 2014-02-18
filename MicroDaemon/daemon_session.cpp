@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <json/json.h>
+#include <boost/thread.hpp>
 
 #include <Common/Hypervisor.h>
 #include <Common/ProgressFeedback.h>
@@ -66,7 +67,7 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
 
         // Fire result callback
         if (parameters->contains("result")) {
-            __cbResult( parameters->getNum<int>("result") );
+            interactionCallback( parameters->getNum<int>("result") );
         } else {
             sendError("Missing 'result' parameter", id);
         }
@@ -86,18 +87,25 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
         if (parameters->contains("vmcp")) {
 
             // Try to open session
-            HVSessionPtr session = requestSession( id, parameters->get("vmcp") );
-
-            // Handle response
-            if (!session) {
-                sendError("Unable to open session", id);
-            } else {
-                data["session_id"] = "1339128";
-                reply(id, data);
-            }
+            boost::thread( boost::bind( &DaemonSession::requestSession_thread, this, id, parameters->get("vmcp") ) );
 
         } else {
             sendError("Missing 'vmcp' parameter", id);
+        }
+
+    }
+
+    // [Session commands]
+    //  If there is a 'session_id' parameter in the request,
+    //  forward the command to the appropriate action
+    else if (parameters->contains("session_id")) {
+
+        // Lookup session pointer
+        int session_id = parameters->getNum<int>("session_id");
+        if (core.sessions.find(session_id) == core.sessions.end()) {
+            sendError("Unable to find a session with the specified session id!", id);
+        } else {
+            core.sessions[session_id]->handleAction( id, action, parameters );
         }
 
     }
@@ -125,6 +133,7 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
  */
 void DaemonSession::__callbackConfim (const std::string& title, const std::string& body, const callbackResult& cb) {
     sendEvent("interact", "", ArgumentList("confirm")(title)(body));
+    interactionCallback = cb;
 }
 
 /**
@@ -132,6 +141,7 @@ void DaemonSession::__callbackConfim (const std::string& title, const std::strin
  */
 void DaemonSession::__callbackAlert (const std::string& title, const std::string& body, const callbackResult& cb) {
     sendEvent("interact", "", ArgumentList("confirm")(title)(body));
+    interactionCallback = cb;
 }
 
 /**
@@ -139,6 +149,7 @@ void DaemonSession::__callbackAlert (const std::string& title, const std::string
  */
 void DaemonSession::__callbackLicense (const std::string& title, const std::string& body, const callbackResult& cb) {
     sendEvent("interact", "", ArgumentList("confirm")(title)(body));
+    interactionCallback = cb;
 }
 
 /**
@@ -146,17 +157,18 @@ void DaemonSession::__callbackLicense (const std::string& title, const std::stri
  */
 void DaemonSession::__callbackLicenseURL (const std::string& title, const std::string& url, const callbackResult& cb) {
     sendEvent("interact", "", ArgumentList("confirm")(title)(url));
+    interactionCallback = cb;
 }
 
 /**
  * [Thread] Request Session
  */
-HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::string& vmcpURL ) {
+void DaemonSession::requestSession_thread( const std::string& eventID, const std::string& vmcpURL ) {
 	CRASH_REPORT_BEGIN;
 	HVInstancePtr hv = core.hypervisor;
 
     // Create the object where we can forward the events
-    CVMCallbacks cb( *this, id );
+    CVMCallbacks cb( *this, "" );
 
     try {
 
@@ -186,13 +198,13 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
         // Still invalid? Something's wrong
         if (!core.keystore.valid) {
             cb.fire("failed", ArgumentList( "Unable to initialize cryptographic store" )( HVE_NOT_VALIDATED ) );
-            return HVSessionPtr();
+            return;
         }
 
         // Block requests from untrusted domains
         if (!core.keystore.isDomainValid(domain)) {
             cb.fire("failed", ArgumentList( "The domain is not trusted" )( HVE_NOT_TRUSTED ) );
-            return HVSessionPtr();
+            return;
         }
         
         pInit->done("Crypto store initialized");
@@ -216,7 +228,7 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
         int res = core.downloadProvider->downloadText( newURL, &jsonString );
         if (res < 0) {
             cb.fire("failed", ArgumentList( "Unable to contact the VMCP endpoint" )( res ) );
-            return HVSessionPtr();
+            return;
         }
 
         pInit->doing("Validating VMCP data");
@@ -229,12 +241,12 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
             if ( !parsingSuccessful ) {
                 // report to the user the failure and their locations in the document.
                 cb.fire("failed", ArgumentList( "Unable to parse response data as JSON" )( HVE_QUERY_ERROR ) );
-                return HVSessionPtr();
+                return;
             }
         } catch (std::exception& e) {
             CVMWA_LOG("Error", "JSON Parse exception " << e.what());
             cb.fire("failed", ArgumentList( "Unable to parse response data as JSON" )( HVE_QUERY_ERROR ) );
-            return HVSessionPtr();
+            return;
         }
     
         // Import response to a ParameterMap
@@ -245,41 +257,47 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
         // Validate response
         if (!vmcpData->contains("name")) {
             cb.fire("failed", ArgumentList( "Missing 'name' parameter from the VMCP response" )( HVE_USAGE_ERROR ) );
-            return HVSessionPtr();
+            return;
         };
         if (!vmcpData->contains("secret")) {
             cb.fire("failed", ArgumentList( "Missing 'secret' parameter from the VMCP response" )( HVE_USAGE_ERROR ) );
-            return HVSessionPtr();
+            return;
         };
         if (!vmcpData->contains("signature")) {
             cb.fire("failed", ArgumentList( "Missing 'signature' parameter from the VMCP response" )( HVE_USAGE_ERROR ) );
-            return HVSessionPtr();
+            return;
         };
         if (vmcpData->contains("diskURL") && !vmcpData->contains("diskChecksum")) {
             cb.fire("failed", ArgumentList( "A 'diskURL' was specified, but no 'diskChecksum' was found in the VMCP response" )( HVE_USAGE_ERROR ) );
-            return HVSessionPtr();
+            return;
         }
 
         // Validate signature
         res = core.keystore.signatureValidate( domain, salt, vmcpData );
         if (res < 0) {
             cb.fire("failed", ArgumentList( "The VMCP response signature could not be validated" )( res ) );
-            return HVSessionPtr();
+            return;
         }
+
+        CVMWA_LOG("Debug", "Signature valid");
 
         pInit->done("Obtained information from VMCP endpoint");
 
         // =======================================================================
+
+        CVMWA_LOG("Debug", "Validating session");
     
         // Check session state
         res = hv->sessionValidate( vmcpData );
         if (res == 2) { 
             // Invalid password
             cb.fire("failed", ArgumentList( "The password specified is invalid for this session" )( HVE_PASSWORD_DENIED ) );
-            return HVSessionPtr();
+            return;
         }
 
         // =======================================================================
+
+        CVMWA_LOG("Debug", "Validating request");
     
         /* Check if the session is new and prompt the user */
         pInit->doing("Validating request");
@@ -290,10 +308,10 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
             std::string msg = "The website " + domain + " is trying to allocate a " + core.get_hv_name() + " Virtual Machine \"" + vmcpData->get("name") + "\". This website is validated and trusted by CernVM." _EOL _EOL "Do you want to continue?";
 
             // Prompt user using the currently active userInteraction 
-            if (this->confirm("New CernVM WebAPI Session", msg) != UI_OK) {
+            if (userInteraction->confirm("New CernVM WebAPI Session", msg) != UI_OK) {
             
                 // If we were aborted due to shutdown, exit
-                if (core.hasExited()) return HVSessionPtr();
+                if (core.hasExited()) return;
 
                 // Manage throttling 
                 if ((getMillis() - this->throttleTimestamp) <= THROTTLE_TIMESPAN) {
@@ -306,7 +324,7 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
 
                 // Fire error
                 cb.fire("failed", ArgumentList( "User denied the allocation of new session" )( HVE_ACCESS_DENIED ) );
-                return HVSessionPtr();
+                return;
             
             } else {
             
@@ -319,6 +337,8 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
         }
         pInit->done("Request validated");
 
+        CVMWA_LOG("Debug", "Oppening session");
+
         // =======================================================================
 
         // Prepare a progress task that will be used by sessionOpen    
@@ -328,7 +348,7 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
         HVSessionPtr session = hv->sessionOpen( vmcpData, pOpen );
         if (!session) {
             cb.fire("failed", ArgumentList( "Unable to open session" )( HVE_ACCESS_DENIED ) );
-            return HVSessionPtr();
+            return;
         }
 
         // We have everything. Prepare CVMWebAPI Session and fire success
@@ -338,8 +358,26 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
         // Check if we need a daemon for our current services
         hv->checkDaemonNeed();
 
-        // Return session instance
-        return session;
+        // Handle response
+        if (!session) {
+            sendError("Unable to open session", eventID);
+        } else {
+
+            // Create CVMWebAPISession wrapper
+            CVMWebAPISession* cvmSession = new CVMWebAPISession( core, *this, session );
+
+            // Register session on store
+            int session_id = core.storeSession(cvmSession);
+
+            // Reply the session ID
+            std::map<std::string, std::string> data;
+            data["session_id"] = ntos<int>( session_id );
+            reply(eventID, data);
+
+            // Sync session state
+            session->update();
+
+        }
     
     } catch (...) {
 
@@ -350,7 +388,6 @@ HVSessionPtr DaemonSession::requestSession( const std::string& id, const std::st
 
     }
 
-    return HVSessionPtr();
     CRASH_REPORT_END;
 }
 

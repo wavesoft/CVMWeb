@@ -84,12 +84,14 @@ template int hex_ston<int>( const std::string &Text );
 template long hex_ston<long>( const std::string &Text );
 
 template int ston<int>( const std::string &Text );
+template unsigned int ston<unsigned int>( const std::string &Text );
 template long ston<long>( const std::string &Text );
 template size_t ston<size_t>( const std::string &Text );
 template double ston<double>( const std::string &Text );
 template float ston<float>( const std::string &Text );
 
 template std::string ntos<int>( int &value );
+template std::string ntos<unsigned int>( unsigned int &value );
 template std::string ntos<long>( long &value );
 template std::string ntos<size_t>( size_t &value );
 template std::string ntos<double>( double &value );
