@@ -968,9 +968,9 @@ int HVInstance::sessionValidate ( const ParameterMapPtr& parameters ) {
         CVMWA_LOG("Error", "Missing 'name' parameter on sessionValidate" );
         return HVE_NOT_VALIDATED;
     }
-    std::string key = parameters->get("key");
+    std::string key = parameters->get("secret");
     if (key.empty()) {
-        CVMWA_LOG("Error", "Missing 'key' parameter on sessionValidate" );
+        CVMWA_LOG("Error", "Missing 'secret' parameter on sessionValidate" );
         return HVE_NOT_VALIDATED;
     }
 
@@ -985,7 +985,7 @@ int HVInstance::sessionValidate ( const ParameterMapPtr& parameters ) {
     if (!sess) return 0;
 
     // Compare key
-    if (sess->parameters->get("key", "").compare(keyHash) == 0) {
+    if (sess->parameters->get("secret", "").compare(keyHash) == 0) {
 
         // Correct password
         return 1;
@@ -1015,9 +1015,9 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters, const F
         CVMWA_LOG("Error", "Missing 'name' parameter on sessionOpen" );
         return voidPtr;
     }
-    std::string key = parameters->get("key");
-    if (name.empty()) {
-        CVMWA_LOG("Error", "Missing 'key' parameter on sessionOpen" );
+    std::string key = parameters->get("secret");
+    if (key.empty()) {
+        CVMWA_LOG("Error", "Missing 'secret' parameter on sessionOpen" );
         return voidPtr;
     }
 
@@ -1031,7 +1031,7 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters, const F
     // If we found one, continue
     if (sess) {
         // Validate secret key
-        if (sess->parameters->get("key","").compare(keyHash) != 0) {
+        if (sess->parameters->get("secret","").compare(keyHash) != 0) {
             // Exists but the password is invalid
             return voidPtr;
         }
@@ -1045,7 +1045,7 @@ HVSessionPtr HVInstance::sessionOpen( const ParameterMapPtr& parameters, const F
 
     // Populate parameters
     sess->parameters->fromParameters( parameters );
-    sess->parameters->set("key", keyHash); // (Replace with it's crypto-hash version)
+    sess->parameters->set("secret", keyHash); // (Replace with it's crypto-hash version)
 
     // Store it on open sessions
     openSessions.push_back( sess );

@@ -4,10 +4,13 @@ var WS_ENDPOINT = "ws://127.0.0.1:1793",
 /**
  * WebAPI Socket handler
  */
-WebAPI.Socket = function() {
+_NS_.Socket = function() {
 
 	// Superclass constructor
-	WebAPI.EventDispatcher.call(this);
+	_NS_.EventDispatcher.call(this);
+
+	// The user interaction handler
+	this.interaction = new UserInteraction(this);
 
 	// Status flags
 	this.connecting = false;
@@ -28,47 +31,44 @@ WebAPI.Socket = function() {
 /**
  * Subclass event dispatcher
  */
-WebAPI.Socket.prototype = Object.create( WebAPI.EventDispatcher.prototype );
+_NS_.Socket.prototype = Object.create( _NS_.EventDispatcher.prototype );
 
 /**
  * Cleanup after shutdown/close
  */
-WebAPI.Socket.prototype.__handleClose = function() {
+_NS_.Socket.prototype.__handleClose = function() {
 	this.__fire("disconnected");
 }
 
 /**
  * Handle connection acknowlegement
  */
-WebAPI.Socket.prototype.__handleOpen = function(data) {
+_NS_.Socket.prototype.__handleOpen = function(data) {
 	this.__fire("connected", data['version']);
 }
 
 /**
  * Handle raw incoming data
  */
-WebAPI.Socket.prototype.__handleData = function(data) {
+_NS_.Socket.prototype.__handleData = function(data) {
 	var o = JSON.parse(data);
+	console.log(o);
 
-	// Fire callbacks if there is an ID
-	if (o['id'] != undefined) {
+	// Forward all the frames of the given ID to the
+	// frame-handling callback.
+	if (o['id']) {
 		var cb = this.responseCallbacks[o['id']];
 		if (cb != undefined) cb(o);
-	} 
+	}
 
 	// Fire event if we got an event response
-	if (o['type'] == "event") {
+	else if (o['type'] == "event") {
 		var data = o['data'];
 
-		// Handle core events
+		// [Event] User Interaction
 		if (o['name'] == "interact") {
-			if (data[0] == "confirm") {
-				if (window.confirm(data[2], data[1])) {
-					this.send("interactionCallback", {"result": 1});
-				} else {
-					this.send("interactionCallback", {"result": 0});
-				}
-			}
+			// Forward to user interaction controller
+			this.interaction.handleInteractionEvent(o);
 
 		} else {
 			this.__fire(o['name'], o['data']);
@@ -82,7 +82,7 @@ WebAPI.Socket.prototype.__handleData = function(data) {
 /**
  * Send a JSON frame
  */
-WebAPI.Socket.prototype.send = function(action, data, responseCallback, responseTimeout) {
+_NS_.Socket.prototype.send = function(action, data, responseEvents, responseTimeout) {
 	var self = this;
 
 	// Calculate next frame's ID
@@ -95,8 +95,12 @@ WebAPI.Socket.prototype.send = function(action, data, responseCallback, response
 	};
 
 	// Register response callback
-	if (responseCallback) {
-		var timeoutTimer = null;
+	if (responseEvents) {
+		var timeoutTimer = null,
+			eventify = function(name) {
+				if (!name) return "";
+				return "on" + name[0].toUpperCase() + name.substr(1);
+			}
 
 		// Register a timeout timer
 		// unless the responseTimeout is set to 0
@@ -106,17 +110,36 @@ WebAPI.Socket.prototype.send = function(action, data, responseCallback, response
 				// Remove slot
 				delete self.responseCallbacks[frameID];
 
-				// Respond error
-				responseCallback(null, "error", {"error": "Response timeout"});
+				// Send error event
+				if (responseEvents['onError'])
+					responseEvents['onError']("Response timeout");
 
 			}, responseTimeout || 10000);
 		}
 
-		// Register a callback for the frame of the given type
+		// Register a callback that will be fired when we receive
+		// a frame with the specified ID.
 		this.responseCallbacks[frameID] = function(data) {
+
+			// We got a response, reset timeout timer
 			if (timeoutTimer!=null) clearTimeout(timeoutTimer);
-			delete self.responseCallbacks[frameID];
-			responseCallback(data['data'] || { }, data['type'], data);
+
+			// Cleanup when we received a 'succeed' frame
+			if ((data['name'] == 'succeed') || (data['name'] == 'failed'))
+				delete self.responseCallbacks[frameID];
+
+			// Pick and fire the appropriate event response
+			var evName = eventify(data['name']);
+			console.log("Hanlding incoming event ", evName, ":", data );
+			if (responseEvents[evName]) {
+
+				// Fire the function with the array list as arguments
+				responseEvents[evName].apply(
+						self, data['data'] || []
+					);
+
+			}
+
 		};
 	}
 
@@ -127,7 +150,7 @@ WebAPI.Socket.prototype.send = function(action, data, responseCallback, response
 /**
  * Close connection
  */
-WebAPI.Socket.prototype.close = function() {
+_NS_.Socket.prototype.close = function() {
 	if (!this.connected) return;
 
 	// Disconnect
@@ -142,7 +165,7 @@ WebAPI.Socket.prototype.close = function() {
 /**
  * Establish connection
  */
-WebAPI.Socket.prototype.connect = function() {
+_NS_.Socket.prototype.connect = function( cbAPIState ) {
 	var self = this;
 	if (this.connected) return;
 
@@ -171,10 +194,12 @@ WebAPI.Socket.prototype.connect = function() {
 			var socket = new WebSocket(WS_ENDPOINT);
 			socket.onerror = function(e) {
 				clearTimeout(timeoutCb);
+				if (!self.connecting) return;
 				cb(false);
 			};
 			socket.onopen = function(e) {
 				clearTimeout(timeoutCb);
+				if (!self.connecting) return;
 				cb(true, socket);
 			};
 
@@ -248,12 +273,15 @@ WebAPI.Socket.prototype.connect = function() {
 		// Send handshake and wait for response
 		// to finalize the connection
 		self.send("handshake", {
-			"version": WebAPI.version,
+			"version": _NS_.version,
 			"auth": self.authToken
 		}, function(data, type, raw) {
 			console.info("Successfuly contacted with CernVM WebAPI v" + data['version']);
 			self.__handleOpen(data);
 		});
+
+		// We managed to connect, we do have an API installed
+		if (cbAPIState) cbAPIState(true);
 
 	};
 
@@ -264,6 +292,11 @@ WebAPI.Socket.prototype.connect = function() {
 		console.error("Unable to contact CernVM WebAPI");
 		self.connecting = false;
 		self.connected = false;
+
+		// We could not connect nor launch the plug-in, therefore
+		// we are missing API components.
+		if (cbAPIState) cbAPIState(false);
+
 	};
 
 	/**
@@ -290,8 +323,14 @@ WebAPI.Socket.prototype.connect = function() {
 			// A socket is directly available
 			socket_success(socket);
 		} else {
+
 			// We ned to do a URL launch
-			window.location = WS_URI + "launch";
+			var e = document.createElement('iframe'); 
+			e.style.display="none"; 
+			e.src = WS_URI + "launch";
+			document.body.appendChild(e);
+
+			// And start loop for 5 sec
 			check_loop(checkloop_cb, 5000);
 		}
 	});	

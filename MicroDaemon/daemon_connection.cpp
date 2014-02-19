@@ -18,7 +18,10 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
+// Everything is included in daemon.h
+// (Including cross-referencing)
 #include "daemon.h"
+
 #include <vector>
 
 #include <json/json.h>
@@ -161,10 +164,11 @@ void DaemonConnection::__callbackLicenseURL (const std::string& title, const std
  */
 void DaemonConnection::requestSession_thread( const std::string& eventID, const std::string& vmcpURL ) {
 	CRASH_REPORT_BEGIN;
+    Json::Value data;
 	HVInstancePtr hv = core.hypervisor;
 
     // Create the object where we can forward the events
-    CVMCallbackFw cb( *this, "" );
+    CVMCallbackFw cb( *this, eventID );
 
     // Block requests when reached throttled state
     if (this->throttleBlock) {
@@ -355,28 +359,18 @@ void DaemonConnection::requestSession_thread( const std::string& eventID, const 
 
         // We have everything. Prepare CVMWebAPI Session and fire success
         pTasks->complete( "Session oppened successfully" );
-        cb.fire("succeed", ArgumentList( "Session oppened successfully" ) );
 
         // Check if we need a daemon for our current services
         hv->checkDaemonNeed();
 
-        // Handle response
-        if (!session) {
-            sendError("Unable to open session", eventID);
-        } else {
+        // Sync session state
+        session->update();
 
-            // Register session on store
-            CVMWebAPISession* cvmSession = core.storeSession( *this, session );
-
-            // Reply the session ID
-            Json::Value data;
-            data["session_id"] = cvmSession->uuid;
-            reply(eventID, data);
-
-            // Sync session state
-            session->update();
-
-        }
+        // Register session on store
+        CVMWebAPISession* cvmSession = core.storeSession( *this, session );
+        
+        // Completed
+        cb.fire("succeed", ArgumentList("Session oppened successfully")(cvmSession->uuid));
     
     } catch (...) {
 

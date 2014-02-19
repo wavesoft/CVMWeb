@@ -22,8 +22,6 @@
 #ifndef DAEMON_COMPONENT_WEBAPISESSION_H
 #define DAEMON_COMPONENT_WEBAPISESSION_H
 
-#include "../daemon.h"
-
 #include <Common/Hypervisor.h>
 #include <Common/ProgressFeedback.h>
 #include <Common/Utilities.h>
@@ -37,7 +35,8 @@ public:
 	 * Constructor for the CernVM WebAPI Session 
 	 */
 	CVMWebAPISession( DaemonCore& core, DaemonConnection& connection, HVSessionPtr hvSession, int uuid  )
-		: core(core), connection(connection), hvSession(hvSession), uuid(uuid), uuid_str(ntos<int>(uuid)), callbackForwarder( connection, uuid_str )
+		: core(core), connection(connection), hvSession(hvSession), uuid(uuid), uuid_str(ntos<int>(uuid)), 
+		  callbackForwarder( connection, uuid_str ), apiPortOnline(false)
 	{ 
 
 		// Handle state changes
@@ -75,7 +74,7 @@ public:
 	/**
 	 * Session polling timer
 	 */
-	void handleTimer( );
+	void processPeriodicJobs( );
 
 	/**
 	 * The session ID
@@ -118,6 +117,11 @@ private:
 	 * Callback forwarding object
 	 */
 	CVMCallbackFw		callbackForwarder;
+
+	/**
+	 * Last state of the API port
+	 */
+	bool 				apiPortOnline;
 
 };
 

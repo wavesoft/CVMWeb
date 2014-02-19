@@ -12,12 +12,18 @@
 			width: 100%;
 		}
 		</style>
-		<script type="text/javascript" src="js/WebAPI.js"></script>
-		<script type="text/javascript" src="js/EventDispatcher.js"></script>
-		<script type="text/javascript" src="js/Socket.js"></script>
+		<script type="text/javascript" src="cvmwebapi-2.0.0-src.js"></script>
 		<script type="text/javascript">
 
-		var ws = new WebAPI.Socket();
+
+		CVM.startCVMWebAPI(function(api) {
+
+			console.log(api);
+
+		});
+
+		/*
+		var ws = new CVM.Socket();
 		var session_id = 0;
 		function initialize() {
 			ws.connect();
@@ -28,17 +34,19 @@
 		function start() {
 			ws.send("requestSession", {
 				"vmcp": "http://localhost/sign.php"
-			}, function(ans) {
-				session_id = ans["session_id"];
-				document.getElementById('session_controls').style['display'] = 'block';
-				console.log(ans);
+			}, {
+				onSucceed : function( msg, id ) {
+					session_id = id;
+				}
 			});
+
 		}
 		function sendSession(what) {
 			ws.send(what, {
 				"session_id": session_id
 			});
 		}
+		*/
 
 		</script>
 	</head>

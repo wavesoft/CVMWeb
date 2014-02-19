@@ -35,9 +35,8 @@
 	// Serve some static resources
 	NSBundle* bundle = [NSBundle mainBundle];
 	webserver->serve_static( "/control.html", 			[[bundle pathForResource:@"control" ofType:@"html"] cStringUsingEncoding:NSASCIIStringEncoding] );
-	webserver->serve_static( "/js/EventDispatcher.js", 	[[bundle pathForResource:@"EventDispatcher" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
-	webserver->serve_static( "/js/Socket.js", 			[[bundle pathForResource:@"Socket" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
-	webserver->serve_static( "/js/WebAPI.js", 			[[bundle pathForResource:@"WebAPI" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
+	webserver->serve_static( "/cvmwebapi-2.0.0.js", 	[[bundle pathForResource:@"cvmwebapi-2.0.0" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
+	webserver->serve_static( "/cvmwebapi-2.0.0-src.js", [[bundle pathForResource:@"cvmwebapi-2.0.0-src" ofType:@"js"] cStringUsingEncoding:NSASCIIStringEncoding] );
 
 	// Reset variables
 	launchedByURL = false;
@@ -74,6 +73,14 @@
 		userInfo:nil
 		repeats:YES];
 
+	// Start CRON timer
+	cronTimer = [NSTimer
+		scheduledTimerWithTimeInterval:1
+		target:self
+		selector:@selector(forwardCronEvent)
+		userInfo:nil
+		repeats:YES];
+
 	// If we were not launched by URL, open the management interface
 	// in the browser.
 	if (!launchedByURL) {
@@ -104,6 +111,15 @@
 
 	NSLog(@"Timer started");
 
+}
+
+/**
+ * The cron jobs timer
+ /*/
+- (void)forwardCronEvent
+{
+	// Trigger the scheduled jobs loop
+	core->processPeriodicJobs();
 }
 
 /**

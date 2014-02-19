@@ -18,7 +18,9 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "CVMWebAPISession.h"
+// Everything is included in daemon.h
+// (Including cross-referencing)
+#include "../daemon.h"
 
 /**
  * Handle session commands
@@ -42,13 +44,50 @@ void CVMWebAPISession::handleAction( const std::string& id, const std::string& a
 /**
  * Handle timed event
  */
-void CVMWebAPISession::handleTimer() {
+void CVMWebAPISession::processPeriodicJobs() {
+
+	// Synchronize session state with VirtualBox (or file)
+	CVMWA_LOG("Debug", "Syncing session");
+	hvSession->update(false);
+
+	// Check for API calls
+    int sessionState = hvSession->local->getNum<int>("state", 0);
+	CVMWA_LOG("Debug", "Session state: " << sessionState);
+    if (sessionState == SS_RUNNING) {
+    	if (!apiPortOnline) {
+
+    		// Check if API port has gone online
+    		bool newState = hvSession->isAPIAlive();
+			CVMWA_LOG("Debug", "API Port: " << newState);
+    		if (newState) {
+	    		connection.sendEvent( "apiPortStateChanged", ArgumentList(true) );
+    			apiPortOnline = true;
+    		}
+
+    	}
+    } else {
+    	if (apiPortOnline) {
+    		// In any other state, the port is just offline
+    		connection.sendEvent( "apiPortStateChanged", ArgumentList(false) );
+    		apiPortOnline = false;
+    	}
+    }
 
 }
 
 /**
- * Forward state changed events to the UI
+ * Handle state changed events and forward them if needed to the UI
  */
 void CVMWebAPISession::__cbStateChanged( VariantArgList& args ) {
 	connection.sendEvent( "stateChanged", args, uuid_str );
+
+	// Check if we switched to a state where API is not available any more
+	int session = boost::get<int>(args[0]);
+	if ((session != SS_RUNNING) && apiPortOnline) {
+		// In any other state, the port is just offline
+		connection.sendEvent( "apiPortStateChanged", ArgumentList(false) );
+		apiPortOnline = false;
+	}
+
 }
+

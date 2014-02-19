@@ -1,13 +1,13 @@
 
-WebAPI.EventDispatcher = function(e) {
+_NS_.EventDispatcher = function(e) {
     this.events = { };
 };
 
 /**
  * Fire an event to the registered handlers
  */
-WebAPI.EventDispatcher.prototype.__fire = function( name, args ) {
-    if (WebAPI.debugLogging) console.log("Firing",name,"(", args, ")");
+_NS_.EventDispatcher.prototype.__fire = function( name, args ) {
+    if (_NS_.debugLogging) console.log("Firing",name,"(", args, ")");
     if (this.events[name] == undefined) return;
     var callbacks = this.events[name];
     for (var i=0; i<callbacks.length; i++) {
@@ -18,7 +18,7 @@ WebAPI.EventDispatcher.prototype.__fire = function( name, args ) {
 /**
  * Register a listener on the given event
  */
-WebAPI.EventDispatcher.prototype.addEventListener = function( name, listener ) {
+_NS_.EventDispatcher.prototype.addEventListener = function( name, listener ) {
     if (this.events[name] == undefined) this.events[name]=[];
     this.events[name].push( listener );
 };
@@ -26,7 +26,7 @@ WebAPI.EventDispatcher.prototype.addEventListener = function( name, listener ) {
 /**
  * Unregister a listener from the given event
  */
-WebAPI.EventDispatcher.prototype.removeEventListener = function( name, listener ) {
+_NS_.EventDispatcher.prototype.removeEventListener = function( name, listener ) {
     if (this.events[name] == undefined) return;
     var i = this.events[name].indexOf(listener);
     if (i<0) return;

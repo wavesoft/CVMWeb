@@ -189,7 +189,7 @@ public:
     virtual std::string     getAPIHost          ();
     virtual int             getAPIPort          ();
     virtual void            abort               ();
-    virtual int             update              ();
+    virtual int             update              ( bool waitTillInactive = true );
 
     /////////////////////////////////////
     // External updates feedback

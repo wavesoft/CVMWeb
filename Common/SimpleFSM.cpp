@@ -509,7 +509,7 @@ void SimpleFSM::FSMWaitInactive ( int timeout ) {
 	// Wait until we are no longer active
 	{
 	    boost::unique_lock<boost::mutex> lock(fsmwWaitMutex);		
-		while (!FSMActive()) {
+		while (FSMActive()) {
 			fsmwWaitCond.wait(lock);
 		}
 	}

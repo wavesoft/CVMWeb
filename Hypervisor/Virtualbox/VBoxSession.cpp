@@ -1423,9 +1423,14 @@ int VBoxSession::getAPIPort ( ) {
  * Update the state of the VM, triggering the
  * appropriate state change event callbacks
  */
-int VBoxSession::update ( ) {
+int VBoxSession::update ( bool waitTillInactive ) {
 
     // Wait until the FSM is not doing anything
+    if (!waitTillInactive) {
+        // Exit if the FSM is still active
+        if (FSMActive()) 
+            return HVE_SCHEDULED;
+    }
     FSMWaitInactive();
 
     // Get current state
@@ -1640,10 +1645,6 @@ void VBoxSession::errorOccured ( const std::string & str, int errNo ) {
     // Notify progress failure on the FSM progress
     FSMFail( str, errNo );
 
-    // Skew through the error state, while trying to head
-    // towards the previously defined state.
-    FSMSkew( 2 );
-
     // Check the timestamp of the last time we had an error
     unsigned long currTime = getMillis();
     if ((currTime - errorTimestamp) < SESSION_HEAL_THRESSHOLD ) {
@@ -1651,9 +1652,17 @@ void VBoxSession::errorOccured ( const std::string & str, int errNo ) {
         if (errorCount > SESSION_HEAL_TRIES) {
             CVMWA_LOG("Error", "Too many errors. Won't try to heal them again");
             FSMGoto(112);
+        } else {
+            // Skew through the error state, while trying to head
+            // towards the previously defined state.
+            FSMSkew( 2 );
         }
     } else {
         errorCount = 1;
+
+        // Skew through the error state, while trying to head
+        // towards the previously defined state.
+        FSMSkew( 2 );
     }
 
     // Update last error timestamp

@@ -22,8 +22,6 @@
 #ifndef DAEMON_COMPONENT_CALLBACKS_H
 #define DAEMON_COMPONENT_CALLBACKS_H
 
-#include "../daemon.h"
-
 /**
  * A utility class that keeps track of the delegated Callbacks
  * and helps deregistering the listeners after destruction.

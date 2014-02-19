@@ -18,11 +18,12 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include <cstdlib>
-#include <openssl/rand.h>
-
+// Everything is included in daemon.h
+// (Including cross-referencing)
 #include "daemon.h"
 
+#include <cstdlib>
+#include <openssl/rand.h>
 #include <Common/Utilities.h>
 
 /**
@@ -193,8 +194,27 @@ void DaemonCore::releaseConnectionSessions( DaemonConnection& connection ) {
     CVMWA_LOG("Debug", "Releasing connection sessions");
     for (std::map<int, CVMWebAPISession* >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
         CVMWebAPISession* sess = (*it).second;
-        if (&sess->connection == &connection)
+        if (&sess->connection == &connection) {
+
+            // Release wrapper object
             delete sess;
+
+            // Remove from list
+            sessions.erase( it );
+            if (it != sessions.end()) ++it;
+
+        }
     }
 
 }
+
+/**
+ * Forward the tick event to all of the child nodes
+ */
+void DaemonCore::processPeriodicJobs() {
+    for (std::map<int, CVMWebAPISession* >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
+        CVMWebAPISession* sess = (*it).second;
+        sess->processPeriodicJobs();
+    }   
+}
+

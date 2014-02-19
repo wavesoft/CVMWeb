@@ -388,7 +388,7 @@ public:
     /**
      * Re-read the session variables from disk
      */
-    virtual int             update() = 0;
+    virtual int             update( bool waitTillInactive = true ) = 0;
 
     /**
      * Abort current task and prepare session for reaping

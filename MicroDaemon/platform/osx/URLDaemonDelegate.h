@@ -28,6 +28,8 @@
   	@private NSTimer *			timer;
   	// The reaping probe timer
   	@private NSTimer *			reapTimer;
+    // The cron jobs timer
+    @private NSTimer *      cronTimer;
     // The timer used for delay-starting reap timer
     @private NSTimer *      delayStartTimer;
     // The timer used for delay-launching the URL
@@ -42,6 +44,11 @@
  * Run one step on server events
  */
 - (void)serverLoop;
+
+/**
+ * CRON Event
+ */
+- (void)forwardCronEvent;
 
 /**
  * Check server for reaping dead connections

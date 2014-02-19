@@ -31,6 +31,7 @@ class DaemonConnection;
 class DaemonFactory;
 
 class CVMCallbackFw;
+class CVMWebAPI;
 class CVMWebAPISession;
 
 // Include implementations
@@ -39,6 +40,7 @@ class CVMWebAPISession;
 #include "daemon_factory.h"
 
 #include "components/CVMCallbackFw.h"
+#include "components/CVMWebAPI.h"
 #include "components/CVMWebAPISession.h"
 
 #endif /* end of include guard: DAEMON_H */

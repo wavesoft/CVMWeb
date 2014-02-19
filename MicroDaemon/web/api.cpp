@@ -136,7 +136,7 @@ void WebsocketAPI::reply( const std::string& id, const Json::Value& data ) {
 /**
  * Send a json-formatted action response
  */
-void WebsocketAPI::sendEvent( const std::string& event, const VariantArgList& argVariants, const std::string& session_id ) {
+void WebsocketAPI::sendEvent( const std::string& event, const VariantArgList& argVariants, const std::string& id ) {
 	// Build and send an action response
 	Json::FastWriter writer;
 	Json::Value root, data;
@@ -144,10 +144,7 @@ void WebsocketAPI::sendEvent( const std::string& event, const VariantArgList& ar
 	// Populate core fields
 	root["type"] = "event";
 	root["name"] = event;
-
-	// Append SessionID if it's provided
-	if (!session_id.empty())
-		root["session_id"] = session_id;
+	root["id"] = id;
 
 	// Populate json fields
 	for (std::vector< VariantArg >::const_iterator it = argVariants.begin(); it != argVariants.end(); ++it) {

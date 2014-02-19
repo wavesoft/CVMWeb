@@ -54,7 +54,7 @@ public:
 	/**
 	 * Check if the daemon has exited
 	 */
-	bool hasExited();
+	bool 						hasExited();
 
 	/**
 	 * Allocate new authenticatino key
@@ -86,6 +86,11 @@ public:
 	 * Check if a hypervisor was detected
 	 */
 	bool 						hasHypervisor();
+
+	/**
+	 * Run periodic jobs
+	 */
+	void 						processPeriodicJobs();
 
 	/**
 	 * Return the hypervisor name

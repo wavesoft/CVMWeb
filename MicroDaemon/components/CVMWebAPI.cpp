@@ -18,5 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "CVMWebAPI.h"
+// Everything is included in daemon.h
+// (Including cross-referencing)
+#include "../daemon.h"
 

@@ -73,7 +73,7 @@ public:
 	/**
 	 * Send a named event with array data
 	 */
-	void 					sendEvent( const std::string& event, const VariantArgList& params, const std::string& session_id = "" );
+	void 					sendEvent( const std::string& event, const VariantArgList& params, const std::string& id = "" );
 
 	/**
 	 * Send error response

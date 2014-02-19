@@ -146,7 +146,7 @@ file ( GLOB DAEMON_SOURCES
 file ( GLOB DAEMON_RESOURCES 
 		# Get HTML Websites
 		${PROJECT_SOURCE_DIR}/html/*.html
-		${PROJECT_SOURCE_DIR}/html/js/*.js
+		${PROJECT_SOURCE_DIR}/html/*.js
 		# Get Icon
 		${PLATFORM_DIR}/icon.*
 	)
