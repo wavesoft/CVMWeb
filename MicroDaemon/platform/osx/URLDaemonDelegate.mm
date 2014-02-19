@@ -150,7 +150,7 @@
 	std::string authToken = core->newAuthKey();
 
 	// Concat url + auth token
-	NSMutableString* url = [[NSMutableString alloc] initWithString:@"http://localhost:1793/control.html#"];
+	NSMutableString* url = [[NSMutableString alloc] initWithString:@"http://test.local:1793/control.html#"];
 	[url appendString:[NSString stringWithCString:authToken.c_str() encoding:[NSString defaultCStringEncoding]]];
 
 	// Open again the management interface

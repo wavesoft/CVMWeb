@@ -18,7 +18,7 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "daemon_session.h"
+#include "daemon.h"
 #include <vector>
 
 #include <json/json.h>
@@ -27,13 +27,11 @@
 #include <Common/Hypervisor.h>
 #include <Common/ProgressFeedback.h>
 
-#include "components/CVMCallbacks.h"
-
 /**
  * Handle incoming websocket action
  */
-void DaemonSession::handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters ) {
-	std::map<std::string, std::string> data;
+void DaemonConnection::handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters ) {
+    Json::Value data;
 
     // =============================
     //  Common actions
@@ -50,13 +48,10 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
 		// Check if we are privileged
 		if (parameters->contains("auth")) {
 			privileged = core.authKeyValid( parameters->get("auth") );
-            if (privileged) {
 
-                // Enable privileged UI on the user
-                std::vector< std::string > arr;
-                sendEvent("privileged", "", ArgumentList(1));
+            // Let UI know about it's priviledges
+            sendEvent("privileged", ArgumentList(privileged));
 
-            }
 		}
 
     }
@@ -87,7 +82,7 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
         if (parameters->contains("vmcp")) {
 
             // Try to open session
-            boost::thread( boost::bind( &DaemonSession::requestSession_thread, this, id, parameters->get("vmcp") ) );
+            boost::thread( boost::bind( &DaemonConnection::requestSession_thread, this, id, parameters->get("vmcp") ) );
 
         } else {
             sendError("Missing 'vmcp' parameter", id);
@@ -105,7 +100,8 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
         if (core.sessions.find(session_id) == core.sessions.end()) {
             sendError("Unable to find a session with the specified session id!", id);
         } else {
-            core.sessions[session_id]->handleAction( id, action, parameters );
+            // Handle session action in another thread
+            boost::thread( boost::bind( &CVMWebAPISession::handleAction, core.sessions[session_id], id, action, parameters ) );
         }
 
     }
@@ -131,44 +127,50 @@ void DaemonSession::handleAction( const std::string& id, const std::string& acti
 /**
  * Send confirm interaction event
  */
-void DaemonSession::__callbackConfim (const std::string& title, const std::string& body, const callbackResult& cb) {
-    sendEvent("interact", "", ArgumentList("confirm")(title)(body));
+void DaemonConnection::__callbackConfim (const std::string& title, const std::string& body, const callbackResult& cb) {
+    sendEvent("interact", ArgumentList("confirm")(title)(body));
     interactionCallback = cb;
 }
 
 /**
  * Send alert interaction event
  */
-void DaemonSession::__callbackAlert (const std::string& title, const std::string& body, const callbackResult& cb) {
-    sendEvent("interact", "", ArgumentList("confirm")(title)(body));
+void DaemonConnection::__callbackAlert (const std::string& title, const std::string& body, const callbackResult& cb) {
+    sendEvent("interact", ArgumentList("confirm")(title)(body));
     interactionCallback = cb;
 }
 
 /**
  * Send license interaction event
  */
-void DaemonSession::__callbackLicense (const std::string& title, const std::string& body, const callbackResult& cb) {
-    sendEvent("interact", "", ArgumentList("confirm")(title)(body));
+void DaemonConnection::__callbackLicense (const std::string& title, const std::string& body, const callbackResult& cb) {
+    sendEvent("interact", ArgumentList("confirm")(title)(body));
     interactionCallback = cb;
 }
 
 /**
  * Send license by URL interaction event
  */
-void DaemonSession::__callbackLicenseURL (const std::string& title, const std::string& url, const callbackResult& cb) {
-    sendEvent("interact", "", ArgumentList("confirm")(title)(url));
+void DaemonConnection::__callbackLicenseURL (const std::string& title, const std::string& url, const callbackResult& cb) {
+    sendEvent("interact", ArgumentList("confirm")(title)(url));
     interactionCallback = cb;
 }
 
 /**
  * [Thread] Request Session
  */
-void DaemonSession::requestSession_thread( const std::string& eventID, const std::string& vmcpURL ) {
+void DaemonConnection::requestSession_thread( const std::string& eventID, const std::string& vmcpURL ) {
 	CRASH_REPORT_BEGIN;
 	HVInstancePtr hv = core.hypervisor;
 
     // Create the object where we can forward the events
-    CVMCallbacks cb( *this, "" );
+    CVMCallbackFw cb( *this, "" );
+
+    // Block requests when reached throttled state
+    if (this->throttleBlock) {
+        cb.fire("failed", ArgumentList( "Request denied by throttle protection" )( HVE_ACCESS_DENIED ) );
+        return;
+    }
 
     try {
 
@@ -363,15 +365,12 @@ void DaemonSession::requestSession_thread( const std::string& eventID, const std
             sendError("Unable to open session", eventID);
         } else {
 
-            // Create CVMWebAPISession wrapper
-            CVMWebAPISession* cvmSession = new CVMWebAPISession( core, *this, session );
-
             // Register session on store
-            int session_id = core.storeSession(cvmSession);
+            CVMWebAPISession* cvmSession = core.storeSession( *this, session );
 
             // Reply the session ID
-            std::map<std::string, std::string> data;
-            data["session_id"] = ntos<int>( session_id );
+            Json::Value data;
+            data["session_id"] = cvmSession->uuid;
             reply(eventID, data);
 
             // Sync session state

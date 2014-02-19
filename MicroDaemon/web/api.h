@@ -68,12 +68,12 @@ public:
 	/**
 	 * Reply to an action
 	 */
-	void 					reply( const std::string& id, const std::map< std::string, std::string>& params );
+	void 					reply( const std::string& id, const Json::Value& data );
 
 	/**
 	 * Send a named event with array data
 	 */
-	void 					sendEvent( const std::string& event, const std::string&id, const VariantArgList& params );
+	void 					sendEvent( const std::string& event, const VariantArgList& params, const std::string& session_id = "" );
 
 	/**
 	 * Send error response

@@ -22,10 +22,7 @@
 #ifndef DAEMON_FACTORY_H
 #define DAEMON_FACTORY_H
 
-#include "web/webserver.h"
-
-#include "daemon_session.h"
-#include "daemon_core.h"
+#include "daemon.h"
 
 class DaemonFactory : public CVMWebserverConnectionFactory {
 public:
@@ -39,7 +36,7 @@ public:
 	 * This factory just creates WebsocketAPI handlers
 	 */
 	virtual CVMWebserverConnectionHandler *	createHandler( const std::string& domain, const std::string uri ) {
-		return new DaemonSession( domain, uri, core );
+		return new DaemonConnection( domain, uri, core );
 	}
 
 	/**

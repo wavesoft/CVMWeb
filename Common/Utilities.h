@@ -537,12 +537,12 @@ sharedMutex                                 __nmutex_get( std::string name );
 #if defined(DEBUG) || defined(LOGGING)
     #ifdef _WIN32
         #define CVMWA_LOG(kind, ...) \
-            do { std::ostringstream ss; ss << "[" << getTimestamp() << "][" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); } while(0); \
-            CVMWA_REPORT_LOG(kind, __VA_ARGS__ )
+            do { NAMED_MUTEX_LOCK("log"); std::ostringstream ss; ss << "[" << getTimestamp() << "][" << kind << "@" << __FUNCTION__ << "] " << __VA_ARGS__ << std::endl; OutputDebugStringA( ss.str().c_str() ); NAMED_MUTEX_UNLOCK; } while(0); \
+            CVMWA_REPORT_LOG(kind, __VA_ARGS__ );
     #else
         #define CVMWA_LOG(kind, ...) \
-            do { std::cerr << "[" << getTimestamp() << "][" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; } while(0); \
-            CVMWA_REPORT_LOG(kind, __VA_ARGS__ )
+            do { NAMED_MUTEX_LOCK("log"); std::cerr << "[" << getTimestamp() << "][" << kind << "@" << __func__ << "] " << __VA_ARGS__ << std::endl; NAMED_MUTEX_UNLOCK; } while(0); \
+            CVMWA_REPORT_LOG(kind, __VA_ARGS__ );
     #endif
 #else
     #define CVMWA_LOG(kind, ...) CVMWA_REPORT_LOG(kind, __VA_ARGS__)

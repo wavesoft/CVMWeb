@@ -18,12 +18,12 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "CVMCallbacks.h"
+#include "../daemon.h"
 
 /**
  * Unregister everything upon destruction
  */
-CVMCallbacks::~CVMCallbacks() {
+CVMCallbackFw::~CVMCallbackFw() {
 
 	// Unregister from all the objects that we are monitoring
 	for (std::vector< DisposableDelegate* >::iterator it = listening.begin(); it != listening.end(); ++it ) {
@@ -37,11 +37,11 @@ CVMCallbacks::~CVMCallbacks() {
 /**
  * Listen the events of the specified callback object
  */
-void CVMCallbacks::listen( Callbacks & cb ) {
+void CVMCallbackFw::listen( Callbacks & cb ) {
 
 	// Register an anyEvent receiver and keep the slot reference
 	listening.push_back(
-		new DisposableDelegate( &cb, boost::bind( &CVMCallbacks::fire, this, _1, _2 ) )
+		new DisposableDelegate( &cb, boost::bind( &CVMCallbackFw::fire, this, _1, _2 ) )
 	);
 		
 }
@@ -49,7 +49,7 @@ void CVMCallbacks::listen( Callbacks & cb ) {
 /**
  * Stop listening for events of the specified callback object
  */
-void CVMCallbacks::stopListening( Callbacks & cb ) {
+void CVMCallbackFw::stopListening( Callbacks & cb ) {
 
 	// Register an anyEvent receiver and keep the slot reference
 	for (std::vector< DisposableDelegate* >::iterator it = listening.begin(); it != listening.end(); ++it ) {
@@ -75,8 +75,8 @@ void CVMCallbacks::stopListening( Callbacks & cb ) {
 /**
  * Fire an event to the javascript object
  */
-void CVMCallbacks::fire( const std::string& name, VariantArgList& args ) {
+void CVMCallbackFw::fire( const std::string& name, VariantArgList& args ) {
 	// Forward the event to the interface
-	api.sendEvent( name, eventID, args );
+	api.sendEvent( name, args, sessionID );
 
 }

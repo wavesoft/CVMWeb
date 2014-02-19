@@ -20,6 +20,8 @@
 
 #include "api.h"
 #include <sstream>
+ 
+#include <Common/Utilities.h>
 
 /**
  * Handle incoming raw request from the browser
@@ -92,6 +94,8 @@ std::string WebsocketAPI::getEgressRawData() {
  */
 void WebsocketAPI::sendRawData( const std::string& data ) {
 
+	CVMWA_LOG("Debug", "Pushing egress data: '" << data << "'")
+
 	// Add data to the egress queue
 	egress.push(data);
 
@@ -113,19 +117,16 @@ void WebsocketAPI::sendError( const std::string& error, const std::string& id ) 
 /**
  * Send a json-formatted action response
  */
-void WebsocketAPI::reply( const std::string& id, const std::map< std::string, std::string>& params ) {
+void WebsocketAPI::reply( const std::string& id, const Json::Value& data ) {
 	// Build and send an action response
 	Json::FastWriter writer;
-	Json::Value root, data;
+	Json::Value root;
 
 	// Populate core fields
 	root["type"] = "result";
 	root["id"] = id;
 
 	// Populate data
-	for (std::map< std::string, std::string >::const_iterator it = params.begin(); it != params.end(); ++it) {
-		data[(*it).first] = (*it).second;
-	}
 	root["data"] = data;
 
 	// Compile JSON response
@@ -135,7 +136,7 @@ void WebsocketAPI::reply( const std::string& id, const std::map< std::string, st
 /**
  * Send a json-formatted action response
  */
-void WebsocketAPI::sendEvent( const std::string& event, const std::string&id, const VariantArgList& argVariants ) {
+void WebsocketAPI::sendEvent( const std::string& event, const VariantArgList& argVariants, const std::string& session_id ) {
 	// Build and send an action response
 	Json::FastWriter writer;
 	Json::Value root, data;
@@ -143,7 +144,10 @@ void WebsocketAPI::sendEvent( const std::string& event, const std::string&id, co
 	// Populate core fields
 	root["type"] = "event";
 	root["name"] = event;
-	root["id"] = id;
+
+	// Append SessionID if it's provided
+	if (!session_id.empty())
+		root["session_id"] = session_id;
 
 	// Populate json fields
 	for (std::vector< VariantArg >::const_iterator it = argVariants.begin(); it != argVariants.end(); ++it) {

@@ -19,46 +19,53 @@
  */
 
 #pragma once
-#ifndef DAEMON_SESSION_H
-#define DAEMON_SESSION_H
+#ifndef DAEMON_CONNECTION_H
+#define DAEMON_CONNECTION_H
+
+#include "daemon.h"
 
 #include <Common/Config.h>
 #include <Common/UserInteraction.h>
+#include <Common/Callbacks.h>
 
 #include <boost/make_shared.hpp>
 #include <boost/bind.hpp>
-
-#include "web/webserver.h"
-#include "web/api.h"
-
-#include "daemon_core.h"
-
-
+ 
 /**
  * Websocket Session
  */
-class DaemonSession : public WebsocketAPI {
+class DaemonConnection : public WebsocketAPI {
 public:
 
 	/**
 	 * Constructor
 	 */
-	DaemonSession( const std::string& domain, const std::string uri, DaemonCore& core )
+	DaemonConnection( const std::string& domain, const std::string uri, DaemonCore& core )
 		: WebsocketAPI(domain, uri), core(core), privileged(false), userInteraction(), interactionCallback()
 	{
 
 		// Prepare user interaction
 		userInteraction = boost::make_shared<UserInteraction>();
-		userInteraction->setConfirmHandler( boost::bind( &DaemonSession::__callbackConfim, this, _1, _2, _3 ) );
-		userInteraction->setAlertHandler( boost::bind( &DaemonSession::__callbackAlert, this, _1, _2, _3 ) );
-		userInteraction->setLicenseHandler( boost::bind( &DaemonSession::__callbackLicense, this, _1, _2, _3 ) );
-		userInteraction->setLicenseURLHandler( boost::bind( &DaemonSession::__callbackLicenseURL, this, _1, _2, _3 ) );
+		userInteraction->setConfirmHandler( boost::bind( &DaemonConnection::__callbackConfim, this, _1, _2, _3 ) );
+		userInteraction->setAlertHandler( boost::bind( &DaemonConnection::__callbackAlert, this, _1, _2, _3 ) );
+		userInteraction->setLicenseHandler( boost::bind( &DaemonConnection::__callbackLicense, this, _1, _2, _3 ) );
+		userInteraction->setLicenseURLHandler( boost::bind( &DaemonConnection::__callbackLicenseURL, this, _1, _2, _3 ) );
 
 		// Reset throttling parameters
 	    throttleTimestamp = 0;
 	    throttleDenies = 0;
 	    throttleBlock = false;
 	};
+
+	/**
+	 * Destructor
+	 */
+	~DaemonConnection() {
+
+		// Release all sessions by this connection
+		core.releaseConnectionSessions( *this );
+
+	}
 
 protected:
 
@@ -91,7 +98,7 @@ protected:
 private:
 
 	/**
-	 * Delegate function that forwards the request to the javascript interface
+	 * Callbacks from userInteraction -> to WebSocket
 	 */
 	void __callbackConfim		(const std::string&, const std::string&, const callbackResult& cb);
 	void __callbackAlert		(const std::string&, const std::string&, const callbackResult& cb);
@@ -100,6 +107,7 @@ private:
 
 	/**
 	 * The user interaction callback where we should forward the responses
+	 * from the WebSocket -> to userInteraction
 	 */
 	callbackResult interactionCallback;
 
@@ -110,4 +118,4 @@ private:
 
 };
 
-#endif /* end of include guard: DAEMON_SESSION_H */
+#endif /* end of include guard: DAEMON_CONNECTION_H */

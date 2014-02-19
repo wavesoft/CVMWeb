@@ -38,7 +38,7 @@ using namespace std;
  * Replace macros
  * 
  * Look for the specified macros in the iString and return a copy
- * where all of them are replaced with the values found in uData map.
+ * where all of them are replaced with the values found in mapData map.
  *
  * This function looks for the following two patterms:
  *
@@ -103,7 +103,7 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
 };
 
 /**
- * Get last lines from the VirtualBox log and try to locate the string that mentions
+ * Get last 2kb of the VirtualBox log and try to locate the string that mentions
  * state change.
  */
 int getStateFromFile( std::string logPath ) {
@@ -1646,7 +1646,7 @@ void VBoxSession::errorOccured ( const std::string & str, int errNo ) {
 
     // Check the timestamp of the last time we had an error
     unsigned long currTime = getMillis();
-    if ((errorTimestamp - currTime) < SESSION_HEAL_THRESSHOLD ) {
+    if ((currTime - errorTimestamp) < SESSION_HEAL_THRESSHOLD ) {
         errorCount += 1;
         if (errorCount > SESSION_HEAL_TRIES) {
             CVMWA_LOG("Error", "Too many errors. Won't try to heal them again");

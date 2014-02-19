@@ -18,37 +18,27 @@
  * Contact: <ioannis.charalampidis[at]cern.ch>
  */
 
-#include "CVMWebAPISession.h"
+#pragma once
+#ifndef DAEMON_H
+#define DAEMON_H
 
-/**
- * Handle session commands
- */
-void CVMWebAPISession::handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters ) {
-	if (action == "start") {
-		hvSession->start(NULL);
-	} else if (action == "stop") {
-		hvSession->stop();
-	} else if (action == "pause") {
-		hvSession->pause();
-	} else if (action == "resume") {
-		hvSession->resume();
-	} else if (action == "hibernate") {
-		hvSession->hibernate();
-	} else if (action == "reset") {
-		hvSession->reset();
-	}
-}
+#include "web/webserver.h"
+#include "web/api.h"
 
-/**
- * Handle timed event
- */
-void CVMWebAPISession::handleTimer() {
+// Forward declarations for the entire project
+class DaemonCore;
+class DaemonConnection;
+class DaemonFactory;
 
-}
+class CVMCallbackFw;
+class CVMWebAPISession;
 
-/**
- * Forward state changed events to the UI
- */
-void CVMWebAPISession::__cbStateChanged( VariantArgList& args ) {
-	connection.sendEvent( "stateChanged", args, uuid_str );
-}
+// Include implementations
+#include "daemon_core.h"
+#include "daemon_connection.h"
+#include "daemon_factory.h"
+
+#include "components/CVMCallbackFw.h"
+#include "components/CVMWebAPISession.h"
+
+#endif /* end of include guard: DAEMON_H */

@@ -22,13 +22,13 @@
 #ifndef DAEMON_COMPONENT_WEBAPISESSION_H
 #define DAEMON_COMPONENT_WEBAPISESSION_H
 
+#include "../daemon.h"
+
 #include <Common/Hypervisor.h>
+#include <Common/ProgressFeedback.h>
+#include <Common/Utilities.h>
 
-class DaemonCore;
-class DaemonSession;
-
-#include "../daemon_core.h"
-#include "../daemon_session.h"
+#include <Hypervisor/Virtualbox/VBoxSession.h>
 
 class CVMWebAPISession {
 public:
@@ -36,19 +36,66 @@ public:
 	/**
 	 * Constructor for the CernVM WebAPI Session 
 	 */
-	CVMWebAPISession( DaemonCore& core, DaemonSession& session, HVSessionPtr hvSession  )
-		: core(core), session(session), hvSession(hvSession)
+	CVMWebAPISession( DaemonCore& core, DaemonConnection& connection, HVSessionPtr hvSession, int uuid  )
+		: core(core), connection(connection), hvSession(hvSession), uuid(uuid), uuid_str(ntos<int>(uuid)), callbackForwarder( connection, uuid_str )
 	{ 
 
 		// Handle state changes
-        hvSession->on( "stateChanged", boost::bind( &CVMWebAPISession::__cbStateChanged, this, _1 ) );
+        hStateChanged = hvSession->on( "stateChanged", boost::bind( &CVMWebAPISession::__cbStateChanged, this, _1 ) );
+
+        // Enable progress feedback to the HVSessionPtr FSM.
+        //
+        // To do so, we are going to create a FiniteState progress feedback object,
+        // make callbackForwarder to listen for it's progress events, and then
+        // give the progress feedback object for use by the FSM  
+        //
+        FiniteTaskPtr ft = boost::make_shared<FiniteTask>();
+        callbackForwarder.listen( *ft.get() );
+
+        // That's currently a VBoxSession-only feature
+        boost::static_pointer_cast<VBoxSession>(hvSession)->FSMUseProgress( ft, "Serving request" );
+
+        CVMWA_LOG("Debug", "Session initialized with ID " << uuid << " (str:" << uuid_str << ")");
 
 	};
+
+	/**
+	 * Destructo
+	 */
+	~CVMWebAPISession() {
+		CVMWA_LOG("Debug", "Destructing CVMWebAPISession");
+		hvSession->off( "stateChanged", hStateChanged );
+	}
 
 	/**
 	 * Handling of commands directed for this session
 	 */
 	void handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters );
+
+	/**
+	 * Session polling timer
+	 */
+	void handleTimer( );
+
+	/**
+	 * The session ID
+	 */
+	int					uuid;
+
+	/**
+	 * The string version of session ID
+	 */
+	std::string 		uuid_str;
+
+	/**
+	 * The websocket connection used for I/O
+	 */
+	DaemonConnection& 	connection;
+
+	/**
+	 * The encapsulated hypervisor session pointer
+	 */
+	HVSessionPtr		hvSession;
 
 private:
 
@@ -63,14 +110,14 @@ private:
 	DaemonCore&			core;
 
 	/**
-	 * The websocket session used for I/O
+	 * Hook slots (used for unbinding the hooks at destruction)
 	 */
-	DaemonSession& 		session;
+	NamedEventSlotPtr 	hStateChanged;
 
 	/**
-	 * The encapsulated hypervisor session pointer
+	 * Callback forwarding object
 	 */
-	HVSessionPtr		hvSession;
+	CVMCallbackFw		callbackForwarder;
 
 };
 

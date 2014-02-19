@@ -13,9 +13,7 @@
 #include <MicroDaemon/web/webserver.h>
 
 // Daemon components
-#include <MicroDaemon/daemon_core.h>
-#include <MicroDaemon/daemon_factory.h>
-#include <MicroDaemon/daemon_session.h>
+#include <MicroDaemon/daemon.h>
 
 @interface URLDaemonDelegate : NSObject <NSApplicationDelegate> {
   

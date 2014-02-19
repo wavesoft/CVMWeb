@@ -21,7 +21,7 @@
 #include <cstdlib>
 #include <openssl/rand.h>
 
-#include "daemon_core.h"
+#include "daemon.h"
 
 #include <Common/Utilities.h>
 
@@ -161,7 +161,7 @@ std::string DaemonCore::calculateHostID( std::string& domain ) {
 /**
  * Store the given session and return it's unique ID
  */
-int DaemonCore::storeSession( CVMWebAPISession* session ) {
+CVMWebAPISession* DaemonCore::storeSession( DaemonConnection& connection, HVSessionPtr hvSession ) {
 
     // Create a random int that does not exist in the sessions
     int uuid;
@@ -172,15 +172,29 @@ int DaemonCore::storeSession( CVMWebAPISession* session ) {
         uuid = abs(uuid);
 
         // Make sure we have no collisions
-        if (sessions.find(uuid) == sessions.end());
+        if (sessions.find(uuid) == sessions.end())
             break;
             
     }
 
-    // Store session
-    sessions[uuid] = session;
+    // Create CVMWebAPISession wrapper and store it on sessionss
+    CVMWebAPISession* cvmSession = new CVMWebAPISession( *this, connection, hvSession, uuid );
+    sessions[uuid] = cvmSession;
 
     // Return session
-    return uuid;
+    return cvmSession;
+
+}
+
+/**
+ * Unregister all sessions launched from the given connection
+ */
+void DaemonCore::releaseConnectionSessions( DaemonConnection& connection ) {
+    CVMWA_LOG("Debug", "Releasing connection sessions");
+    for (std::map<int, CVMWebAPISession* >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
+        CVMWebAPISession* sess = (*it).second;
+        if (&sess->connection == &connection)
+            delete sess;
+    }
 
 }

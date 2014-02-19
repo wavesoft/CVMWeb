@@ -22,8 +22,7 @@
 #ifndef DAEMON_COMPONENT_CALLBACKS_H
 #define DAEMON_COMPONENT_CALLBACKS_H
 
-#include <Common/Callbacks.h>
-#include "../web/api.h"
+#include "../daemon.h"
 
 /**
  * A utility class that keeps track of the delegated Callbacks
@@ -61,15 +60,15 @@ public:
 /**
  * Wrapper class that forawrds events to the remote end of the socket.
  */
-class CVMCallbacks {
+class CVMCallbackFw {
 public:
 
 	// Constructor
-	CVMCallbacks( WebsocketAPI& api, const std::string& eventID ) 
-		: listening(), api(api), eventID(eventID) { };
+	CVMCallbackFw( WebsocketAPI& api, const std::string& sessionID ) 
+		: listening(), api(api), sessionID(sessionID) { };
 
 	// Destructor
-	~CVMCallbacks();
+	~CVMCallbackFw();
 
 	// Trigger a custom event
 	void fire								( const std::string& name, VariantArgList& args );
@@ -89,7 +88,7 @@ private:
 	WebsocketAPI&							api;
 
 	// The current event ID
-	const std::string&						eventID;
+	const std::string&						sessionID;
 
 };
 

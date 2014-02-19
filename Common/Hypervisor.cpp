@@ -969,7 +969,7 @@ int HVInstance::sessionValidate ( const ParameterMapPtr& parameters ) {
         return HVE_NOT_VALIDATED;
     }
     std::string key = parameters->get("key");
-    if (name.empty()) {
+    if (key.empty()) {
         CVMWA_LOG("Error", "Missing 'key' parameter on sessionValidate" );
         return HVE_NOT_VALIDATED;
     }

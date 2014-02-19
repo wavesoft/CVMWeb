@@ -22,13 +22,11 @@
 #ifndef DAEMON_CORE_H
 #define DAEMON_CORE_H
 
+#include "daemon.h"
+
 #include <Common/Hypervisor.h>
 #include <Common/DomainKeystore.h>
 #include <Common/DownloadProvider.h>
-
-class CVMWebAPISession;
-
-#include "components/CVMWebAPISession.h"
 
 class AuthKey {
 public:
@@ -74,9 +72,15 @@ public:
 	std::string 				calculateHostID( std::string& domain );
 
 	/**
-	 * Create new random session ID and store the given session
+	 * Allocate a new UUID and store the given session information to the
+	 * sessions map.
 	 */
-	int 						storeSession( CVMWebAPISession* session );
+	CVMWebAPISession* 			storeSession( DaemonConnection& session, HVSessionPtr hvSession );
+
+	/**
+	 * Unregister all sessions launched from the given connection
+	 */
+	void 						releaseConnectionSessions( DaemonConnection& connection );
 
 	/**
 	 * Check if a hypervisor was detected
@@ -128,7 +132,7 @@ public:
 	/**
 	 * Sessions
 	 */
-	std::map<unsigned int, CVMWebAPISession* >	sessions;
+	std::map<int, CVMWebAPISession* >			sessions;
 
 };
 
