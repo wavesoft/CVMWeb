@@ -18,7 +18,16 @@
 
 		CVM.startCVMWebAPI(function(api) {
 
-			console.log(api);
+			console.info("Got API: ",api);
+
+			api.requestSession(
+				"http://localhost/sign.php",
+				function(session) {
+
+					window.sess = session;
+					
+					console.info("Got Session: ",session);
+				});
 
 		});
 

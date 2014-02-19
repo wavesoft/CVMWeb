@@ -102,6 +102,13 @@ _NS_.EventDispatcher.prototype.removeEventListener = function( name, listener ) 
     if (i<0) return;
     this.events.splice(i,1);
 };
+
+/**
+ * WebAPI Socket handler
+ */
+_NS_.ProgressFeedback = function() {
+	
+};
 var WS_ENDPOINT = "ws://127.0.0.1:1793",
 	WS_URI = "cernvm-webapi:";
 
@@ -141,7 +148,13 @@ _NS_.Socket.prototype = Object.create( _NS_.EventDispatcher.prototype );
  * Cleanup after shutdown/close
  */
 _NS_.Socket.prototype.__handleClose = function() {
+
+	// Fire the disconnected event
 	this.__fire("disconnected");
+
+	// Hide any active user interaction - it's now useless
+	UserInteraction.hideInteraction();
+
 }
 
 /**
@@ -156,7 +169,6 @@ _NS_.Socket.prototype.__handleOpen = function(data) {
  */
 _NS_.Socket.prototype.__handleData = function(data) {
 	var o = JSON.parse(data);
-	console.log(o);
 
 	// Forward all the frames of the given ID to the
 	// frame-handling callback.
@@ -172,7 +184,7 @@ _NS_.Socket.prototype.__handleData = function(data) {
 		// [Event] User Interaction
 		if (o['name'] == "interact") {
 			// Forward to user interaction controller
-			this.interaction.handleInteractionEvent(o);
+			this.interaction.handleInteractionEvent(o['data']);
 
 		} else {
 			this.__fire(o['name'], o['data']);
@@ -234,7 +246,6 @@ _NS_.Socket.prototype.send = function(action, data, responseEvents, responseTime
 
 			// Pick and fire the appropriate event response
 			var evName = eventify(data['name']);
-			console.log("Hanlding incoming event ", evName, ":", data );
 			if (responseEvents[evName]) {
 
 				// Fire the function with the array list as arguments
@@ -454,6 +465,17 @@ var UserInteraction = _NS_.UserInteraction = function( socket ) {
 	this.socket = socket;
 };
 
+
+/**
+ * Hide the active interaction screen
+ */
+UserInteraction.hideInteraction = function() {
+	if (UserInteraction.activeScreen) {
+		document.body.removeChild(UserInteraction.activeScreen);
+		UserInteraction.activeScreen = null;
+	}
+}
+
 /**
  * Create a framed button
  */
@@ -570,7 +592,7 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 	if (header) {
 		if (typeof(header) == "string") {
 			cHeader.innerHTML = header;
-			cHeader.style.fontSize = "2em";
+			cHeader.style.fontSize = "1.6em";
 			cHeader.style.marginBottom = "8px";
 		} else {
 			cHeader.appendChild(header);
@@ -603,7 +625,7 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 		if (cbClose) {
 			cbClose();
 		} else {
-			document.body.removeChild(floater);
+			UserInteraction.hideInteraction();
 		}
 	}
 
@@ -611,6 +633,10 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 	content.onclick = function(event) {
 		event.stopPropagation();
 	}
+
+	// Remove previous element
+	UserInteraction.hideInteraction();
+	UserInteraction.activeScreen = floater;
 
 	// Append element in the body
 	document.body.appendChild(floater);
@@ -768,7 +794,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	if (data[0] == 'confirm') {
 
 		// Fire the confirmation function
-		this.confirm( data[2], data[1], function(result, notagain) {
+		UserInteraction.confirm( data[1], data[2], function(result, notagain) {
 
 			// Send back interaction callback response
 			if (result) {
@@ -785,7 +811,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	else if (data[0] == 'alert') {
 
 		// Fire the confirmation function
-		this.alert( data[2], data[1], function(result) { });
+		UserInteraction.alert( data[1], data[2], function(result) { });
 
 	}
 
@@ -793,7 +819,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	else if (data[0] == 'confirmLicense') {
 
 		// Fire the confirmation function
-		this.confirmLicense( data[2], data[1], function(result, notagain) {
+		UserInteraction.confirmLicense( data[1], data[2], function(result, notagain) {
 
 			// Send back interaction callback response
 			if (result) {
@@ -810,7 +836,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	else if (data[0] == 'confirmLicenseURL') {
 
 		// Fire the confirmation function
-		this.confirmLicenseURL( data[2], data[1], function(result, notagain) {
+		UserInteraction.confirmLicenseURL( data[1], data[2], function(result, notagain) {
 
 			// Send back interaction callback response
 			if (result) {
@@ -832,13 +858,131 @@ _NS_.WebAPIPlugin = function() {
 
 	// Superclass constructor
 	_NS_.Socket.call(this);
-
 }
 
 /**
  * Subclass event dispatcher
  */
 _NS_.WebAPIPlugin.prototype = Object.create( _NS_.Socket.prototype );
+
+/**
+ * Open a session and call the cbOk when ready
+ */
+_NS_.WebAPIPlugin.prototype.requestSession = function(vmcp, cbOk, cbFail) {
+	var self = this;
+
+	// Send requestSession
+	this.send("requestSession", {
+		"vmcp": vmcp
+	}, {
+		onSucceed : function( msg, session_id ) {
+
+			// Create a new session object
+			var session = new _NS_.WebAPISession( self, session_id );
+
+			// Receive events with id=session_id
+			self.responseCallbacks[session_id] = function(data) {
+				session.handleEvent(data);
+			}
+
+			// Fire the ok callback
+			if (cbOk) cbOk(session);
+
+		},
+		onFailed: function( msg, code ) {
+
+			// Fire the failed callback
+			if (cbFail) cbFail(msg, code);
+
+		},
+		onProgress: function( msg, percent ) {
+			self.__fire("progress", [msg, percent]);
+		},
+		onStarted: function( msg ) {
+			self.__fire("started", [msg]);
+		},
+		onCompleted: function( msg ) {
+			self.__fire("completed", [msg]);
+		}
+	});
+
+
+};
+/**
+ * WebAPI Socket handler
+ */
+_NS_.WebAPISession = function( socket, session_id ) {
+
+	// Superclass initialize
+	_NS_.EventDispatcher.call(this);
+
+	// Keep references
+	this.socket = socket;
+	this.session_id = session_id;
+
+}
+
+/**
+ * Subclass event dispatcher
+ */
+_NS_.WebAPISession.prototype = Object.create( _NS_.EventDispatcher.prototype );
+
+/**
+ * Handle incoming event
+ */
+_NS_.WebAPISession.prototype.handleEvent = function(data) {
+	this.__fire(data['name'], data['data']);
+}
+
+_NS_.WebAPISession.prototype.start = function( values ) {
+	// Send a start message
+	this.socket.send("start", {
+		"session_id": this.session_id,
+		"parameters": values || { }
+	})
+}
+
+_NS_.WebAPISession.prototype.stop = function() {
+	// Send a stop message
+	this.socket.send("stop", {
+		"session_id": this.session_id
+	})
+}
+
+_NS_.WebAPISession.prototype.pause = function() {
+	// Send a pause message
+	this.socket.send("pause", {
+		"session_id": this.session_id
+	})
+}
+
+_NS_.WebAPISession.prototype.resume = function() {
+	// Send a resume message
+	this.socket.send("resume", {
+		"session_id": this.session_id
+	})
+}
+
+_NS_.WebAPISession.prototype.reset = function() {
+	// Send a reset message
+	this.socket.send("reset", {
+		"session_id": this.session_id
+	})
+}
+
+_NS_.WebAPISession.prototype.hibernate = function() {
+	// Send a hibernate message
+	this.socket.send("hibernate", {
+		"session_id": this.session_id
+	})
+}
+
+_NS_.WebAPISession.prototype.close = function() {
+	// Send a close message
+	this.socket.send("close", {
+		"session_id": this.session_id
+	})
+}
 
 /**
  * This file is always included last in the build chain. 

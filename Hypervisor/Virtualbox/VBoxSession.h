@@ -180,7 +180,7 @@ public:
     virtual int             stop                ();
     virtual int             hibernate           ();
     virtual int             open                ();
-    virtual int             start               ( std::map<std::string,std::string> *userData );
+    virtual int             start               ( const ParameterMapPtr& userData );
     virtual int             setExecutionCap     ( int cap);
     virtual int             setProperty         ( std::string name, std::string key );
     virtual std::string     getProperty         ( std::string name );

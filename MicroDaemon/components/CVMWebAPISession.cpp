@@ -27,7 +27,10 @@
  */
 void CVMWebAPISession::handleAction( const std::string& id, const std::string& action, ParameterMapPtr parameters ) {
 	if (action == "start") {
-		hvSession->start(NULL);
+
+		ParameterMapPtr startParm = parameters->subgroup("parameters");
+		hvSession->start( startParm );
+
 	} else if (action == "stop") {
 		hvSession->stop();
 	} else if (action == "pause") {
@@ -38,6 +41,8 @@ void CVMWebAPISession::handleAction( const std::string& id, const std::string& a
 		hvSession->hibernate();
 	} else if (action == "reset") {
 		hvSession->reset();
+	} else if (action == "close") {
+		hvSession->close();
 	}
 }
 

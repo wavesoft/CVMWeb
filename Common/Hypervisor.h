@@ -227,7 +227,7 @@ public:
         parameters->setDefault("daemonFlags",           "0");
         parameters->setDefault("uuid",                  "");
         parameters->setDefault("ip",                    "");
-        parameters->setDefault("key",                   "");
+        parameters->setDefault("secret",                "");
         parameters->setDefault("name",                  "");
         parameters->setDefault("diskURL",               "");
         parameters->setDefault("diskChecksum",          "");
@@ -332,7 +332,7 @@ public:
     /**
      * Boot the VM
      */    
-    virtual int             start( std::map<std::string,std::string> *userData ) = 0;
+    virtual int             start( const ParameterMapPtr& userData ) = 0;
 
     /**
      * Change the execution cap

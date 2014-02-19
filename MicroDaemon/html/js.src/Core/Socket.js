@@ -37,7 +37,13 @@ _NS_.Socket.prototype = Object.create( _NS_.EventDispatcher.prototype );
  * Cleanup after shutdown/close
  */
 _NS_.Socket.prototype.__handleClose = function() {
+
+	// Fire the disconnected event
 	this.__fire("disconnected");
+
+	// Hide any active user interaction - it's now useless
+	UserInteraction.hideInteraction();
+
 }
 
 /**
@@ -52,7 +58,6 @@ _NS_.Socket.prototype.__handleOpen = function(data) {
  */
 _NS_.Socket.prototype.__handleData = function(data) {
 	var o = JSON.parse(data);
-	console.log(o);
 
 	// Forward all the frames of the given ID to the
 	// frame-handling callback.
@@ -68,7 +73,7 @@ _NS_.Socket.prototype.__handleData = function(data) {
 		// [Event] User Interaction
 		if (o['name'] == "interact") {
 			// Forward to user interaction controller
-			this.interaction.handleInteractionEvent(o);
+			this.interaction.handleInteractionEvent(o['data']);
 
 		} else {
 			this.__fire(o['name'], o['data']);
@@ -130,7 +135,6 @@ _NS_.Socket.prototype.send = function(action, data, responseEvents, responseTime
 
 			// Pick and fire the appropriate event response
 			var evName = eventify(data['name']);
-			console.log("Hanlding incoming event ", evName, ":", data );
 			if (responseEvents[evName]) {
 
 				// Fire the function with the array list as arguments

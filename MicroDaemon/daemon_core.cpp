@@ -36,6 +36,12 @@ DaemonCore::DaemonCore(): authKeys(), sessions(), keystore(), config() {
 
 	// Detect and instantiate hypervisor
 	hypervisor = detectHypervisor();
+    if (hypervisor) {
+
+        // Load stored sessions
+        hypervisor->loadSessions();
+
+    }
 
     // Initialize download provider
     downloadProvider = DownloadProvider::Default();
@@ -201,7 +207,8 @@ void DaemonCore::releaseConnectionSessions( DaemonConnection& connection ) {
 
             // Remove from list
             sessions.erase( it );
-            if (it != sessions.end()) ++it;
+            if (sessions.empty()) break;
+            if (it != sessions.end()) it++;
 
         }
     }

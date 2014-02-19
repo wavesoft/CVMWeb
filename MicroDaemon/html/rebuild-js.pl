@@ -59,7 +59,7 @@ $buffer .= read_file( "js.src/Init.js" );
 print "ok\n";
 
 # Enclose it into a function and dump it into the final file
-open  DUMP_FILE, ">~tmp-dump.js";
+open  DUMP_FILE, ">cvmwebapi-$VERSION-src.js";
 print DUMP_FILE "window.$NS={'version':'$VERSION'};(function(_NS_) {\n";
 print DUMP_FILE $buffer."\n";
 print DUMP_FILE "})(window.$NS);\n";
@@ -67,14 +67,11 @@ close DUMP_FILE;
 
 # Compress
 print "Compressing...";
-`yuicompressor -o cvmwebapi-$VERSION.js ~tmp-dump.js`;
+`yuicompressor -o cvmwebapi-$VERSION.js cvmwebapi-$VERSION-src.js`;
 if ($? == 0) {
     print "ok\n";
 } else {
-    system("cat -n ~tmp-dump.js");
+    system("cat -n cvmwebapi-$VERSION-src.js");
     print "failed\n";
 }
-
-# Remove temp file
-rename "~tmp-dump.js", "cvmwebapi-$VERSION-src.js";
 

@@ -13,6 +13,17 @@ var UserInteraction = _NS_.UserInteraction = function( socket ) {
 	this.socket = socket;
 };
 
+
+/**
+ * Hide the active interaction screen
+ */
+UserInteraction.hideInteraction = function() {
+	if (UserInteraction.activeScreen) {
+		document.body.removeChild(UserInteraction.activeScreen);
+		UserInteraction.activeScreen = null;
+	}
+}
+
 /**
  * Create a framed button
  */
@@ -129,7 +140,7 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 	if (header) {
 		if (typeof(header) == "string") {
 			cHeader.innerHTML = header;
-			cHeader.style.fontSize = "2em";
+			cHeader.style.fontSize = "1.6em";
 			cHeader.style.marginBottom = "8px";
 		} else {
 			cHeader.appendChild(header);
@@ -162,7 +173,7 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 		if (cbClose) {
 			cbClose();
 		} else {
-			document.body.removeChild(floater);
+			UserInteraction.hideInteraction();
 		}
 	}
 
@@ -170,6 +181,10 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 	content.onclick = function(event) {
 		event.stopPropagation();
 	}
+
+	// Remove previous element
+	UserInteraction.hideInteraction();
+	UserInteraction.activeScreen = floater;
 
 	// Append element in the body
 	document.body.appendChild(floater);
@@ -327,7 +342,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	if (data[0] == 'confirm') {
 
 		// Fire the confirmation function
-		this.confirm( data[2], data[1], function(result, notagain) {
+		UserInteraction.confirm( data[1], data[2], function(result, notagain) {
 
 			// Send back interaction callback response
 			if (result) {
@@ -344,7 +359,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	else if (data[0] == 'alert') {
 
 		// Fire the confirmation function
-		this.alert( data[2], data[1], function(result) { });
+		UserInteraction.alert( data[1], data[2], function(result) { });
 
 	}
 
@@ -352,7 +367,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	else if (data[0] == 'confirmLicense') {
 
 		// Fire the confirmation function
-		this.confirmLicense( data[2], data[1], function(result, notagain) {
+		UserInteraction.confirmLicense( data[1], data[2], function(result, notagain) {
 
 			// Send back interaction callback response
 			if (result) {
@@ -369,7 +384,7 @@ UserInteraction.prototype.handleInteractionEvent = function( data ) {
 	else if (data[0] == 'confirmLicenseURL') {
 
 		// Fire the confirmation function
-		this.confirmLicenseURL( data[2], data[1], function(result, notagain) {
+		UserInteraction.confirmLicenseURL( data[1], data[2], function(result, notagain) {
 
 			// Send back interaction callback response
 			if (result) {

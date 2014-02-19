@@ -1335,10 +1335,10 @@ int VBoxSession::hibernate ( ) {
 /**
  * Put the VM to started state
  */
-int VBoxSession::start ( std::map<std::string,std::string> *userData ) {
+int VBoxSession::start ( const ParameterMapPtr& userData ) {
 
     // Update user data
-    this->userData->fromMap( userData, true );
+    this->userData->fromParameters( userData, true );
 
     // Switch to running state
     FSMGoto(7);
