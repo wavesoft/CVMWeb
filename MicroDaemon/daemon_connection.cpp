@@ -367,7 +367,7 @@ void DaemonConnection::requestSession_thread( const std::string& eventID, const 
         session->update();
 
         // Register session on store
-        CVMWebAPISession* cvmSession = core.storeSession( *this, session );
+        CVMWebAPISessionPtr cvmSession = core.storeSession( *this, session );
         
         // Completed
         cb.fire("succeed", ArgumentList("Session oppened successfully")(cvmSession->uuid));

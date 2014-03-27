@@ -11,3 +11,8 @@ test/code.txt
 js/cvmwebapi-*
 js/publish.sh
 err.txt
+
+extern/cyassl*
+test/ssl
+
+temp.buf

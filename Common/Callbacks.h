@@ -30,6 +30,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "Utilities.h"
 #include "ArgumentList.h"
@@ -76,7 +77,7 @@ typedef boost::shared_ptr< NamedEventSlot >	NamedEventSlotPtr;
 class Callbacks {
 public:
 
-	Callbacks() : anyEventCallbacks(), namedEventCallbacks() { };
+	Callbacks() : anyEventCallbacks(), namedEventCallbacks(), shopMutex() { };
 
 	/**
 	 * Register a callback that will be fired for all events
@@ -108,6 +109,9 @@ public:
 	// Callback list
 	std::vector< AnyEventSlotPtr >								anyEventCallbacks;
 	std::map< std::string, std::vector< NamedEventSlotPtr > > 	namedEventCallbacks;
+
+	// Shared operations mutex
+	boost::mutex 		shopMutex;
 
 };
 

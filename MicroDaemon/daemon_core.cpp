@@ -24,6 +24,8 @@
 
 #include <cstdlib>
 #include <openssl/rand.h>
+#include <boost/make_shared.hpp>
+ 
 #include <Common/Utilities.h>
 
 /**
@@ -168,7 +170,7 @@ std::string DaemonCore::calculateHostID( std::string& domain ) {
 /**
  * Store the given session and return it's unique ID
  */
-CVMWebAPISession* DaemonCore::storeSession( DaemonConnection& connection, HVSessionPtr hvSession ) {
+CVMWebAPISessionPtr DaemonCore::storeSession( DaemonConnection& connection, HVSessionPtr hvSession ) {
 
     // Create a random int that does not exist in the sessions
     int uuid;
@@ -185,7 +187,7 @@ CVMWebAPISession* DaemonCore::storeSession( DaemonConnection& connection, HVSess
     }
 
     // Create CVMWebAPISession wrapper and store it on sessionss
-    CVMWebAPISession* cvmSession = new CVMWebAPISession( *this, connection, hvSession, uuid );
+    CVMWebAPISessionPtr cvmSession = boost::make_shared<CVMWebAPISession>( *this, connection, hvSession, uuid );
     sessions[uuid] = cvmSession;
 
     // Return session
@@ -198,17 +200,13 @@ CVMWebAPISession* DaemonCore::storeSession( DaemonConnection& connection, HVSess
  */
 void DaemonCore::releaseConnectionSessions( DaemonConnection& connection ) {
     CVMWA_LOG("Debug", "Releasing connection sessions");
-    for (std::map<int, CVMWebAPISession* >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
-        CVMWebAPISession* sess = (*it).second;
+    for (std::map<int, CVMWebAPISessionPtr >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
+        CVMWebAPISessionPtr sess = (*it).second;
         if (&sess->connection == &connection) {
 
-            // Release wrapper object
-            delete sess;
-
             // Remove from list
-            sessions.erase( it );
+            it = sessions.erase( it );
             if (sessions.empty()) break;
-            if (it != sessions.end()) it++;
 
         }
     }
@@ -219,8 +217,8 @@ void DaemonCore::releaseConnectionSessions( DaemonConnection& connection ) {
  * Forward the tick event to all of the child nodes
  */
 void DaemonCore::processPeriodicJobs() {
-    for (std::map<int, CVMWebAPISession* >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
-        CVMWebAPISession* sess = (*it).second;
+    for (std::map<int, CVMWebAPISessionPtr >::iterator it = sessions.begin(); it != sessions.end(); ++it) {
+        CVMWebAPISessionPtr sess = (*it).second;
         sess->processPeriodicJobs();
     }   
 }

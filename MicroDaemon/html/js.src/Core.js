@@ -54,6 +54,20 @@ _NS_.startCVMWebAPI = function( cbOK, cbFail, unused ) {
 				// Show frame
 				UserInteraction.createFramedWindow( cFrame );
 
+				// Wait until the application is installed
+				var infiniteTimer;
+				infiniteTimer = setInterval(function() {
+					instance.connect(function(hasAPI) {
+
+						// Check if we have API
+						if (hasAPI) {
+							clearInterval(infiniteTimer);
+							cbOK( instance );
+						}
+
+					});
+				}, 5000);
+
 			}
 		});
 

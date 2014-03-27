@@ -1,4 +1,5 @@
-var WS_ENDPOINT = "ws://127.0.0.1:1793",
+
+4var WS_ENDPOINT = "ws://127.0.0.1:1793",
 	WS_URI = "cernvm-webapi:";
 
 /**
@@ -129,7 +130,7 @@ _NS_.Socket.prototype.send = function(action, data, responseEvents, responseTime
 			// We got a response, reset timeout timer
 			if (timeoutTimer!=null) clearTimeout(timeoutTimer);
 
-			// Cleanup when we received a 'succeed' frame
+			// Cleanup when we received a 'succeed' or 'failed' event
 			if ((data['name'] == 'succeed') || (data['name'] == 'failed'))
 				delete self.responseCallbacks[frameID];
 
@@ -330,8 +331,8 @@ _NS_.Socket.prototype.connect = function( cbAPIState ) {
 
 			// We ned to do a URL launch
 			var e = document.createElement('iframe'); 
-			e.style.display="none"; 
 			e.src = WS_URI + "launch";
+			e.style.display="none"; 
 			document.body.appendChild(e);
 
 			// And start loop for 5 sec

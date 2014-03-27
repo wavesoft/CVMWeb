@@ -1415,10 +1415,21 @@ bool isPortOpen( const char * host, int port, unsigned char handshake ) {
     client.sin_family = AF_INET;
     client.sin_port = htons( port );
     client.sin_addr.s_addr = inet_addr( host );
-    
+
     // Open a connection
     sock = (SOCKET) socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return false;
+
+    // Set timeouts
+    struct timeval timeout;      
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+    if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+                sizeof(timeout)) < 0) return false;
+    if (setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+                sizeof(timeout)) < 0) return false;
+
+    // Try to connect
     int result = connect(sock, (struct sockaddr *) &client,sizeof(client));
 
     // Check for open failures

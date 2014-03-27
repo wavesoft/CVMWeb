@@ -23,6 +23,8 @@ _NS_.WebAPIPlugin.prototype.requestSession = function(vmcp, cbOk, cbFail) {
 	this.send("requestSession", {
 		"vmcp": vmcp
 	}, {
+
+		// Basic responses
 		onSucceed : function( msg, session_id ) {
 
 			// Create a new session object
@@ -43,6 +45,8 @@ _NS_.WebAPIPlugin.prototype.requestSession = function(vmcp, cbOk, cbFail) {
 			if (cbFail) cbFail(msg, code);
 
 		},
+
+		// Progress feedbacks
 		onProgress: function( msg, percent ) {
 			self.__fire("progress", [msg, percent]);
 		},
@@ -52,6 +56,7 @@ _NS_.WebAPIPlugin.prototype.requestSession = function(vmcp, cbOk, cbFail) {
 		onCompleted: function( msg ) {
 			self.__fire("completed", [msg]);
 		}
+
 	});
 
 

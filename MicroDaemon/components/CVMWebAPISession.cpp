@@ -50,33 +50,62 @@ void CVMWebAPISession::handleAction( const std::string& id, const std::string& a
  * Handle timed event
  */
 void CVMWebAPISession::processPeriodicJobs() {
+	if (periodicsRunning) return;
+	boost::thread( boost::bind( &CVMWebAPISession::periodicJobsThread, this ) );
+}
+
+/**
+ * Handle timed event
+ */
+void CVMWebAPISession::periodicJobsThread() {
+
+	// Mark the thread as running
+	periodicsRunning = true;
 
 	// Synchronize session state with VirtualBox (or file)
 	CVMWA_LOG("Debug", "Syncing session");
 	hvSession->update(false);
 
-	// Check for API calls
+	// Check for API port state
     int sessionState = hvSession->local->getNum<int>("state", 0);
+    int apiPort = hvSession->local->getNum<int>("apiPort", 80);
 	CVMWA_LOG("Debug", "Session state: " << sessionState);
     if (sessionState == SS_RUNNING) {
     	if (!apiPortOnline) {
 
     		// Check if API port has gone online
     		bool newState = hvSession->isAPIAlive();
-			CVMWA_LOG("Debug", "API Port: " << newState);
     		if (newState) {
-	    		connection.sendEvent( "apiPortStateChanged", ArgumentList(true) );
+	    		connection.sendEvent( "apiPortStateChanged", ArgumentList(true)(apiPort) );
     			apiPortOnline = true;
+    		}
+
+    	} else {
+
+    		// Still check for API port going offline
+    		if (++apiPortCounter > 10) {
+
+    			// Check for offline port
+	    		if (!hvSession->isAPIAlive()) {
+		    		connection.sendEvent( "apiPortStateChanged", ArgumentList(false)(apiPort) );
+	    			apiPortOnline = true;
+	    		}
+
+	    		// Reset counter
+	    		apiPortCounter=0;
     		}
 
     	}
     } else {
     	if (apiPortOnline) {
     		// In any other state, the port is just offline
-    		connection.sendEvent( "apiPortStateChanged", ArgumentList(false) );
+    		connection.sendEvent( "apiPortStateChanged", ArgumentList(false)(apiPort) );
     		apiPortOnline = false;
     	}
     }
+
+    // Mark the thread as completed
+    periodicsRunning = false;
 
 }
 

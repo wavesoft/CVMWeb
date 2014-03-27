@@ -28,6 +28,7 @@
 
 #include <Hypervisor/Virtualbox/VBoxSession.h>
 
+
 class CVMWebAPISession {
 public:
 
@@ -36,7 +37,7 @@ public:
 	 */
 	CVMWebAPISession( DaemonCore& core, DaemonConnection& connection, HVSessionPtr hvSession, int uuid  )
 		: core(core), connection(connection), hvSession(hvSession), uuid(uuid), uuid_str(ntos<int>(uuid)), 
-		  callbackForwarder( connection, uuid_str ), apiPortOnline(false)
+		  callbackForwarder( connection, uuid_str ), apiPortOnline(false), periodicsRunning(false), apiPortCounter(0)
 	{ 
 
 		// Handle state changes
@@ -59,7 +60,7 @@ public:
 	};
 
 	/**
-	 * Destructo
+	 * Destructor
 	 */
 	~CVMWebAPISession() {
 		CVMWA_LOG("Debug", "Destructing CVMWebAPISession");
@@ -103,6 +104,16 @@ private:
 	 */
 	void __cbStateChanged( VariantArgList& args );
 
+	/*
+	 * Periodic jobs thread
+	 */
+	void periodicJobsThread( );
+
+	/**
+	 * Flab which indicates that the periodic job thread is running
+	 */
+	bool 				periodicsRunning;
+
 	/**
 	 * The daemon's core state manager
 	 */
@@ -122,6 +133,11 @@ private:
 	 * Last state of the API port
 	 */
 	bool 				apiPortOnline;
+
+	/**
+	 * Polling counter of the API Port
+	 */
+	int 				apiPortCounter;
 
 };
 

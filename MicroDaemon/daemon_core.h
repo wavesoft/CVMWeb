@@ -75,7 +75,7 @@ public:
 	 * Allocate a new UUID and store the given session information to the
 	 * sessions map.
 	 */
-	CVMWebAPISession* 			storeSession( DaemonConnection& session, HVSessionPtr hvSession );
+	CVMWebAPISessionPtr			storeSession( DaemonConnection& session, HVSessionPtr hvSession );
 
 	/**
 	 * Unregister all sessions launched from the given connection
@@ -137,7 +137,7 @@ public:
 	/**
 	 * Sessions
 	 */
-	std::map<int, CVMWebAPISession* >			sessions;
+	std::map<int, CVMWebAPISessionPtr >			sessions;
 
 };
 

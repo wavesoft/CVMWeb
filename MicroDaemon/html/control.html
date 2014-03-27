@@ -15,7 +15,7 @@
 		<script type="text/javascript" src="cvmwebapi-2.0.0-src.js"></script>
 		<script type="text/javascript">
 
-
+		var sess;
 		CVM.startCVMWebAPI(function(api) {
 
 			console.info("Got API: ",api);
@@ -23,9 +23,7 @@
 			api.requestSession(
 				"http://localhost/sign.php",
 				function(session) {
-
-					window.sess = session;
-					
+					sess = session;
 					console.info("Got Session: ",session);
 				});
 
@@ -38,7 +36,7 @@
 			ws.connect();
 		}
 		function stop() {
-			ws.send("stop");
+			sess.stop();
 		}
 		function start() {
 			ws.send("requestSession", {
@@ -67,11 +65,12 @@
 		<input type="button" value="Stop" onclick="stop()" />
 		<input type="button" value="Open session" onclick="start()" />
 		<div class="display:none" id="session_controls">
-			<input type="button" value="Start" onclick="sendSession('start')" />
-			<input type="button" value="Stop" onclick="sendSession('stop')" />
-			<input type="button" value="Pause" onclick="sendSession('pause')" />
-			<input type="button" value="Resume" onclick="sendSession('resume')" />
-			<input type="button" value="Hibernate" onclick="sendSession('hibernate')" />
+			<input type="button" value="Start" onclick="sess.start()" />
+			<input type="button" value="Stop" onclick="sess.stop()" />
+			<input type="button" value="Pause" onclick="sess.pause()" />
+			<input type="button" value="Resume" onclick="sess.resume()" />
+			<input type="button" value="Hibernate" onclick="sess.hibernate()" />
+			<input type="button" value="Close" onclick="sess.close()" />
 		</div>
 		<script type="text/javascript">initialize();</script>
 	</body>

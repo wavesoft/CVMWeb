@@ -103,7 +103,7 @@ std::string macroReplace( ParameterMapPtr mapData, std::string iString ) {
 };
 
 /**
- * Get last 2kb of the VirtualBox log and try to locate the string that mentions
+ * Get last 100kb of the VirtualBox log and try to locate the string that mentions
  * state change.
  */
 int getStateFromFile( std::string logPath ) {
@@ -121,15 +121,32 @@ int getStateFromFile( std::string logPath ) {
     string inBufferLine, stateStr;
     size_t iStart, iEnd, i1, i2, qStart, qEnd;
     char inBuffer[1024];
-    fIn.seekg( 2048, fIn.end );
+
+    // Calculate file length
+    fIn.seekg( 0, fIn.end );
+    int seekSize = fIn.tellg();
+    int fSize = fIn.tellg();
+    if (seekSize > 81920) seekSize = 81920;
+
+    // Move 80kb before te end of the file
+    fIn.seekg( seekSize, fIn.end );
+
+    CVMWA_LOG("Debug", "File metrics: fileSize=" << fSize << ", seekSize=" << seekSize << ", tellg=" << fIn.tellg() << ". eof=" << fIn.eof() << ", bad=" << fIn.bad() << ", fail=" << fIn.fail());
+
+    // Start scanning
     while (!fIn.eof()) {
 
         // Read line
-        fIn.getline( inBuffer, 1024 );
+        fIn.getline( inBuffer, 1023 );
 
         // Handle it via higher-level API
         inBufferLine.assign( inBuffer );
+        CVMWA_LOG("Debug", "Got line: " << inBufferLine);
+        CVMWA_LOG("Debug", "File metrics: tellg=" << fIn.tellg() << ", eof=" << fIn.eof() << ", bad=" << fIn.bad() << ", fail=" << fIn.fail());
+
         if ((iStart = inBufferLine.find("Changing the VM state from")) != string::npos) {
+
+            CVMWA_LOG("Debug", "Found relevant line: " << inBufferLine);
 
             // Pick the appropriate ending
             iEnd = inBufferLine.length();
@@ -154,16 +171,22 @@ int getStateFromFile( std::string logPath ) {
             stateStr = inBufferLine.substr( qStart+1, qEnd-qStart-2 );
 
             // Compare to known state names
+            CVMWA_LOG("Debug","Got switch to " << stateStr);
             if      (stateStr.compare("RUNNING") == 0) state = SS_RUNNING;
             else if (stateStr.compare("OFF") == 0) state = SS_POWEROFF;
             else if (stateStr.compare("SUSPENDED") == 0) state = SS_PAUSED;
 
             // If we got 'SAVING' it means the VM was saved
-            if      (stateStr.compare("SAVING") == 0) return SS_SAVED;
+            if      (stateStr.compare("SAVING") == 0) {
+                fIn.close();
+                return SS_SAVED;
+            }
 
         }
 
     }
+
+    fIn.close();
 
     // Return the found state
     return state;

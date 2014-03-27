@@ -24,6 +24,8 @@
  * Register a callback that handles a named event
  */
 NamedEventSlotPtr Callbacks::on ( const std::string& name, cbNamedEvent cb ) {
+	boost::mutex::scoped_lock lock(shopMutex);
+
     // Allocate missing entry
 	if (namedEventCallbacks.find(name) == namedEventCallbacks.end())
         namedEventCallbacks[name] = std::vector< NamedEventSlotPtr >();
@@ -38,12 +40,16 @@ NamedEventSlotPtr Callbacks::on ( const std::string& name, cbNamedEvent cb ) {
  * Unegister a callback that handles a named event
  */
 void Callbacks::off ( const std::string& name, NamedEventSlotPtr cb ) {
+	if (!cb) return;
+	boost::mutex::scoped_lock lock(shopMutex);
+
     // Allocate missing entry
 	if (namedEventCallbacks.find(name) == namedEventCallbacks.end()) return;
     // Lookup and delete entry from map
     std::vector< NamedEventSlotPtr > * cbs = &namedEventCallbacks[name];
     for (std::vector< NamedEventSlotPtr >::iterator it = cbs->begin(); it != cbs->end(); ++it) {
         if (*it == cb) {
+        	CVMWA_LOG("Callbacks", "Found and erased");
             cbs->erase(it);
             return;
         }
@@ -54,6 +60,7 @@ void Callbacks::off ( const std::string& name, NamedEventSlotPtr cb ) {
  * Register a callback that handles all the events
  */
 AnyEventSlotPtr Callbacks::onAnyEvent ( cbAnyEvent cb ) {
+	boost::mutex::scoped_lock lock(shopMutex);
 	AnyEventSlotPtr ptr = boost::make_shared<AnyEventSlot>( cb );
 	anyEventCallbacks.push_back( ptr );
 	return ptr;
@@ -63,7 +70,9 @@ AnyEventSlotPtr Callbacks::onAnyEvent ( cbAnyEvent cb ) {
  * Unregister a callback that handles all the events
  */
 void Callbacks::offAnyEvent ( AnyEventSlotPtr cb ) {
-	
+	if (!cb) return;
+	boost::mutex::scoped_lock lock(shopMutex);
+
 	// Find and erase the given anyEvent slot
 	for (std::vector< AnyEventSlotPtr >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {
 	    if (*it == cb) {
@@ -78,6 +87,7 @@ void Callbacks::offAnyEvent ( AnyEventSlotPtr cb ) {
  * Fire an event by it's name
  */
 void Callbacks::fire( const std::string& name, VariantArgList& args ){
+	boost::mutex::scoped_lock lock(shopMutex);
 
 	// First, call the anyEvent handlers
 	for (std::vector< AnyEventSlotPtr >::iterator it = anyEventCallbacks.begin(); it != anyEventCallbacks.end(); ++it) {

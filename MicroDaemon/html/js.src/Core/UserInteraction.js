@@ -130,10 +130,12 @@ UserInteraction.createFramedWindow = function( body, header, footer, cbClose ) {
 
 	// Style header
 	cHeader.style.color = "#333"
+	cHeader.style.marginBottom = "8px";
 
 	// Style footer
 	cFooter.style.textAlign = "center";
 	cFooter.style.color = "#333"
+	cFooter.style.marginTop = "8px";
 
 	// Append header
 	content.appendChild(cHeader);
